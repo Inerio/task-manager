@@ -1,0 +1,13 @@
+# Node modules
+node_modules/
+
+# Angular build output
+dist/
+.angular/
+
+# IDE & editor config
+.vscode/
+*.log
+
+# Environment files
+src/environments/environment*.ts

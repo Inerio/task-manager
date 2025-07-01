@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres-task-manager
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: Inerio
+      POSTGRES_PASSWORD: 1234          # à changer !
+      POSTGRES_DB: TaskManagerDB
+      PGDATA: /data/postgres
+
+    volumes:
+      - db_data:/data/postgres         # volume persistant
+
+    ports:
+      - "5432:5432"                    
+
+    networks:
+      - backend                        # réseau interne pour API + DB
+
+networks:
+  backend:
+    driver: bridge                     # réseau Docker isolé
+
+volumes:
+  db_data:                             

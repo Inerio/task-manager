@@ -1,0 +1,39 @@
+<div class="task-list">
+  <h2>{{ title }}</h2>
+
+  <!-- Liste des tâches -->
+  <app-task-item
+    *ngFor="let task of filteredTasks"
+    [task]="task"
+    (taskDeleted)="handleTaskDeleted($event)"
+    (taskUpdated)="handleTaskUpdated($event)"
+  >
+  </app-task-item>
+
+  <!-- Bouton pour afficher/masquer le formulaire -->
+  <button (click)="toggleForm()" class="add-btn">+ Ajouter tâche</button>
+
+  <!-- Formulaire d'ajout -->
+  <div *ngIf="showForm" class="add-task-form">
+    <input
+      type="text"
+      [(ngModel)]="newTask.title"
+      placeholder="Titre de la tâche"
+      required
+      autocomplete="off"
+    />
+
+    <input
+      type="text"
+      [(ngModel)]="newTask.description"
+      placeholder="Description"
+      required
+      autocomplete="off"
+    />
+
+    <div class="btn-group">
+      <button (click)="addTask()">Valider</button>
+      <button (click)="toggleForm()">Annuler</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,56 @@
+.task-card {
+  position: relative;
+  background: white;
+  padding: 1rem;
+  padding-top: 1.8rem; // laisse de la place pour la checkbox
+  border-radius: 0.5rem;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  transition: background-color 0.3s ease;
+
+  h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: bold;
+  }
+
+  p {
+    margin: 0.5rem 0;
+    color: #444;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .task-actions {
+    display: flex;
+    gap: 0.5rem;
+
+    button {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+  }
+
+  // Checkbox bien placée en haut à droite
+  .task-checkbox-icon {
+    position: absolute;
+    top: 0.6rem;
+    right: -6rem;
+    transform: scale(1.2);
+    cursor: pointer;
+    accent-color: #4caf50;
+    z-index: 2;
+  }
+
+  // Fond vert si completed
+  &.completed {
+    background-color: #e0ffe0;
+    border-left: 4px solid #4caf50;
+  }
+}

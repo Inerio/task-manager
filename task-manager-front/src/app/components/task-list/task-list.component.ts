@@ -1,24 +1,24 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Task } from '../../models/task.model';
-import { TaskService } from '../../services/task.service';
-import { TaskItemComponent } from '../task-item/task-item.component';
+import { CommonModule } from "@angular/common";
+import { Component, Input, OnInit } from "@angular/core";
+import { FormsModule } from "@angular/forms";
+import { Task } from "../../models/task.model";
+import { TaskService } from "../../services/task.service";
+import { TaskItemComponent } from "../task-item/task-item.component";
 
 /**
  * Composant représentant une colonne de tâches (À faire, En cours, Terminées).
  * Filtre et affiche uniquement les tâches correspondant à son `status`.
  */
 @Component({
-  selector: 'app-task-list',
+  selector: "app-task-list",
   standalone: true,
   imports: [CommonModule, FormsModule, TaskItemComponent],
-  templateUrl: './task-list.component.html',
-  styleUrls: ['./task-list.component.scss'],
+  templateUrl: "./task-list.component.html",
+  styleUrls: ["./task-list.component.scss"],
 })
 export class TaskListComponent implements OnInit {
   @Input() title!: string;
-  @Input() status!: 'todo' | 'in-progress' | 'done';
+  @Input() status!: "todo" | "in-progress" | "done";
 
   tasks: Task[] = [];
   filteredTasks: Task[] = [];
@@ -38,10 +38,12 @@ export class TaskListComponent implements OnInit {
     this.taskService.getTasks().subscribe({
       next: (data) => {
         this.tasks = data;
-        this.filteredTasks = data.filter((task) => task.status === this.status);
+        this.filteredTasks = Array.isArray(data)
+          ? data.filter((task) => task.status === this.status)
+          : [];
       },
       error: (err) => {
-        console.error('Erreur chargement des tâches :', err);
+        console.error("Erreur chargement des tâches :", err);
       },
     });
   }
@@ -70,7 +72,7 @@ export class TaskListComponent implements OnInit {
         this.resetForm();
         this.showForm = false;
       },
-      error: (err) => console.error('Erreur création tâche :', err),
+      error: (err) => console.error("Erreur création tâche :", err),
     });
   }
 
@@ -82,8 +84,8 @@ export class TaskListComponent implements OnInit {
   /** Fournit un template vide pour la création */
   private getEmptyTask(): Partial<Task> {
     return {
-      title: '',
-      description: '',
+      title: "",
+      description: "",
       completed: false,
     };
   }
@@ -103,7 +105,7 @@ export class TaskListComponent implements OnInit {
         if (index !== -1) this.filteredTasks[index] = saved;
       },
       error: (err) => {
-        console.error('Erreur mise à jour tâche :', err);
+        console.error("Erreur mise à jour tâche :", err);
       },
     });
   }

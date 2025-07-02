@@ -1,5 +1,6 @@
 package com.inerio.taskmanager.service;
 
+import com.inerio.taskmanager.exception.TaskNotFoundException;
 import com.inerio.taskmanager.model.Task;
 import com.inerio.taskmanager.repository.TaskRepository;
 import org.springframework.stereotype.Service;
@@ -8,8 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Service métier pour la gestion des tâches.
- * Contient les règles de gestion et délègue les opérations à la couche repository.
+ * Service metier pour la gestion des taches.
+ * Gere les regles metier et la delegation vers le repository.
  */
 @Service
 public class TaskService {
@@ -22,56 +23,51 @@ public class TaskService {
     }
 
     /**
-     * Récupère toutes les tâches stockées.
-     * @return liste complète des tâches
+     * Retourne toutes les taches en base.
      */
     public List<Task> getAllTasks() {
         return taskRepository.findAll();
     }
 
     /**
-     * Récupère une tâche par son identifiant.
-     * @param id identifiant de la tâche
-     * @return Optional contenant la tâche si elle existe
+     * Retourne une tache par son ID.
      */
     public Optional<Task> getTaskById(Long id) {
         return taskRepository.findById(id);
     }
 
     /**
-     * Crée une nouvelle tâche (ou met à jour si l'ID est déjà présent).
-     * @param task tâche à sauvegarder
-     * @return tâche persistée
+     * Cree une nouvelle tache ou met a jour si l'ID existe deja.
      */
     public Task createTask(Task task) {
         return taskRepository.save(task);
     }
 
     /**
-     * Supprime une tâche selon son ID.
-     * @param id identifiant de la tâche
+     * Supprime une tache par ID.
+     * @throws TaskNotFoundException si l'ID est inconnu
      */
     public void deleteTask(Long id) {
+        if (!taskRepository.existsById(id)) {
+            throw new TaskNotFoundException("Tache introuvable avec l'ID " + id);
+        }
         taskRepository.deleteById(id);
     }
 
     /**
-     * Supprime toutes les tâches de la base.
+     * Supprime toutes les taches.
      */
     public void deleteAllTasks() {
         taskRepository.deleteAll();
     }
 
     /**
-     * Met à jour une tâche existante en base.
-     * @param id identifiant de la tâche à modifier
-     * @param updatedTask données mises à jour
-     * @return tâche mise à jour
-     * @throws RuntimeException si la tâche n'existe pas
+     * Met a jour une tache par ID.
+     * @throws TaskNotFoundException si l'ID n'existe pas
      */
     public Task updateTask(Long id, Task updatedTask) {
         Task existing = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tâche introuvable avec l'ID " + id));
+                .orElseThrow(() -> new TaskNotFoundException("Tache introuvable avec l'ID " + id));
 
         existing.setTitle(updatedTask.getTitle());
         existing.setDescription(updatedTask.getDescription());

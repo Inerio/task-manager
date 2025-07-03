@@ -1,4 +1,11 @@
-<div class="task-card" [class.completed]="task().completed">
+<div
+  class="task-card"
+  [class.completed]="task().completed"
+  [class.dragging]="dragging()"
+  draggable="true"
+  (dragstart)="onDragStart($event)"
+  (dragend)="onDragEnd()"
+>
   <!-- Checkbox de statut terminé -->
   <input
     type="checkbox"

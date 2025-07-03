@@ -28,6 +28,8 @@ export class TaskListComponent {
   showForm = signal(false);
   newTask = signal<Partial<Task>>(this.getEmptyTask());
 
+  isDragOver = signal(false);
+
   /** Liste des tâches converties en signaux individuels */
   taskSignals: WritableSignal<Task>[] = [];
 
@@ -37,6 +39,31 @@ export class TaskListComponent {
       const filtered = this.taskService.getTasksByStatus(this.status)();
       this.taskSignals = filtered.map(createTaskSignal);
     });
+  }
+
+  /** Gère les drag sur cette colonne et met à jour le statut onDrop */
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver.set(true);
+  }
+
+  onDragLeave(): void {
+    this.isDragOver.set(false);
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver.set(false);
+    const taskId = event.dataTransfer?.getData('text/plain');
+    if (!taskId) return;
+
+    const id = parseInt(taskId, 10);
+    const allTasks = this.taskService.tasks(); // on utilise le signal global
+    const task = allTasks.find((t) => t.id === id);
+    if (!task || task.status === this.status) return;
+
+    const updatedTask = { ...task, status: this.status };
+    this.taskService.updateTask(updatedTask.id!, updatedTask);
   }
 
   /** Bascule le formulaire d'ajout */

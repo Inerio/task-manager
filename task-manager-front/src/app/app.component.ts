@@ -10,7 +10,9 @@ import { TaskService } from './services/task.service';
   imports: [TaskListComponent],
 })
 export class AppComponent {
-  constructor(private taskService: TaskService) {}
+  constructor(private taskService: TaskService) {
+    this.taskService.loadTasks();
+  }
 
   /** Supprime toutes les tâches après confirmation */
   deleteAllTasks(): void {

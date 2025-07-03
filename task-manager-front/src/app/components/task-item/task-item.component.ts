@@ -4,6 +4,7 @@ import {
   WritableSignal,
   effect,
   inject,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Task, createTaskSignal } from '../../models/task.model';
@@ -28,6 +29,9 @@ export class TaskItemComponent {
     status: '',
   });
 
+  // Déclaration du signal qui indique si la tâche est en cours de drag
+  dragging = signal(false);
+
   private taskService = inject(TaskService);
 
   constructor() {
@@ -38,6 +42,44 @@ export class TaskItemComponent {
         this.originalTask.set({ ...current });
       }
     });
+  }
+
+  /** Événement déclenché lors d'un drag */
+  onDragStart(event: DragEvent): void {
+    if (this.task().isEditing) {
+      event.preventDefault();
+      return;
+    }
+    this.dragging.set(true);
+    const task = this.task();
+    if (!task.id) return;
+    event.dataTransfer?.setData('text/plain', task.id.toString());
+
+    // Création d'une image drag personnalisée (clone de la tâche)
+    const dragImage = document.createElement('div');
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px'; // hors écran pour ne pas perturber la page
+    dragImage.style.padding = '0.5rem 1rem';
+    dragImage.style.background = 'white';
+    dragImage.style.border = '1px solid #ccc';
+    dragImage.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
+    dragImage.style.borderRadius = '4px';
+    dragImage.style.fontWeight = 'bold';
+    dragImage.style.fontSize = '1rem';
+    dragImage.innerText = task.title;
+
+    document.body.appendChild(dragImage);
+
+    event.dataTransfer?.setDragImage(dragImage, 10, 10);
+
+    // Nettoyage de l'élément après le démarrage du drag
+    setTimeout(() => {
+      document.body.removeChild(dragImage);
+    }, 0);
+  }
+
+  onDragEnd(): void {
+    this.dragging.set(false);
   }
 
   /** Bascule le statut terminé / non terminé et envoie la mise à jour */

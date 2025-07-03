@@ -81,3 +81,20 @@
     }
   }
 }
+
+.task-dropzone {
+  transition: min-height 0.3s ease, padding-bottom 0.3s ease;
+  /*min-height: 150px;
+  padding-bottom: 10px;*/
+  border: 2px dashed transparent;
+  border-radius: 8px;
+}
+
+.task-dropzone.drag-over {
+  min-height: 150px;
+  padding-bottom: 150px; /* plus grand padding bas pour étendre */
+  border-color: #0d6efd;
+  background-color: rgba(13, 110, 253, 0.1);
+  box-shadow: 0 0 15px rgba(13, 110, 253, 0.4);
+  transition: padding-bottom 0.3s ease;
+}

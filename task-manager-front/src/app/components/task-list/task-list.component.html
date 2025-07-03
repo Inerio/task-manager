@@ -1,37 +1,46 @@
 <div class="task-list">
   <h2>{{ title }}</h2>
 
-  <!-- Liste des tâches -->
-  @for (taskSignal of taskSignals; track trackById($index, taskSignal)) {
-  <app-task-item [task]="taskSignal"></app-task-item>
-  }
+  <!-- Zone drop pour les tâches -->
+  <div
+    class="task-dropzone"
+    [class.drag-over]="isDragOver()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave()"
+    (drop)="onDrop($event)"
+  >
+    <!-- Liste des tâches -->
+    @for (taskSignal of taskSignals; track trackById($index, taskSignal)) {
+    <app-task-item [task]="taskSignal"></app-task-item>
+    }
 
-  <!-- Bouton d'ajout -->
-  <button (click)="toggleForm()" class="add-btn">+ Ajouter tâche</button>
+    <!-- Bouton d'ajout -->
+    <button (click)="toggleForm()" class="add-btn">+ Ajouter tâche</button>
 
-  <!-- Formulaire -->
-  @if (showForm()) {
-  <div class="add-task-form">
-    <input
-      type="text"
-      [value]="newTask().title"
-      (input)="updateNewTaskTitle($event)"
-      placeholder="Titre de la tâche"
-      required
-      autocomplete="off"
-    />
-    <input
-      type="text"
-      [value]="newTask().description"
-      (input)="updateNewTaskDescription($event)"
-      placeholder="Description"
-      required
-      autocomplete="off"
-    />
-    <div class="btn-group">
-      <button (click)="addTask()">Valider</button>
-      <button (click)="toggleForm()">Annuler</button>
+    <!-- Formulaire -->
+    @if (showForm()) {
+    <div class="add-task-form">
+      <input
+        type="text"
+        [value]="newTask().title"
+        (input)="updateNewTaskTitle($event)"
+        placeholder="Titre de la tâche"
+        required
+        autocomplete="off"
+      />
+      <input
+        type="text"
+        [value]="newTask().description"
+        (input)="updateNewTaskDescription($event)"
+        placeholder="Description"
+        required
+        autocomplete="off"
+      />
+      <div class="btn-group">
+        <button (click)="addTask()">Valider</button>
+        <button (click)="toggleForm()">Annuler</button>
+      </div>
     </div>
+    }
   </div>
-  }
 </div>

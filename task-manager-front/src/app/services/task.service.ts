@@ -1,56 +1,93 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import {
+  computed,
+  inject,
+  Injectable,
+  signal,
+  Signal,
+  WritableSignal,
+} from '@angular/core';
+import { catchError, Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment.local';
 import { Task } from '../models/task.model';
 
-/**
- * Service Angular pour interagir avec l'API de gestion des tâches.
- * Fournit les opérations CRUD principales.
- */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class TaskService {
-  /** URL de base de l'API REST côté Spring */
+  private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  /** Signal global contenant la liste des tâches */
+  private tasksSignal: WritableSignal<Task[]> = signal([]);
 
-  /** Récupère toutes les tâches */
-  getTasks(): Observable<Task[]> {
-    return this.http.get<Task[]>(this.apiUrl);
+  /** Accès en lecture seule au signal */
+  readonly tasks: Signal<Task[]> = computed(() => this.tasksSignal());
+
+  // ----------------------------
+  // Lecture / récupération
+  // ----------------------------
+
+  /** Charge toutes les tâches depuis l'API */
+  loadTasks(): void {
+    this.http.get<Task[]>(this.apiUrl).subscribe({
+      next: (data) => this.tasksSignal.set(data ?? []),
+      error: (err) => console.error('Erreur chargement des tâches', err),
+    });
   }
 
-  /**
-   * Crée une nouvelle tâche
-   * @param task L'objet tâche à envoyer
-   */
-  createTask(task: Task): Observable<Task> {
-    return this.http.post<Task>(this.apiUrl, task);
+  /** Retourne une liste réactive des tâches filtrées par statut */
+  getTasksByStatus(status: string): Signal<Task[]> {
+    return computed(() =>
+      this.tasksSignal().filter((task) => task.status === status),
+    );
   }
 
-  /**
-   * Met à jour une tâche existante
-   * @param id ID de la tâche à modifier
-   * @param task Données mises à jour
-   */
-  updateTask(id: number, task: Task): Observable<Task> {
-    return this.http.put<Task>(`${this.apiUrl}/${id}`, task);
+  // ----------------------------
+  // Création / mise à jour
+  // ----------------------------
+
+  /** Crée une nouvelle tâche */
+  createTask(task: Task): void {
+    this.http.post<Task>(this.apiUrl, task).subscribe({
+      next: (newTask) => this.tasksSignal.set([...this.tasksSignal(), newTask]),
+      error: (err) => console.error('Erreur création tâche', err),
+    });
   }
 
-  /**
-   * Supprime une tâche par son ID
-   * @param id ID de la tâche à supprimer
-   */
-  deleteTask(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  /** Met à jour une tâche existante */
+  updateTask(id: number, updatedTask: Task): void {
+    this.http.put<Task>(`${this.apiUrl}/${id}`, updatedTask).subscribe({
+      next: (updated) => {
+        const tasks = this.tasksSignal().map((t) =>
+          t.id === id ? updated : t,
+        );
+        this.tasksSignal.set(tasks);
+      },
+      error: (err) => console.error('Erreur mise à jour tâche', err),
+    });
   }
 
-  /**
-   * Supprime toutes les tâches
-   */
+  // ----------------------------
+  // Suppression
+  // ----------------------------
+
+  /** Supprime une tâche par ID */
+  deleteTask(id: number): void {
+    this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
+      next: () => {
+        this.tasksSignal.set(this.tasksSignal().filter((t) => t.id !== id));
+      },
+      error: (err) => console.error('Erreur suppression tâche', err),
+    });
+  }
+
+  /** Supprime toutes les tâches et retourne un Observable */
   deleteAllTasks(): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/all`);
+    return this.http.delete<void>(`${this.apiUrl}/all`).pipe(
+      tap(() => this.tasksSignal.set([])),
+      catchError((err) => {
+        console.error('Erreur suppression complète', err);
+        throw err;
+      }),
+    );
   }
 }

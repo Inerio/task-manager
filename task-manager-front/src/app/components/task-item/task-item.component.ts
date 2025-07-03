@@ -1,13 +1,14 @@
-
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  Component,
+  Input,
+  WritableSignal,
+  effect,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Task } from '../../models/task.model';
+import { Task, createTaskSignal } from '../../models/task.model';
 import { TaskService } from '../../services/task.service';
 
-/**
- * Composant représentant une tâche unique.
- * Permet l'affichage, l'édition, la suppression, et la complétion.
- */
 @Component({
   selector: 'app-task-item',
   standalone: true,
@@ -16,69 +17,71 @@ import { TaskService } from '../../services/task.service';
   styleUrls: ['./task-item.component.scss'],
 })
 export class TaskItemComponent {
-  /** Tâche à afficher */
-  @Input() task!: Task;
+  /** Signal représentant la tâche affichée */
+  @Input({ required: true }) task!: WritableSignal<Task>;
 
-  /** Émet lorsqu'une tâche a été supprimée */
-  @Output() taskDeleted = new EventEmitter<number>();
+  /** Signal local servant à stocker une copie de la tâche pour annuler l'édition */
+  private originalTask = createTaskSignal({
+    title: '',
+    description: '',
+    completed: false,
+    status: '',
+  });
 
-  /** Émet lorsqu'une tâche a été modifiée */
-  @Output() taskUpdated = new EventEmitter<Task>();
+  private taskService = inject(TaskService);
 
-  /** Copie de la tâche pour annulation d'édition */
-  originalTask: Task = { ...this.task };
-
-  constructor(private taskService: TaskService) {}
-
-  /** Active le mode édition */
-  startEdit(): void {
-    this.task.isEditing = true;
-    this.originalTask = { ...this.task };
-  }
-
-  /** Sauvegarde les modifications */
-  saveEdit(): void {
-    if (!this.task.title.trim()) return;
-    this.task.isEditing = false;
-    this.taskUpdated.emit(this.task); // informer le parent de l’update
-  }
-
-  /** Annule les modifications */
-  cancelEdit(): void {
-    this.task.title = this.originalTask.title;
-    if ('description' in this.task) {
-      this.task.description = this.originalTask.description;
-    }
-    this.task.isEditing = false;
-  }
-
-  /** Supprime la tâche via le service */
-  deleteTask(): void {
-    if (!this.task.id) {
-      console.error('Impossible de supprimer : tâche sans ID.');
-      return;
-    }
-
-    this.taskService.deleteTask(this.task.id).subscribe({
-      next: () => {
-        console.log('Tâche supprimée');
-        this.taskDeleted.emit(this.task.id);
-      },
-      error: (err) => {
-        console.error('Erreur lors de la suppression :', err);
-      },
+  constructor() {
+    // Réagit aux changements de `task` et synchronise `originalTask` si besoin
+    effect(() => {
+      const current = this.task();
+      if (current?.title) {
+        this.originalTask.set({ ...current });
+      }
     });
   }
 
-  /** Bascule l'état terminé / non terminé */
+  /** Bascule le statut terminé / non terminé et envoie la mise à jour */
   toggleCompleted(): void {
-    const updatedTask = { ...this.task, completed: !this.task.completed };
-    this.taskService.updateTask(updatedTask.id!, updatedTask).subscribe({
-      next: (task) => {
-        this.task = task;
-        this.taskUpdated.emit(task);
-      },
-      error: (err) => console.error('Erreur lors du toggle :', err),
-    });
+    const updated = { ...this.task(), completed: !this.task().completed };
+    this.task.set(updated);
+    this.taskService.updateTask(updated.id!, updated);
+  }
+
+  /** Active le mode édition et sauvegarde l'état actuel */
+  startEdit(): void {
+    const current = this.task();
+    this.task.set({ ...current, isEditing: true });
+    this.originalTask.set({ ...current });
+  }
+
+  /** Sauvegarde les modifications et désactive le mode édition */
+  saveEdit(): void {
+    const current = this.task();
+    if (!current.title.trim()) return;
+    this.task.set({ ...current, isEditing: false });
+    this.taskService.updateTask(current.id!, this.task());
+  }
+
+  /** Annule les modifications en restaurant `originalTask` */
+  cancelEdit(): void {
+    this.task.set({ ...this.originalTask(), isEditing: false });
+  }
+
+  /** Supprime la tâche via le service backend */
+  deleteTask(): void {
+    const current = this.task();
+    if (current.id) this.taskService.deleteTask(current.id);
+  }
+
+  /** Met à jour dynamiquement le titre depuis l'input texte */
+  updateTitleFromEvent(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.task.set({ ...this.task(), title: value });
+  }
+
+  /** Met à jour dynamiquement la description depuis le textarea */
+  updateDescriptionFromEvent(event: Event): void {
+    const value = (event.target as HTMLTextAreaElement).value;
+    this.task.set({ ...this.task(), description: value });
   }
 }

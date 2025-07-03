@@ -12,7 +12,7 @@ import { TaskService } from './services/task.service';
 export class AppComponent {
   constructor(private taskService: TaskService) {}
 
-  /** Supprime toutes les tâches après confirmation de l'utilisateur */
+  /** Supprime toutes les tâches après confirmation */
   deleteAllTasks(): void {
     const confirmed = confirm(
       'Confirmer la suppression de toutes les tâches ?',
@@ -20,7 +20,7 @@ export class AppComponent {
     if (!confirmed) return;
 
     this.taskService.deleteAllTasks().subscribe({
-      next: () => window.location.reload(),
+      next: () => this.taskService.loadTasks(),
       error: (err) => console.error('Erreur suppression :', err),
     });
   }

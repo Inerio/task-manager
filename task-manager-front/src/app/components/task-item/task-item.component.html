@@ -1,31 +1,41 @@
-<div class="task-card" [class.completed]="task.completed">
-  <!-- Checkbox flottante -->
+<div class="task-card" [class.completed]="task().completed">
+  <!-- Checkbox de statut terminé -->
   <input
     type="checkbox"
     class="task-checkbox-icon"
-    [checked]="task.completed"
+    [checked]="task().completed"
     (change)="toggleCompleted()"
-    />
+  />
 
-    <!-- Affichage normal -->
-    @if (!task.isEditing) {
-      <h4>{{ task.title }}</h4>
-      <p>{{ task.description }}</p>
-      <div class="task-actions">
-        <button (click)="startEdit()" title="Modifier">✏️</button>
-        <button (click)="deleteTask()" title="Supprimer">❌</button>
-      </div>
-    } @else {
-      <input type="text" [(ngModel)]="task.title" placeholder="Titre" />
-      <textarea
-        [(ngModel)]="task.description"
-        placeholder="Description"
-      ></textarea>
-      <div class="task-actions">
-        <button (click)="saveEdit()" title="Valider">✅</button>
-        <button (click)="cancelEdit()" title="Annuler">❌</button>
-      </div>
-    }
+  <!-- Affichage lecture seule -->
+  @if (!task().isEditing) {
+  <h4>{{ task().title }}</h4>
+  <p>{{ task().description }}</p>
 
-    <!-- Mode édition -->
+  <div class="task-actions">
+    <button (click)="startEdit()" title="Modifier">✏️</button>
+    <button (click)="deleteTask()" title="Supprimer">❌</button>
   </div>
+  }
+
+  <!-- Édition de la tâche -->
+  @else {
+  <input
+    type="text"
+    [value]="task().title"
+    (input)="updateTitleFromEvent($event)"
+    placeholder="Titre"
+  />
+
+  <textarea
+    [value]="task().description"
+    (input)="updateDescriptionFromEvent($event)"
+    placeholder="Description"
+  ></textarea>
+
+  <div class="task-actions">
+    <button (click)="saveEdit()" title="Valider">✅</button>
+    <button (click)="cancelEdit()" title="Annuler">❌</button>
+  </div>
+  }
+</div>

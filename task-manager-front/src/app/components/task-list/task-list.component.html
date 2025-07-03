@@ -2,31 +2,28 @@
   <h2>{{ title }}</h2>
 
   <!-- Liste des tâches -->
-  @for (task of filteredTasks; track trackById($index, task)) {
-  <app-task-item
-    [task]="task"
-    (taskDeleted)="handleTaskDeleted($event)"
-    (taskUpdated)="handleTaskUpdated($event)"
-  >
-  </app-task-item>
+  @for (taskSignal of taskSignals; track trackById($index, taskSignal)) {
+  <app-task-item [task]="taskSignal"></app-task-item>
   }
 
-  <!-- Bouton pour afficher/masquer le formulaire -->
+  <!-- Bouton d'ajout -->
   <button (click)="toggleForm()" class="add-btn">+ Ajouter tâche</button>
 
-  <!-- Formulaire d'ajout -->
-  @if (showForm) {
+  <!-- Formulaire -->
+  @if (showForm()) {
   <div class="add-task-form">
     <input
       type="text"
-      [(ngModel)]="newTask.title"
+      [value]="newTask().title"
+      (input)="updateNewTaskTitle($event)"
       placeholder="Titre de la tâche"
       required
       autocomplete="off"
     />
     <input
       type="text"
-      [(ngModel)]="newTask.description"
+      [value]="newTask().description"
+      (input)="updateNewTaskDescription($event)"
       placeholder="Description"
       required
       autocomplete="off"

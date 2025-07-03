@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Task } from '../../models/task.model';
@@ -11,7 +11,7 @@ import { TaskService } from '../../services/task.service';
 @Component({
   selector: 'app-task-item',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './task-item.component.html',
   styleUrls: ['./task-item.component.scss'],
 })

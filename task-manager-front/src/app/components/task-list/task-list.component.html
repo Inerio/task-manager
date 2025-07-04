@@ -1,7 +1,5 @@
 <div class="task-list">
   <h2>{{ title }}</h2>
-
-  <!-- Zone drop pour les tâches -->
   <div
     class="task-dropzone"
     [class.drag-over]="isDragOver()"
@@ -9,9 +7,9 @@
     (dragleave)="onDragLeave()"
     (drop)="onDrop($event)"
   >
-    <!-- Liste des tâches -->
-    @for (taskSignal of taskSignals; track trackById($index, taskSignal)) {
-    <app-task-item [task]="taskSignal"></app-task-item>
+    <!-- Utilisation directe du signal -->
+    @for (task of filteredTasks(); track trackById($index, task)) {
+    <app-task-item [task]="task"></app-task-item>
     }
 
     <!-- Bouton d'ajout -->

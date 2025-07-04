@@ -1,6 +1,6 @@
 <div
   class="task-card"
-  [class.completed]="task().completed"
+  [class.completed]="localTask().completed"
   [class.dragging]="dragging()"
   draggable="true"
   (dragstart)="onDragStart($event)"
@@ -8,7 +8,7 @@
 >
   <!-- Badge d'échéance -->
   @if (dueBadge()) {
-  <span class="due-badge" [class.late]="dueBadge() === 'En retard !'">
+  <span class="due-badge" [class.late]="dueBadge() === 'En retard !'">
     {{ dueBadge() }}
   </span>
   }
@@ -17,15 +17,14 @@
   <input
     type="checkbox"
     class="task-checkbox-icon"
-    [checked]="task().completed"
+    [checked]="localTask().completed"
     (change)="toggleCompleted()"
   />
 
   <!-- Affichage lecture seule -->
-  @if (!task().isEditing) {
-  <h4>{{ task().title }}</h4>
-  <p>{{ task().description }}</p>
-
+  @if (!localTask().isEditing) {
+  <h4>{{ localTask().title }}</h4>
+  <p>{{ localTask().description }}</p>
   <div class="task-actions">
     <button (click)="startEdit()" title="Modifier">✏️</button>
     <button (click)="deleteTask()" title="Supprimer">❌</button>
@@ -36,25 +35,22 @@
   @else {
   <input
     type="text"
-    [value]="task().title"
+    [value]="localTask().title"
     (input)="updateTitleFromEvent($event)"
     placeholder="Titre"
   />
-
   <textarea
-    [value]="task().description"
+    [value]="localTask().description"
     (input)="updateDescriptionFromEvent($event)"
     placeholder="Description"
   ></textarea>
-
   <input
     type="date"
-    [value]="task().dueDate ?? ''"
+    [value]="localTask().dueDate ?? ''"
     (input)="updateDueDateFromEvent($event)"
     placeholder="Échéance (optionnelle)"
     autocomplete="off"
   />
-
   <div class="task-actions">
     <button (click)="saveEdit()" title="Valider">✅</button>
     <button (click)="cancelEdit()" title="Annuler">❌</button>

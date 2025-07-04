@@ -1,14 +1,14 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
-  Input,
-  WritableSignal,
-  effect,
+  computed,
   inject,
+  Input,
   signal,
+  Signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Task, createTaskSignal } from '../../models/task.model';
+import { Task } from '../../models/task.model';
 import { TaskService } from '../../services/task.service';
 import { TaskItemComponent } from '../task-item/task-item.component';
 
@@ -30,41 +30,10 @@ export class TaskListComponent {
 
   isDragOver = signal(false);
 
-  /** Liste des tâches converties en signaux individuels */
-  taskSignals: WritableSignal<Task>[] = [];
-
-  constructor() {
-    // Charge les tâches du statut courant et les transforme en signaux
-    effect(() => {
-      const filtered = this.taskService.getTasksByStatus(this.status)();
-      this.taskSignals = filtered.map(createTaskSignal);
-    });
-  }
-
-  /** Gère les drag sur cette colonne et met à jour le statut onDrop */
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOver.set(true);
-  }
-
-  onDragLeave(): void {
-    this.isDragOver.set(false);
-  }
-
-  onDrop(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOver.set(false);
-    const taskId = event.dataTransfer?.getData('text/plain');
-    if (!taskId) return;
-
-    const id = parseInt(taskId, 10);
-    const allTasks = this.taskService.tasks(); // on utilise le signal global
-    const task = allTasks.find((t) => t.id === id);
-    if (!task || task.status === this.status) return;
-
-    const updatedTask = { ...task, status: this.status };
-    this.taskService.updateTask(updatedTask.id!, updatedTask);
-  }
+  /** Signal des tâches filtrées, à utiliser directement dans le HTML */
+  readonly filteredTasks: Signal<Task[]> = computed(() =>
+    this.taskService.getTasksByStatus(this.status)(),
+  );
 
   /** Bascule le formulaire d'ajout */
   toggleForm(): void {
@@ -102,29 +71,44 @@ export class TaskListComponent {
     };
   }
 
-  /** Liaison de champ : titre */
   updateNewTaskTitle(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.newTask.set({ ...this.newTask(), title: target.value });
   }
 
-  /** Liaison de champ : description */
   updateNewTaskDescription(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.newTask.set({ ...this.newTask(), description: target.value });
   }
 
-  /** Liaison de champ : date d'échéance */
   updateNewTaskDueDate(event: Event): void {
     const value = (event.target as HTMLInputElement).value || null;
     this.newTask.set({ ...this.newTask(), dueDate: value });
   }
 
-  /** TrackBy pour éviter les re-render */
-  trackById(
-    index: number,
-    taskSignal: WritableSignal<Task>,
-  ): number | undefined {
-    return taskSignal().id;
+  // Drag & Drop
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver.set(true);
+  }
+  onDragLeave(): void {
+    this.isDragOver.set(false);
+  }
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver.set(false);
+    const taskId = event.dataTransfer?.getData('text/plain');
+    if (!taskId) return;
+    const id = parseInt(taskId, 10);
+    const allTasks = this.taskService.tasks(); // global
+    const task = allTasks.find((t) => t.id === id);
+    if (!task || task.status === this.status) return;
+    const updatedTask = { ...task, status: this.status };
+    this.taskService.updateTask(updatedTask.id!, updatedTask);
+  }
+
+  /** TrackBy pour @for */
+  trackById(index: number, task: Task): number | undefined {
+    return task.id;
   }
 }

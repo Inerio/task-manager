@@ -73,6 +73,7 @@ public class TaskService {
         existing.setDescription(updatedTask.getDescription());
         existing.setCompleted(updatedTask.isCompleted());
         existing.setStatus(updatedTask.getStatus());
+        existing.setDueDate(updatedTask.getDueDate());
 
         return taskRepository.save(existing);
     }

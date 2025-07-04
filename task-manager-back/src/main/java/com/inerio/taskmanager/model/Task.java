@@ -1,5 +1,8 @@
 package com.inerio.taskmanager.model;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -21,6 +24,12 @@ public class Task {
     @Column(nullable = false)
     private String status; // à remplacer par TaskStatus enum
 
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime creationDate;
+
+    @Column(nullable = true)
+    private LocalDate dueDate;
+    
     // Constructeurs
     public Task() {}
 
@@ -45,4 +54,14 @@ public class Task {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    
+    public LocalDateTime getCreationDate() { return creationDate; }
+    
+    public LocalDate getDueDate() { return dueDate; }
+    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    
+    @PrePersist
+    protected void onCreate() {
+        this.creationDate = LocalDateTime.now();
+    }
 }

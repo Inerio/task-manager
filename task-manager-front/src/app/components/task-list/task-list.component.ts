@@ -74,7 +74,7 @@ export class TaskListComponent {
 
   /** Crée une nouvelle tâche dans la bonne colonne */
   addTask(): void {
-    const { title, description } = this.newTask();
+    const { title, description, dueDate } = this.newTask();
     if (!title || !description) return;
 
     const taskToCreate: Task = {
@@ -82,6 +82,7 @@ export class TaskListComponent {
       description,
       completed: false,
       status: this.status,
+      dueDate: dueDate || null,
     };
 
     this.taskService.createTask(taskToCreate);
@@ -111,6 +112,12 @@ export class TaskListComponent {
   updateNewTaskDescription(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.newTask.set({ ...this.newTask(), description: target.value });
+  }
+
+  /** Liaison de champ : date d'échéance */
+  updateNewTaskDueDate(event: Event): void {
+    const value = (event.target as HTMLInputElement).value || null;
+    this.newTask.set({ ...this.newTask(), dueDate: value });
   }
 
   /** TrackBy pour éviter les re-render */

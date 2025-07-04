@@ -2,6 +2,7 @@ import {
   Component,
   Input,
   WritableSignal,
+  computed,
   effect,
   inject,
   signal,
@@ -43,6 +44,24 @@ export class TaskItemComponent {
       }
     });
   }
+
+  /** Signal dérivé pour l'affichage du badge d'échéance */
+  dueBadge = computed(() => {
+    const due = this.task().dueDate;
+    if (!due) return null;
+    const dueDate = new Date(due);
+    const now = new Date();
+    // Normalise l’heure pour comparer uniquement les jours
+    dueDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+
+    const diffMs = dueDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 'En retard !';
+    if (diffDays === 0) return 'Dernier jour !';
+    if (diffDays === 1) return '1 jour restant';
+    return `${diffDays} jours restants`;
+  });
 
   /** Événement déclenché lors d'un drag */
   onDragStart(event: DragEvent): void {
@@ -125,5 +144,11 @@ export class TaskItemComponent {
   updateDescriptionFromEvent(event: Event): void {
     const value = (event.target as HTMLTextAreaElement).value;
     this.task.set({ ...this.task(), description: value });
+  }
+
+  /** Met à jour dynamiquement la date d'échéance depuis l'input texte */
+  updateDueDateFromEvent(event: Event): void {
+    const value = (event.target as HTMLInputElement).value || null;
+    this.task.set({ ...this.task(), dueDate: value });
   }
 }

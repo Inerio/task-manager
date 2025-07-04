@@ -9,6 +9,7 @@ export interface Task {
   description: string;
   completed: boolean;
   status: string; // 'todo' | 'in-progress' | 'done'
+  dueDate?: string | null;
   isEditing?: boolean; // État d'édition (UI uniquement)
 }
 

@@ -68,3 +68,25 @@
 .task-actions button {
   user-select: none;
 }
+
+.due-badge {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.8rem;
+  background: #f0f0f0;
+  color: #444;
+  font-size: 0.83rem;
+  font-weight: 500;
+  padding: 0.12em 0.8em;
+  border-radius: 16px;
+  box-shadow: 0 0 2px #bbb;
+  z-index: 10;
+  pointer-events: none;
+
+  &.late {
+    background: #ffeaea;
+    color: #d32f2f;
+    font-weight: bold;
+    border: 1px solid #d32f2f;
+  }
+}

@@ -6,6 +6,13 @@
   (dragstart)="onDragStart($event)"
   (dragend)="onDragEnd()"
 >
+  <!-- Badge d'échéance -->
+  @if (dueBadge()) {
+  <span class="due-badge" [class.late]="dueBadge() === 'En retard !'">
+    {{ dueBadge() }}
+  </span>
+  }
+
   <!-- Checkbox de statut terminé -->
   <input
     type="checkbox"
@@ -39,6 +46,14 @@
     (input)="updateDescriptionFromEvent($event)"
     placeholder="Description"
   ></textarea>
+
+  <input
+    type="date"
+    [value]="task().dueDate ?? ''"
+    (input)="updateDueDateFromEvent($event)"
+    placeholder="Échéance (optionnelle)"
+    autocomplete="off"
+  />
 
   <div class="task-actions">
     <button (click)="saveEdit()" title="Valider">✅</button>

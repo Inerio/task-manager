@@ -36,6 +36,13 @@
         required
         autocomplete="off"
       />
+      <input
+        type="date"
+        [value]="newTask().dueDate ?? ''"
+        (input)="updateNewTaskDueDate($event)"
+        placeholder="Échéance (optionnelle)"
+        autocomplete="off"
+      />
       <div class="btn-group">
         <button (click)="addTask()">Valider</button>
         <button (click)="toggleForm()">Annuler</button>

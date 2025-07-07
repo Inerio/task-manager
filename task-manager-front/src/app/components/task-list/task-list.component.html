@@ -19,6 +19,7 @@
     @if (showForm()) {
     <div class="add-task-form">
       <input
+        class="form-control"
         type="text"
         [value]="newTask().title"
         (input)="updateNewTaskTitle($event)"
@@ -26,15 +27,16 @@
         required
         autocomplete="off"
       />
-      <input
-        type="text"
+      <textarea
+        class="form-control textarea"
         [value]="newTask().description"
         (input)="updateNewTaskDescription($event)"
         placeholder="Description"
         required
-        autocomplete="off"
-      />
+        rows="4"
+      ></textarea>
       <input
+        class="form-control"
         type="date"
         [value]="newTask().dueDate ?? ''"
         (input)="updateNewTaskDueDate($event)"
@@ -42,8 +44,10 @@
         autocomplete="off"
       />
       <div class="btn-group">
-        <button (click)="addTask()">Valider</button>
-        <button (click)="toggleForm()">Annuler</button>
+        <button class="btn btn-success" (click)="addTask()">Valider</button>
+        <button class="btn btn-secondary" (click)="toggleForm()">
+          Annuler
+        </button>
       </div>
     </div>
     }

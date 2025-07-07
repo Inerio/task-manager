@@ -1,3 +1,5 @@
+@import "./app/shared/styles/shared";
+
 * {
   box-sizing: border-box;
 }
@@ -9,5 +11,11 @@ body {
   color: #1e1e1e;
 }
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}

@@ -1,61 +1,60 @@
 .task-card {
-  /*touch-action: none;*/
   position: relative;
   background: white;
   padding: 1rem;
-  padding-top: 1.8rem; // laisse de la place pour la checkbox
+  padding-top: 2.4rem;
   border-radius: 0.5rem;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 1rem;
   transition: background-color 0.3s ease;
 
-  h4 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: bold;
+  // Harmonisation du texte
+  h4,
+  p {
+    padding: 0.4rem 0.6rem;
+    background: #f9f9f9;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
   }
 
+  h4 {
+    font-weight: bold;
+    margin-top: 0.3rem;
+    margin-bottom: 0.4rem;
+  }
   p {
-    margin: 0.5rem 0;
     color: #444;
   }
 
-  input,
-  textarea {
-    width: 100%;
-    margin-bottom: 0.5rem;
-  }
-
-  .task-actions {
-    display: flex;
-    gap: 0.5rem;
-
-    button {
-      background: none;
-      border: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-    }
-  }
-
-  // Checkbox bien placée en haut à droite
+  // Checkbox placée en haut à droite
   .task-checkbox-icon {
     position: absolute;
-    top: 0.6rem;
-    right: -6rem;
-    transform: scale(1.2);
+    top: 0.8rem;
+    right: 1rem;
+    transform: scale(1.25);
     cursor: pointer;
     accent-color: #4caf50;
     z-index: 2;
+    background: white;
+    box-shadow: 0 0 2px #ccc;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    padding: 2px;
   }
 
-  // Fond vert si completed
+  // Fond vert si complété
   &.completed {
     background-color: #e0ffe0;
     border-left: 4px solid #4caf50;
   }
 }
 
+// Drag & drop : effet visuel
 .task-card.dragging {
   opacity: 0.7;
   box-shadow: 0 0 15px 3px rgba(0, 123, 255, 0.7);
@@ -63,15 +62,11 @@
   transition: transform 0.2s ease;
   cursor: grabbing;
 }
-.task-card h4,
-.task-card p,
-.task-actions button {
-  user-select: none;
-}
 
+// Badge d’échéance
 .due-badge {
   position: absolute;
-  top: 0.2rem;
+  top: 0.8rem;
   left: 0.8rem;
   background: #f0f0f0;
   color: #444;
@@ -89,4 +84,11 @@
     font-weight: bold;
     border: 1px solid #d32f2f;
   }
+}
+
+// Liens dans la description
+.task-card a {
+  color: #42a5f5;
+  text-decoration: underline;
+  word-break: break-all; // Pour les longs liens
 }

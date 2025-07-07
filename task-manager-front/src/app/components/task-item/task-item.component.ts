@@ -8,17 +8,18 @@ import {
   effect,
   inject,
   signal,
-} from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Task } from '../../models/task.model';
-import { TaskService } from '../../services/task.service';
+} from "@angular/core";
+import { FormsModule } from "@angular/forms";
+import { Task } from "../../models/task.model";
+import { TaskService } from "../../services/task.service";
+import { LinkifyPipe } from "../../pipes/linkify.pipe";
 
 @Component({
-  selector: 'app-task-item',
+  selector: "app-task-item",
   standalone: true,
-  imports: [FormsModule],
-  templateUrl: './task-item.component.html',
-  styleUrls: ['./task-item.component.scss'],
+  imports: [FormsModule, LinkifyPipe],
+  templateUrl: "./task-item.component.html",
+  styleUrls: ["./task-item.component.scss"],
 })
 export class TaskItemComponent implements OnChanges {
   /** On reçoit un objet Task (pas un signal !) */
@@ -49,15 +50,15 @@ export class TaskItemComponent implements OnChanges {
     now.setHours(0, 0, 0, 0);
     const diffMs = dueDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return 'En retard !';
-    if (diffDays === 0) return 'Dernier jour !';
-    if (diffDays === 1) return '1 jour restant';
+    if (diffDays < 0) return "En retard !";
+    if (diffDays === 0) return "Dernier jour !";
+    if (diffDays === 1) return "1 jour restant";
     return `${diffDays} jours restants`;
   });
 
   ngOnChanges(changes: SimpleChanges): void {
     // Reconstruit le signal local à chaque changement du @Input
-    if (changes['task'] && this.task) {
+    if (changes["task"] && this.task) {
       this.localTask.set({ ...this.task });
     }
   }
@@ -70,19 +71,19 @@ export class TaskItemComponent implements OnChanges {
     this.dragging.set(true);
     const task = this.localTask();
     if (!task.id) return;
-    event.dataTransfer?.setData('text/plain', task.id.toString());
+    event.dataTransfer?.setData("text/plain", task.id.toString());
 
     // Drag image visuel
-    const dragImage = document.createElement('div');
-    dragImage.style.position = 'absolute';
-    dragImage.style.top = '-1000px';
-    dragImage.style.padding = '0.5rem 1rem';
-    dragImage.style.background = 'white';
-    dragImage.style.border = '1px solid #ccc';
-    dragImage.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
-    dragImage.style.borderRadius = '4px';
-    dragImage.style.fontWeight = 'bold';
-    dragImage.style.fontSize = '1rem';
+    const dragImage = document.createElement("div");
+    dragImage.style.position = "absolute";
+    dragImage.style.top = "-1000px";
+    dragImage.style.padding = "0.5rem 1rem";
+    dragImage.style.background = "white";
+    dragImage.style.border = "1px solid #ccc";
+    dragImage.style.boxShadow = "0 0 5px rgba(0,0,0,0.3)";
+    dragImage.style.borderRadius = "4px";
+    dragImage.style.fontWeight = "bold";
+    dragImage.style.fontSize = "1rem";
     dragImage.innerText = task.title;
     document.body.appendChild(dragImage);
     event.dataTransfer?.setDragImage(dragImage, 10, 10);

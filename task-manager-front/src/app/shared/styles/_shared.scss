@@ -1,0 +1,49 @@
+// Boutons génériques et groupe de boutons
+.btn-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+
+  .btn {
+    flex: 1;
+    padding: 0.4rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .btn-success {
+    background: #4caf50;
+    color: white;
+    &:hover {
+      background: #45a049;
+    }
+  }
+  .btn-secondary {
+    background: #ccc;
+    color: #222;
+    &:hover {
+      background: #bbb;
+    }
+  }
+}
+
+// Champs de formulaire (input, textarea…)
+.form-control {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  background: #f9f9f9;
+  box-sizing: border-box;
+  transition: border 0.2s;
+}
+
+.textarea {
+  min-height: 60px;
+  max-height: 200px;
+  resize: vertical;
+}

@@ -23,37 +23,58 @@
 
   <!-- Affichage lecture seule -->
   @if (!localTask().isEditing) {
-  <h4>{{ localTask().title }}</h4>
-  <p>{{ localTask().description }}</p>
-  <div class="task-actions">
-    <button (click)="startEdit()" title="Modifier">✏️</button>
-    <button (click)="deleteTask()" title="Supprimer">❌</button>
+  <div class="task-content-readonly">
+    <h4 [innerHTML]="localTask().title | linkify"></h4>
+    <p [innerHTML]="localTask().description | linkify"></p>
+    <div class="btn-group">
+      <button class="btn btn-success" (click)="startEdit()" title="Modifier">
+        Éditer
+      </button>
+      <button
+        class="btn btn-secondary"
+        (click)="deleteTask()"
+        title="Supprimer"
+      >
+        Supprimer
+      </button>
+    </div>
   </div>
   }
 
   <!-- Édition de la tâche -->
   @else {
   <input
+    class="form-control"
     type="text"
     [value]="localTask().title"
     (input)="updateTitleFromEvent($event)"
-    placeholder="Titre"
+    placeholder="Titre de la tâche"
+    required
+    autocomplete="off"
   />
   <textarea
+    class="form-control textarea"
     [value]="localTask().description"
     (input)="updateDescriptionFromEvent($event)"
     placeholder="Description"
+    required
+    rows="4"
   ></textarea>
   <input
+    class="form-control"
     type="date"
     [value]="localTask().dueDate ?? ''"
     (input)="updateDueDateFromEvent($event)"
     placeholder="Échéance (optionnelle)"
     autocomplete="off"
   />
-  <div class="task-actions">
-    <button (click)="saveEdit()" title="Valider">✅</button>
-    <button (click)="cancelEdit()" title="Annuler">❌</button>
+  <div class="btn-group">
+    <button class="btn btn-success" (click)="saveEdit()" title="Valider">
+      Valider
+    </button>
+    <button class="btn btn-secondary" (click)="cancelEdit()" title="Annuler">
+      Annuler
+    </button>
   </div>
   }
 </div>

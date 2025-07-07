@@ -40,59 +40,18 @@
     flex-direction: column;
     gap: 0.5rem;
     margin-top: 1rem;
-
-    input {
-      padding: 0.4rem 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 0.9rem;
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 0.5rem;
-
-      button {
-        flex: 1;
-        padding: 0.4rem;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        border: none;
-        cursor: pointer;
-        transition: background 0.2s ease;
-
-        &:first-child {
-          background: #4caf50;
-          color: white;
-
-          &:hover {
-            background: #45a049;
-          }
-        }
-
-        &:last-child {
-          background: #ccc;
-
-          &:hover {
-            background: #bbb;
-          }
-        }
-      }
-    }
   }
 }
 
 .task-dropzone {
   transition: min-height 0.3s ease, padding-bottom 0.3s ease;
-  /*min-height: 150px;
-  padding-bottom: 10px;*/
   border: 2px dashed transparent;
   border-radius: 8px;
 }
 
 .task-dropzone.drag-over {
   min-height: 150px;
-  padding-bottom: 150px; /* plus grand padding bas pour étendre */
+  padding-bottom: 150px;
   border-color: #0d6efd;
   background-color: rgba(13, 110, 253, 0.1);
   box-shadow: 0 0 15px rgba(13, 110, 253, 0.4);

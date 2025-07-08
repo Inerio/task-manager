@@ -7,8 +7,8 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Classe principale de l'application Spring Boot.
- * Configure le serveur et autorise les appels CORS depuis l'application Angular.
+ * Main entry point for the Spring Boot application.
+ * Enables global CORS configuration for Angular frontend.
  */
 @SpringBootApplication
 public class TaskManagerApplication {
@@ -18,7 +18,8 @@ public class TaskManagerApplication {
     }
 
     /**
-     * Autorise les requêtes CORS depuis l'application Angular (http://localhost:4200).
+     * Allows CORS requests from Angular frontend (http://localhost:4200).
+     * Adapt origins for production!
      */
     @Bean
     WebMvcConfigurer corsConfigurer() {

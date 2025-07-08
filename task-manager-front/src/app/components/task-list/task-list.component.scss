@@ -8,6 +8,39 @@
   max-width: 300px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 
+  .task-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: bold;
+      flex: 1;
+      text-align: left;
+    }
+
+    .btn-delete-column {
+      margin-left: 1rem;
+      background: #e0e0e0;
+      color: #444;
+      border: none;
+      padding: 0.35rem 0.8rem;
+      border-radius: 6px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      line-height: 1.1;
+
+      &:hover {
+        background: #c62828;
+        color: #222;
+      }
+    }
+  }
+
   h2 {
     font-size: 1.3rem;
     font-weight: bold;

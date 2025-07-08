@@ -4,6 +4,7 @@ import com.inerio.taskmanager.exception.TaskNotFoundException;
 import com.inerio.taskmanager.model.Task;
 import com.inerio.taskmanager.repository.TaskRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +53,14 @@ public class TaskService {
             throw new TaskNotFoundException("Tache introuvable avec l'ID " + id);
         }
         taskRepository.deleteById(id);
+    }
+    
+    /**
+     * Supprime toutes les tâches d'un statut donné (colonne).
+     */
+    @Transactional
+    public void deleteTasksByStatus(String status) {
+        taskRepository.deleteByStatus(status);
     }
 
     /**

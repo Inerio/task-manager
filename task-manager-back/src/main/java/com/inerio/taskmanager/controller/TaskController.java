@@ -67,8 +67,14 @@ public class TaskController {
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
     }
-
     
+    /** Supprime toutes les tâches d'une colonne/statut */
+    @DeleteMapping("/status/{status}")
+    public ResponseEntity<Void> deleteTasksByStatus(@PathVariable String status) {
+        taskService.deleteTasksByStatus(status);
+        return ResponseEntity.noContent().build();
+    }
+
     /** Supprime toutes les tâches */
     @DeleteMapping("/all")
     public ResponseEntity<Void> deleteAllTasks() {

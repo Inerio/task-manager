@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule } from "@angular/common";
 import {
   Component,
   computed,
@@ -6,22 +6,22 @@ import {
   Input,
   signal,
   Signal,
-} from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Task } from '../../models/task.model';
-import { TaskService } from '../../services/task.service';
-import { TaskItemComponent } from '../task-item/task-item.component';
+} from "@angular/core";
+import { FormsModule } from "@angular/forms";
+import { Task } from "../../models/task.model";
+import { TaskService } from "../../services/task.service";
+import { TaskItemComponent } from "../task-item/task-item.component";
 
 @Component({
-  selector: 'app-task-list',
+  selector: "app-task-list",
   standalone: true,
   imports: [CommonModule, FormsModule, TaskItemComponent],
-  templateUrl: './task-list.component.html',
-  styleUrls: ['./task-list.component.scss'],
+  templateUrl: "./task-list.component.html",
+  styleUrls: ["./task-list.component.scss"],
 })
 export class TaskListComponent {
   @Input({ required: true }) title!: string;
-  @Input({ required: true }) status!: 'todo' | 'in-progress' | 'done';
+  @Input({ required: true }) status!: "todo" | "in-progress" | "done";
 
   private taskService = inject(TaskService);
 
@@ -32,7 +32,7 @@ export class TaskListComponent {
 
   /** Signal des tâches filtrées, à utiliser directement dans le HTML */
   readonly filteredTasks: Signal<Task[]> = computed(() =>
-    this.taskService.getTasksByStatus(this.status)(),
+    this.taskService.getTasksByStatus(this.status)()
   );
 
   /** Bascule le formulaire d'ajout */
@@ -65,8 +65,8 @@ export class TaskListComponent {
 
   private getEmptyTask(): Partial<Task> {
     return {
-      title: '',
-      description: '',
+      title: "",
+      description: "",
       completed: false,
     };
   }
@@ -86,6 +86,15 @@ export class TaskListComponent {
     this.newTask.set({ ...this.newTask(), dueDate: value });
   }
 
+  /** Supprime toutes les tâches de la colonne (statut) */
+  deleteAllInColumn(): void {
+    const confirmed = confirm(
+      `Supprimer toutes les tâches de "${this.title}" ?`
+    );
+    if (!confirmed) return;
+    this.taskService.deleteTasksByStatus(this.status);
+  }
+
   // Drag & Drop
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -97,7 +106,7 @@ export class TaskListComponent {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragOver.set(false);
-    const taskId = event.dataTransfer?.getData('text/plain');
+    const taskId = event.dataTransfer?.getData("text/plain");
     if (!taskId) return;
     const id = parseInt(taskId, 10);
     const allTasks = this.taskService.tasks(); // global

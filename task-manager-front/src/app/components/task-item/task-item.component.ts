@@ -32,6 +32,10 @@ export class TaskItemComponent implements OnChanges {
 
   private taskService = inject(TaskService);
 
+  acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
+
+  maxSize = 5 * 1024 * 1024; // 5 Mo
+
   constructor() {
     // Force la resynchro du signal local sur l'input (cf ngOnChanges)
     effect(() => {
@@ -140,5 +144,51 @@ export class TaskItemComponent implements OnChanges {
   updateDueDateFromEvent(event: Event): void {
     const value = (event.target as HTMLInputElement).value || null;
     this.localTask.set({ ...this.localTask(), dueDate: value });
+  }
+
+  onFileDrop(event: DragEvent) {
+    event.preventDefault();
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    this.uploadFiles(Array.from(files));
+  }
+
+  onFileSelect(event: Event) {
+    const files = (event.target as HTMLInputElement).files;
+    if (!files || files.length === 0) return;
+    this.uploadFiles(Array.from(files));
+  }
+
+  uploadFiles(files: File[]) {
+    for (const file of files) {
+      if (file.size > this.maxSize) {
+        alert(`Fichier trop volumineux (${file.name})`);
+        continue;
+      }
+      if (
+        !file.type.match(/(image|pdf|text|word)/) &&
+        !file.name.match(/\.(pdf|docx?|txt)$/i)
+      ) {
+        alert(`Type de fichier non autorisé (${file.name})`);
+        continue;
+      }
+      this.taskService
+        .uploadAttachment(this.localTask().id!, file)
+        .catch(() => alert("Erreur upload fichier"));
+    }
+  }
+
+  onDeleteAttachment(filename: string) {
+    this.taskService
+      .deleteAttachment(this.localTask().id!, filename)
+      .catch(() => alert("Erreur suppression fichier"));
+  }
+
+  onDownloadAttachment(filename: string) {
+    this.taskService.downloadAttachment(this.localTask().id!, filename);
+  }
+
+  onDragOverAttachment(event: DragEvent) {
+    event.preventDefault();
   }
 }

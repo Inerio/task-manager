@@ -7,7 +7,7 @@ import {
   Signal,
   WritableSignal,
 } from "@angular/core";
-import { catchError, Observable, tap } from "rxjs";
+import { catchError, firstValueFrom, Observable, tap } from "rxjs";
 import { environment } from "../../environments/environment.local";
 import { Task } from "../models/task.model";
 
@@ -102,6 +102,48 @@ export class TaskService {
         console.error("Erreur suppression complète", err);
         throw err;
       })
+    );
+  }
+
+  /** Upload un fichier pour une tâche */
+  async uploadAttachment(taskId: number, file: File): Promise<void> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const updated = await firstValueFrom(
+      this.http.post<Task>(`${this.apiUrl}/${taskId}/attachments`, formData)
+    );
+    if (!updated) return;
+    this.tasksSignal.set(
+      this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
+    );
+  }
+
+  /** Télécharge un fichier attaché à une tâche */
+  downloadAttachment(taskId: number, filename: string): void {
+    this.http
+      .get(
+        `${this.apiUrl}/${taskId}/attachments/${encodeURIComponent(filename)}`,
+        { responseType: "blob" }
+      )
+      .subscribe((blob) => {
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+      });
+  }
+
+  /** Supprime un fichier attaché à une tâche */
+  async deleteAttachment(taskId: number, filename: string): Promise<void> {
+    const updated = await firstValueFrom(
+      this.http.delete<Task>(
+        `${this.apiUrl}/${taskId}/attachments/${encodeURIComponent(filename)}`
+      )
+    );
+    if (!updated) return; // Skip si rien de retourné
+    this.tasksSignal.set(
+      this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
     );
   }
 }

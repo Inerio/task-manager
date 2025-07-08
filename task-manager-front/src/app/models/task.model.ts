@@ -1,4 +1,4 @@
-import { signal, WritableSignal } from '@angular/core';
+import { signal, WritableSignal } from "@angular/core";
 
 /**
  * Modèle représentant une tâche dans l'application.
@@ -11,6 +11,7 @@ export interface Task {
   status: string; // 'todo' | 'in-progress' | 'done'
   dueDate?: string | null;
   isEditing?: boolean; // État d'édition (UI uniquement)
+  attachments?: string[];
 }
 
 /**

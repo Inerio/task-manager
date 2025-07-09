@@ -1,0 +1,45 @@
+<div
+  class="attachments-zone"
+  [class.has-attachments]="attachments.length"
+  [class.drag-over]="isDragging()"
+  (drop)="onFileDrop($event)"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (click)="triggerFileSelect()"
+>
+  <!-- L'input est accessible partout via #fileInput -->
+  <input
+    type="file"
+    #fileInput
+    (change)="onFileSelect($event)"
+    [accept]="acceptTypes"
+    multiple
+    hidden
+  />
+
+  <div class="attachment-tags">
+    @if (attachments.length) { @for (filename of attachments; track filename) {
+    <span class="attachment-tag">
+      <span
+        class="filename"
+        (click)="onDownloadAttachment(filename); $event.stopPropagation()"
+        title="Télécharger"
+        >{{ filename }}</span
+      >
+      <button
+        class="remove-btn"
+        (click)="onDeleteAttachment(filename); $event.stopPropagation()"
+        title="Supprimer"
+      >
+        ✖
+      </button>
+    </span>
+    } }
+  </div>
+  <!-- Si aucun fichier attaché, on affiche l’invitation -->
+  @if (!attachments.length) {
+  <div class="empty-upload-text">
+    Glisser/déposer ou <span class="fake-link">choisir un fichier</span>
+  </div>
+  }
+</div>

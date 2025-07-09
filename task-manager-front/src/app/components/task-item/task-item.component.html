@@ -27,45 +27,14 @@
     <h4 [innerHTML]="localTask().title | linkify"></h4>
     <p [innerHTML]="localTask().description | linkify"></p>
 
-    <div
-      class="attachments-zone"
-      (drop)="onFileDrop($event)"
-      (dragover)="onDragOverAttachment($event)"
-    >
-      <div class="attachment-tags">
-        @if(localTask().attachments?.length) { @for (filename of
-        localTask().attachments ?? []; track filename) {
-        <span class="attachment-tag">
-          <span
-            class="filename"
-            (click)="onDownloadAttachment(filename)"
-            title="Télécharger"
-            >{{ filename }}</span
-          >
-          <button
-            class="remove-btn"
-            (click)="onDeleteAttachment(filename)"
-            title="Supprimer"
-          >
-            ✖
-          </button>
-        </span>
-        } }
-      </div>
-      <label class="upload-label">
-        <input
-          type="file"
-          (change)="onFileSelect($event)"
-          [accept]="acceptTypes"
-          multiple
-          hidden
-        />
-        <span
-          >Glisser/déposer ou
-          <span class="fake-link">choisir un fichier</span></span
-        >
-      </label>
-    </div>
+    <app-attachment-zone
+      [attachments]="localTask().attachments ?? []"
+      [acceptTypes]="acceptTypes"
+      [maxSize]="maxSize"
+      (fileUploaded)="onUploadFile($event)"
+      (fileDeleted)="onDeleteAttachment($event)"
+      (fileDownloaded)="onDownloadAttachment($event)"
+    ></app-attachment-zone>
 
     <div class="btn-group">
       <button class="btn btn-success" (click)="startEdit()" title="Modifier">
@@ -110,45 +79,14 @@
     autocomplete="off"
   />
 
-  <div
-    class="attachments-zone"
-    (drop)="onFileDrop($event)"
-    (dragover)="onDragOverAttachment($event)"
-  >
-    <div class="attachment-tags">
-      @if(localTask().attachments?.length) { @for (filename of
-      localTask().attachments ?? []; track filename) {
-      <span class="attachment-tag">
-        <span
-          class="filename"
-          (click)="onDownloadAttachment(filename)"
-          title="Télécharger"
-          >{{ filename }}</span
-        >
-        <button
-          class="remove-btn"
-          (click)="onDeleteAttachment(filename)"
-          title="Supprimer"
-        >
-          ✖
-        </button>
-      </span>
-      } }
-    </div>
-    <label class="upload-label">
-      <input
-        type="file"
-        (change)="onFileSelect($event)"
-        [accept]="acceptTypes"
-        multiple
-        hidden
-      />
-      <span
-        >Glisser/déposer ou
-        <span class="fake-link">choisir un fichier</span></span
-      >
-    </label>
-  </div>
+  <app-attachment-zone
+    [attachments]="localTask().attachments ?? []"
+    [acceptTypes]="acceptTypes"
+    [maxSize]="maxSize"
+    (fileUploaded)="onUploadFile($event)"
+    (fileDeleted)="onDeleteAttachment($event)"
+    (fileDownloaded)="onDownloadAttachment($event)"
+  ></app-attachment-zone>
 
   <div class="btn-group">
     <button class="btn btn-success" (click)="saveEdit()" title="Valider">

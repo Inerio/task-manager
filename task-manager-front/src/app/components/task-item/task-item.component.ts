@@ -8,18 +8,19 @@ import {
   effect,
   inject,
   signal,
-} from "@angular/core";
-import { FormsModule } from "@angular/forms";
-import { Task } from "../../models/task.model";
-import { TaskService } from "../../services/task.service";
-import { LinkifyPipe } from "../../pipes/linkify.pipe";
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Task } from '../../models/task.model';
+import { LinkifyPipe } from '../../pipes/linkify.pipe';
+import { TaskService } from '../../services/task.service';
+import { AttachmentZoneComponent } from '../attachment-zone/attachment-zone.component';
 
 @Component({
-  selector: "app-task-item",
+  selector: 'app-task-item',
   standalone: true,
-  imports: [FormsModule, LinkifyPipe],
-  templateUrl: "./task-item.component.html",
-  styleUrls: ["./task-item.component.scss"],
+  imports: [FormsModule, LinkifyPipe, AttachmentZoneComponent],
+  templateUrl: './task-item.component.html',
+  styleUrls: ['./task-item.component.scss'],
 })
 export class TaskItemComponent implements OnChanges {
   /** On reçoit un objet Task (pas un signal !) */
@@ -32,7 +33,7 @@ export class TaskItemComponent implements OnChanges {
 
   private taskService = inject(TaskService);
 
-  acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
+  acceptTypes = 'image/*,.pdf,.doc,.docx,.txt';
 
   maxSize = 5 * 1024 * 1024; // 5 Mo
 
@@ -54,15 +55,15 @@ export class TaskItemComponent implements OnChanges {
     now.setHours(0, 0, 0, 0);
     const diffMs = dueDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return "En retard !";
-    if (diffDays === 0) return "Dernier jour !";
-    if (diffDays === 1) return "1 jour restant";
+    if (diffDays < 0) return 'En retard !';
+    if (diffDays === 0) return 'Dernier jour !';
+    if (diffDays === 1) return '1 jour restant';
     return `${diffDays} jours restants`;
   });
 
   ngOnChanges(changes: SimpleChanges): void {
     // Reconstruit le signal local à chaque changement du @Input
-    if (changes["task"] && this.task) {
+    if (changes['task'] && this.task) {
       this.localTask.set({ ...this.task });
     }
   }
@@ -75,19 +76,19 @@ export class TaskItemComponent implements OnChanges {
     this.dragging.set(true);
     const task = this.localTask();
     if (!task.id) return;
-    event.dataTransfer?.setData("text/plain", task.id.toString());
+    event.dataTransfer?.setData('text/plain', task.id.toString());
 
     // Drag image visuel
-    const dragImage = document.createElement("div");
-    dragImage.style.position = "absolute";
-    dragImage.style.top = "-1000px";
-    dragImage.style.padding = "0.5rem 1rem";
-    dragImage.style.background = "white";
-    dragImage.style.border = "1px solid #ccc";
-    dragImage.style.boxShadow = "0 0 5px rgba(0,0,0,0.3)";
-    dragImage.style.borderRadius = "4px";
-    dragImage.style.fontWeight = "bold";
-    dragImage.style.fontSize = "1rem";
+    const dragImage = document.createElement('div');
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px';
+    dragImage.style.padding = '0.5rem 1rem';
+    dragImage.style.background = 'white';
+    dragImage.style.border = '1px solid #ccc';
+    dragImage.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
+    dragImage.style.borderRadius = '4px';
+    dragImage.style.fontWeight = 'bold';
+    dragImage.style.fontSize = '1rem';
     dragImage.innerText = task.title;
     document.body.appendChild(dragImage);
     event.dataTransfer?.setDragImage(dragImage, 10, 10);
@@ -146,49 +147,28 @@ export class TaskItemComponent implements OnChanges {
     this.localTask.set({ ...this.localTask(), dueDate: value });
   }
 
-  onFileDrop(event: DragEvent) {
-    event.preventDefault();
-    const files = event.dataTransfer?.files;
-    if (!files || files.length === 0) return;
-    this.uploadFiles(Array.from(files));
-  }
-
-  onFileSelect(event: Event) {
-    const files = (event.target as HTMLInputElement).files;
-    if (!files || files.length === 0) return;
-    this.uploadFiles(Array.from(files));
-  }
-
-  uploadFiles(files: File[]) {
-    for (const file of files) {
-      if (file.size > this.maxSize) {
-        alert(`Fichier trop volumineux (${file.name})`);
-        continue;
-      }
-      if (
-        !file.type.match(/(image|pdf|text|word)/) &&
-        !file.name.match(/\.(pdf|docx?|txt)$/i)
-      ) {
-        alert(`Type de fichier non autorisé (${file.name})`);
-        continue;
-      }
-      this.taskService
-        .uploadAttachment(this.localTask().id!, file)
-        .catch(() => alert("Erreur upload fichier"));
+  onUploadFile(file: File) {
+    if (file.size > this.maxSize) {
+      alert(`Fichier trop volumineux (${file.name})`);
+      return;
     }
+    if (
+      !file.type.match(/(image|pdf|text|word)/) &&
+      !file.name.match(/\.(pdf|docx?|txt)$/i)
+    ) {
+      alert(`Type de fichier non autorisé (${file.name})`);
+      return;
+    }
+    this.taskService
+      .uploadAttachment(this.localTask().id!, file)
+      .catch(() => alert('Erreur upload fichier'));
   }
-
   onDeleteAttachment(filename: string) {
     this.taskService
       .deleteAttachment(this.localTask().id!, filename)
-      .catch(() => alert("Erreur suppression fichier"));
+      .catch(() => alert('Erreur suppression fichier'));
   }
-
   onDownloadAttachment(filename: string) {
     this.taskService.downloadAttachment(this.localTask().id!, filename);
-  }
-
-  onDragOverAttachment(event: DragEvent) {
-    event.preventDefault();
   }
 }

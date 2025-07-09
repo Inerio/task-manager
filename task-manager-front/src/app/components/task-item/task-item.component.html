@@ -31,7 +31,7 @@
       [attachments]="localTask().attachments ?? []"
       [acceptTypes]="acceptTypes"
       [maxSize]="maxSize"
-      (fileUploaded)="onUploadFile($event)"
+      (filesUploaded)="onUploadFiles($event)"
       (fileDeleted)="onDeleteAttachment($event)"
       (fileDownloaded)="onDownloadAttachment($event)"
     ></app-attachment-zone>
@@ -83,7 +83,7 @@
     [attachments]="localTask().attachments ?? []"
     [acceptTypes]="acceptTypes"
     [maxSize]="maxSize"
-    (fileUploaded)="onUploadFile($event)"
+    (filesUploaded)="onUploadFiles($event)"
     (fileDeleted)="onDeleteAttachment($event)"
     (fileDownloaded)="onDownloadAttachment($event)"
   ></app-attachment-zone>

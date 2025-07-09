@@ -147,27 +147,45 @@ export class TaskItemComponent implements OnChanges {
     this.localTask.set({ ...this.localTask(), dueDate: value });
   }
 
-  onUploadFile(file: File) {
-    if (file.size > this.maxSize) {
-      alert(`Fichier trop volumineux (${file.name})`);
-      return;
+  async onUploadFiles(files: File[]) {
+    const taskId = this.localTask().id!;
+    for (const file of files) {
+      // Optionnel : check taille/type ici, sinon ça sera fait côté backend
+      if (file.size > this.maxSize) {
+        alert(`Fichier trop volumineux (${file.name})`);
+        continue;
+      }
+      if (
+        !file.type.match(/(image|pdf|text|word)/) &&
+        !file.name.match(/\.(pdf|docx?|txt)$/i)
+      ) {
+        alert(`Type de fichier non autorisé (${file.name})`);
+        continue;
+      }
+      try {
+        await this.taskService.uploadAttachment(taskId, file);
+        // Après chaque upload, on force le reload de la tâche
+        await this.refreshTask(taskId);
+      } catch {
+        alert('Erreur upload fichier');
+      }
     }
-    if (
-      !file.type.match(/(image|pdf|text|word)/) &&
-      !file.name.match(/\.(pdf|docx?|txt)$/i)
-    ) {
-      alert(`Type de fichier non autorisé (${file.name})`);
-      return;
+  }
+
+  async refreshTask(taskId: number) {
+    // Recharge la tâche fraîche depuis le backend et maj localTask
+    const tasks = this.taskService.tasks();
+    const fresh = tasks.find((t) => t.id === taskId);
+    if (fresh) {
+      this.localTask.set({ ...fresh });
     }
-    this.taskService
-      .uploadAttachment(this.localTask().id!, file)
-      .catch(() => alert('Erreur upload fichier'));
   }
   onDeleteAttachment(filename: string) {
     this.taskService
       .deleteAttachment(this.localTask().id!, filename)
       .catch(() => alert('Erreur suppression fichier'));
   }
+
   onDownloadAttachment(filename: string) {
     this.taskService.downloadAttachment(this.localTask().id!, filename);
   }

@@ -119,11 +119,16 @@ public class TaskController {
         try {
             Task updatedTask = taskService.uploadAttachment(id, file);
             return ResponseEntity.ok(updatedTask);
+        } catch (IllegalStateException e) {
+            // Duplicate file error: HTTP 409 Conflict
+            log.warn("Attachment upload failed for task {}: {}", id, e.getMessage());
+            return ResponseEntity.status(409).body(e.getMessage());
         } catch (Exception e) {
             log.warn("Attachment upload failed for task {}: {}", id, e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
 
     /**
      * Download a specific attachment for a task.

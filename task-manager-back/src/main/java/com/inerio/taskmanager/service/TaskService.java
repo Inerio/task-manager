@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.nio.file.*;
@@ -62,8 +63,32 @@ public class TaskService {
         if (!taskRepository.existsById(id)) {
             throw new TaskNotFoundException("Task not found with ID " + id);
         }
+
+        // Delete the uploads directory (and all files in it) associated with the task
+        Path taskUploadDir = Paths.get(UPLOAD_DIR, id.toString());
+        try {
+            if (Files.exists(taskUploadDir)) {
+                // Delete all files and then the directory itself
+                Files.walk(taskUploadDir)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (Exception e) {
+                            // Optional: log error if needed
+                            //log.warn("Failed to delete file: " + path, e);
+                        }
+                    });
+            }
+        } catch (Exception e) {
+            // Optional: log error if needed
+            // log.warn("Failed to delete uploads directory for task " + id, e);
+        }
+
+        // Delete the task from the database
         taskRepository.deleteById(id);
     }
+
 
     /**
      * Delete all tasks for a specific status (column).
@@ -105,7 +130,8 @@ public class TaskService {
      * Uploads a file as an attachment for a task.
      * Files are stored in /uploads/{taskId}/.
      * The filename is saved in the attachments list of the Task.
-     *
+     * 
+     * Throws an exception if the file already exists in the attachments list.
      * @throws TaskNotFoundException if task does not exist.
      */
     public Task uploadAttachment(Long taskId, MultipartFile file) throws Exception {
@@ -120,16 +146,27 @@ public class TaskService {
             throw new IllegalArgumentException("Invalid filename");
         }
 
+        // Check for duplicate filename in the task's attachments list
+        if (task.getAttachments().contains(filename)) {
+            throw new IllegalStateException("Attachment already exists: " + filename);
+        }
+
         Path filePath = uploadPath.resolve(filename);
+
+        // Extra check: file should not already exist on disk
+        if (Files.exists(filePath)) {
+            throw new IllegalStateException("A file with this name already exists on the server: " + filename);
+        }
+
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        // Add to task if not already present
-        if (!task.getAttachments().contains(filename)) {
-            task.getAttachments().add(filename);
-            taskRepository.save(task);
-        }
+        // Add to task and save
+        task.getAttachments().add(filename);
+        taskRepository.save(task);
+
         return task;
     }
+
 
     /**
      * Downloads a specific attachment for a task.

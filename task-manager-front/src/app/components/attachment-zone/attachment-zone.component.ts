@@ -22,7 +22,7 @@ export class AttachmentZoneComponent {
   /* Taille max */
   @Input() maxSize = 5 * 1024 * 1024;
 
-  @Output() fileUploaded = new EventEmitter<File>();
+  @Output() filesUploaded = new EventEmitter<File[]>();
   @Output() fileDeleted = new EventEmitter<string>();
   @Output() fileDownloaded = new EventEmitter<string>();
 
@@ -34,15 +34,8 @@ export class AttachmentZoneComponent {
     this.fileInput?.nativeElement.click();
   }
 
-  onFileDrop(event: DragEvent) {
-    event.preventDefault();
-    const files = event.dataTransfer?.files;
-    if (files?.length) {
-      for (const file of Array.from(files)) {
-        this.fileUploaded.emit(file);
-      }
-    }
-    this.isDragging.set(false);
+  trackByFilename(index: number, filename: string): string {
+    return filename;
   }
 
   onDragOver(event: DragEvent) {
@@ -57,8 +50,30 @@ export class AttachmentZoneComponent {
   onFileSelect(event: Event) {
     const files = (event.target as HTMLInputElement).files;
     if (files?.length) {
-      Array.from(files).forEach((file) => this.fileUploaded.emit(file));
+      // Filtre côté front (ne retient que les nouveaux fichiers à uploader)
+      const newFiles = Array.from(files).filter(
+        (file) => !this.attachments.includes(file.name),
+      );
+      if (newFiles.length < files.length) {
+        alert('Certains fichiers étaient déjà attachés et ont été ignorés.');
+      }
+      if (newFiles.length) this.filesUploaded.emit(newFiles); // on émet la liste !
     }
+  }
+
+  onFileDrop(event: DragEvent) {
+    event.preventDefault();
+    const files = event.dataTransfer?.files;
+    if (files?.length) {
+      const newFiles = Array.from(files).filter(
+        (file) => !this.attachments.includes(file.name),
+      );
+      if (newFiles.length < files.length) {
+        alert('Certains fichiers étaient déjà attachés et ont été ignorés.');
+      }
+      if (newFiles.length) this.filesUploaded.emit(newFiles);
+    }
+    this.isDragging.set(false);
   }
 
   onDeleteAttachment(filename: string) {

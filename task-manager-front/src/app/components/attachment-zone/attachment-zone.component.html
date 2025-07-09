@@ -18,7 +18,8 @@
   />
 
   <div class="attachment-tags">
-    @if (attachments.length) { @for (filename of attachments; track filename) {
+    @if (attachments.length) { @for (filename of attachments; track
+    trackByFilename($index, filename)) {
     <span class="attachment-tag">
       <span
         class="filename"

@@ -3,17 +3,17 @@
   [class.completed]="localTask().completed"
   [class.dragging]="dragging()"
   draggable="true"
-  (dragstart)="onDragStart($event)"
-  (dragend)="onDragEnd()"
+  (dragstart)="onTaskDragStart($event)"
+  (dragend)="onTaskDragEnd()"
 >
-  <!-- Badge d'échéance -->
+  <!-- Due date badge -->
   @if (dueBadge()) {
   <span class="due-badge" [class.late]="dueBadge() === 'En retard !'">
     {{ dueBadge() }}
   </span>
   }
 
-  <!-- Checkbox de statut terminé -->
+  <!-- Completed status checkbox -->
   <input
     type="checkbox"
     class="task-checkbox-icon"
@@ -21,7 +21,7 @@
     (change)="toggleCompleted()"
   />
 
-  <!-- Affichage lecture seule -->
+  <!-- Read-only view -->
   @if (!localTask().isEditing) {
   <div class="task-content-readonly">
     <h4 [innerHTML]="localTask().title | linkify"></h4>
@@ -37,28 +37,24 @@
     ></app-attachment-zone>
 
     <div class="btn-group">
-      <button class="btn btn-success" (click)="startEdit()" title="Modifier">
-        Éditer
+      <button class="btn btn-success" (click)="startEdit()" title="Edit">
+        Edit
       </button>
-      <button
-        class="btn btn-secondary"
-        (click)="deleteTask()"
-        title="Supprimer"
-      >
-        Supprimer
+      <button class="btn btn-secondary" (click)="deleteTask()" title="Delete">
+        Delete
       </button>
     </div>
   </div>
   }
 
-  <!-- Édition de la tâche -->
+  <!-- Edit mode -->
   @else {
   <input
     class="form-control"
     type="text"
     [value]="localTask().title"
     (input)="updateTitleFromEvent($event)"
-    placeholder="Titre de la tâche"
+    placeholder="Task title"
     required
     autocomplete="off"
   />
@@ -75,7 +71,7 @@
     type="date"
     [value]="localTask().dueDate ?? ''"
     (input)="updateDueDateFromEvent($event)"
-    placeholder="Échéance (optionnelle)"
+    placeholder="Due date (optional)"
     autocomplete="off"
   />
 
@@ -89,11 +85,11 @@
   ></app-attachment-zone>
 
   <div class="btn-group">
-    <button class="btn btn-success" (click)="saveEdit()" title="Valider">
-      Valider
+    <button class="btn btn-success" (click)="saveEdit()" title="Save">
+      Save
     </button>
-    <button class="btn btn-secondary" (click)="cancelEdit()" title="Annuler">
-      Annuler
+    <button class="btn btn-secondary" (click)="cancelEdit()" title="Cancel">
+      Cancel
     </button>
   </div>
   }

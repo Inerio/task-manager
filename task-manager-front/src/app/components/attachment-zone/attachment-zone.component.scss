@@ -8,6 +8,7 @@
   min-height: 0;
   transition: border-color 0.15s, box-shadow 0.14s;
 
+  // Visual feedback during drag-over
   &.drag-over {
     border-color: #227be7;
     background: #eaf4ff;
@@ -77,6 +78,7 @@
   }
 }
 
+// Fix for tag margin
 .attachments-zone .attachment-tags {
   margin-bottom: 0 !important;
 }

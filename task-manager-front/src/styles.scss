@@ -1,24 +1,24 @@
 @use "./app/shared/styles/shared";
 
+// Apply box-sizing globally
 * {
   box-sizing: border-box;
 }
 
+// Basic body reset and typography
 body {
   margin: 0;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f9f9f9;
   color: #1e1e1e;
 }
 
+// Ensure full height layout for html and body
 html,
 body {
   height: 100%;
 }
+
+// Override default
 body {
-  margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
 }
-
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

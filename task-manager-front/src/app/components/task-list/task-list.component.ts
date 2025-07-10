@@ -20,28 +20,38 @@ import { TaskItemComponent } from "../task-item/task-item.component";
   styleUrls: ["./task-list.component.scss"],
 })
 export class TaskListComponent {
+  // --------------------------------------------------------------------
+  // [STATE & SIGNALS]
+  // --------------------------------------------------------------------
   @Input({ required: true }) title!: string;
   @Input({ required: true }) status!: "todo" | "in-progress" | "done";
 
   private taskService = inject(TaskService);
 
+  /** Show/hide the add form */
   showForm = signal(false);
+
+  /** Temp data for new task creation */
   newTask = signal<Partial<Task>>(this.getEmptyTask());
 
+  /** Is a drag-over animation active? */
   isDragOver = signal(false);
 
-  /** Signal des tâches filtrées, à utiliser directement dans le HTML */
+  /** Filtered tasks for this column (signal, auto-reactive) */
   readonly filteredTasks: Signal<Task[]> = computed(() =>
     this.taskService.getTasksByStatus(this.status)()
   );
 
-  /** Bascule le formulaire d'ajout */
+  // --------------------------------------------------------------------
+  // [FORM LOGIC]
+  // --------------------------------------------------------------------
+  /** Toggle the add-task form */
   toggleForm(): void {
     this.showForm.update((current) => !current);
     if (!this.showForm()) this.resetForm();
   }
 
-  /** Crée une nouvelle tâche dans la bonne colonne */
+  /** Add a new task to this column */
   addTask(): void {
     const { title, description, dueDate } = this.newTask();
     if (!title || !description) return;
@@ -59,10 +69,12 @@ export class TaskListComponent {
     this.showForm.set(false);
   }
 
+  /** Resets the add-task form */
   private resetForm(): void {
     this.newTask.set(this.getEmptyTask());
   }
 
+  /** Template for an empty task */
   private getEmptyTask(): Partial<Task> {
     return {
       title: "",
@@ -71,6 +83,7 @@ export class TaskListComponent {
     };
   }
 
+  /** Input update methods */
   updateNewTaskTitle(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.newTask.set({ ...this.newTask(), title: target.value });
@@ -86,7 +99,10 @@ export class TaskListComponent {
     this.newTask.set({ ...this.newTask(), dueDate: value });
   }
 
-  /** Supprime toutes les tâches de la colonne (statut) */
+  // --------------------------------------------------------------------
+  // [COLUMN ACTIONS]
+  // --------------------------------------------------------------------
+  /** Delete all tasks in this column */
   deleteAllInColumn(): void {
     const confirmed = confirm(
       `Supprimer toutes les tâches de "${this.title}" ?`
@@ -95,28 +111,51 @@ export class TaskListComponent {
     this.taskService.deleteTasksByStatus(this.status);
   }
 
-  // Drag & Drop
-  onDragOver(event: DragEvent): void {
+  // --------------------------------------------------------------------
+  // [DRAG & DROP - TASKS]
+  // --------------------------------------------------------------------
+  /** Drag-over: only activates for tasks */
+  onTaskDragOver(event: DragEvent): void {
+    // Ignore file drops
+    if (event.dataTransfer && event.dataTransfer.types.includes("Files")) {
+      return;
+    }
+    // Get the globally tracked status
+    const sourceStatus = (window as any).CURRENT_DRAGGED_TASK_STATUS;
+    if (sourceStatus === this.status) {
+      this.isDragOver.set(false);
+      return;
+    }
     event.preventDefault();
     this.isDragOver.set(true);
   }
-  onDragLeave(): void {
+
+  onTaskDragLeave(): void {
     this.isDragOver.set(false);
   }
-  onDrop(event: DragEvent): void {
+
+  /** Drop a task (change its column/status) */
+  onTaskDrop(event: DragEvent): void {
+    if (event.dataTransfer && event.dataTransfer.types.includes("Files")) {
+      this.isDragOver.set(false);
+      return;
+    }
     event.preventDefault();
     this.isDragOver.set(false);
     const taskId = event.dataTransfer?.getData("text/plain");
     if (!taskId) return;
     const id = parseInt(taskId, 10);
-    const allTasks = this.taskService.tasks(); // global
+    const allTasks = this.taskService.tasks();
     const task = allTasks.find((t) => t.id === id);
     if (!task || task.status === this.status) return;
     const updatedTask = { ...task, status: this.status };
     this.taskService.updateTask(updatedTask.id!, updatedTask);
   }
 
-  /** TrackBy pour @for */
+  // --------------------------------------------------------------------
+  // [TEMPLATE UTILS]
+  // --------------------------------------------------------------------
+  /** TrackBy for *ngFor / @for loops */
   trackById(index: number, task: Task): number | undefined {
     return task.id;
   }

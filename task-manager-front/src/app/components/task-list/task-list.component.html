@@ -5,7 +5,7 @@
       type="button"
       class="btn btn-danger btn-delete-column"
       (click)="deleteAllInColumn()"
-      title="Supprimer toutes les tâches de cette colonne"
+      title="Delete all tasks in this column"
     >
       🗑️
     </button>
@@ -13,19 +13,19 @@
   <div
     class="task-dropzone"
     [class.drag-over]="isDragOver()"
-    (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave()"
-    (drop)="onDrop($event)"
+    (dragover)="onTaskDragOver($event)"
+    (dragleave)="onTaskDragLeave()"
+    (drop)="onTaskDrop($event)"
   >
-    <!-- Utilisation directe du signal -->
+    <!-- Display all tasks of this status (column) -->
     @for (task of filteredTasks(); track trackById($index, task)) {
     <app-task-item [task]="task"></app-task-item>
     }
 
-    <!-- Bouton d'ajout -->
-    <button (click)="toggleForm()" class="add-btn">+ Ajouter tâche</button>
+    <!-- Add new task button -->
+    <button (click)="toggleForm()" class="add-btn">+ Add task</button>
 
-    <!-- Formulaire -->
+    <!-- Add task form -->
     @if (showForm()) {
     <div class="add-task-form">
       <input
@@ -33,7 +33,7 @@
         type="text"
         [value]="newTask().title"
         (input)="updateNewTaskTitle($event)"
-        placeholder="Titre de la tâche"
+        placeholder="Task title"
         required
         autocomplete="off"
       />
@@ -50,14 +50,12 @@
         type="date"
         [value]="newTask().dueDate ?? ''"
         (input)="updateNewTaskDueDate($event)"
-        placeholder="Échéance (optionnelle)"
+        placeholder="Due date (optional)"
         autocomplete="off"
       />
       <div class="btn-group">
-        <button class="btn btn-success" (click)="addTask()">Valider</button>
-        <button class="btn btn-secondary" (click)="toggleForm()">
-          Annuler
-        </button>
+        <button class="btn btn-success" (click)="addTask()">Save</button>
+        <button class="btn btn-secondary" (click)="toggleForm()">Cancel</button>
       </div>
     </div>
     }

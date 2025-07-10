@@ -1,12 +1,12 @@
-import { Component } from '@angular/core';
-import { TaskListComponent } from './components/task-list/task-list.component';
-import { TaskService } from './services/task.service';
+import { Component } from "@angular/core";
+import { TaskListComponent } from "./components/task-list/task-list.component";
+import { TaskService } from "./services/task.service";
 
 @Component({
-  selector: 'app-root',
+  selector: "app-root",
   standalone: true,
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
+  templateUrl: "./app.component.html",
+  styleUrls: ["./app.component.scss"],
   imports: [TaskListComponent],
 })
 export class AppComponent {
@@ -14,16 +14,14 @@ export class AppComponent {
     this.taskService.loadTasks();
   }
 
-  /** Supprime toutes les tâches après confirmation */
+  /** Delete all tasks after user confirmation */
   deleteAllTasks(): void {
-    const confirmed = confirm(
-      'Confirmer la suppression de toutes les tâches ?',
-    );
+    const confirmed = confirm("Confirm deletion of all tasks?");
     if (!confirmed) return;
 
     this.taskService.deleteAllTasks().subscribe({
       next: () => this.taskService.loadTasks(),
-      error: (err) => console.error('Erreur suppression :', err),
+      error: (err) => console.error("Delete error:", err),
     });
   }
 }

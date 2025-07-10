@@ -1,6 +1,6 @@
 import { Pipe, PipeTransform } from "@angular/core";
 
-// Expression régulière pour détecter les URLs
+// Regex for detecting URLs
 const urlRegex = /(https?:\/\/[^\s]+)/g;
 
 @Pipe({
@@ -10,7 +10,7 @@ const urlRegex = /(https?:\/\/[^\s]+)/g;
 export class LinkifyPipe implements PipeTransform {
   transform(text: string | null | undefined): string {
     if (!text) return "";
-    // Remplace les URLs par des liens cliquables (HTML)
+    // Replace URLs with clickable links (HTML)
     return text.replace(
       urlRegex,
       (url) =>

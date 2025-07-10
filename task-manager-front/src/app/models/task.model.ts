@@ -1,7 +1,7 @@
 import { signal, WritableSignal } from "@angular/core";
 
 /**
- * Modèle représentant une tâche dans l'application.
+ * Interface representing a task in the app.
  */
 export interface Task {
   id?: number;
@@ -10,13 +10,13 @@ export interface Task {
   completed: boolean;
   status: string; // 'todo' | 'in-progress' | 'done'
   dueDate?: string | null;
-  isEditing?: boolean; // État d'édition (UI uniquement)
+  isEditing?: boolean; // Edit state (UI only)
   attachments?: string[];
 }
 
 /**
- * Crée un WritableSignal à partir d'une tâche simple.
- * Utile pour encapsuler une tâche dans un signal local.
+ * Utility: creates a WritableSignal from a plain task.
+ * Useful for wrapping a task in a local signal.
  */
 export function createTaskSignal(task: Task): WritableSignal<Task> {
   return signal({ ...task });

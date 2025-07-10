@@ -8,7 +8,7 @@
   margin-bottom: 1rem;
   transition: background-color 0.3s ease;
 
-  // Harmonisation du texte
+  // Text styling
   h4,
   p {
     padding: 0.4rem 0.6rem;
@@ -31,7 +31,7 @@
     color: #444;
   }
 
-  // Checkbox placée en haut à droite
+  // Checkbox placed top right
   .task-checkbox-icon {
     position: absolute;
     top: 0.8rem;
@@ -47,14 +47,14 @@
     padding: 2px;
   }
 
-  // Fond vert si complété
+  // Green background if completed
   &.completed {
     background-color: #e0ffe0;
     border-left: 4px solid #4caf50;
   }
 }
 
-// Drag & drop : effet visuel
+// Drag & drop visual effect
 .task-card.dragging {
   opacity: 0.7;
   box-shadow: 0 0 15px 3px rgba(0, 123, 255, 0.7);
@@ -63,7 +63,7 @@
   cursor: grabbing;
 }
 
-// Badge d’échéance
+// Due badge styling
 .due-badge {
   position: absolute;
   top: 0.8rem;
@@ -86,9 +86,9 @@
   }
 }
 
-// Liens dans la description
+// Links inside description
 .task-card a {
   color: #42a5f5;
   text-decoration: underline;
-  word-break: break-all; // Pour les longs liens
+  word-break: break-all;
 }

@@ -1,7 +1,7 @@
-import { Routes } from '@angular/router';
-import { AppComponent } from './app.component';
+import { Routes } from "@angular/router";
+import { AppComponent } from "./app.component";
 
 /**
- * Déclaration des routes de l'application (si évolution future).
+ * App routes declaration (for future scalability)
  */
-export const routes: Routes = [{ path: '', component: AppComponent }];
+export const routes: Routes = [{ path: "", component: AppComponent }];

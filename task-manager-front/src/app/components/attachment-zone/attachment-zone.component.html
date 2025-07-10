@@ -7,7 +7,7 @@
   (dragleave)="onDragLeave()"
   (click)="triggerFileSelect()"
 >
-  <!-- L'input est accessible partout via #fileInput -->
+  <!-- Hidden file input, accessible everywhere via #fileInput -->
   <input
     type="file"
     #fileInput
@@ -17,6 +17,7 @@
     hidden
   />
 
+  <!-- Display attached files as tags -->
   <div class="attachment-tags">
     @if (attachments.length) { @for (filename of attachments; track
     trackByFilename($index, filename)) {
@@ -24,23 +25,24 @@
       <span
         class="filename"
         (click)="onDownloadAttachment(filename); $event.stopPropagation()"
-        title="Télécharger"
+        title="Download"
         >{{ filename }}</span
       >
       <button
         class="remove-btn"
         (click)="onDeleteAttachment(filename); $event.stopPropagation()"
-        title="Supprimer"
+        title="Delete"
       >
         ✖
       </button>
     </span>
     } }
   </div>
-  <!-- Si aucun fichier attaché, on affiche l’invitation -->
+
+  <!-- Show invite text if no file is attached -->
   @if (!attachments.length) {
   <div class="empty-upload-text">
-    Glisser/déposer ou <span class="fake-link">choisir un fichier</span>
+    Glisser-déposer ou <span class="fake-link">choisir un fichier</span>
   </div>
   }
 </div>

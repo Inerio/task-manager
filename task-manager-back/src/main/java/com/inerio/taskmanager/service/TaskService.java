@@ -64,26 +64,7 @@ public class TaskService {
             throw new TaskNotFoundException("Task not found with ID " + id);
         }
 
-        // Delete the uploads directory (and all files in it) associated with the task
-        Path taskUploadDir = Paths.get(UPLOAD_DIR, id.toString());
-        try {
-            if (Files.exists(taskUploadDir)) {
-                // Delete all files and then the directory itself
-                Files.walk(taskUploadDir)
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (Exception e) {
-                            // Optional: log error if needed
-                            //log.warn("Failed to delete file: " + path, e);
-                        }
-                    });
-            }
-        } catch (Exception e) {
-            // Optional: log error if needed
-            // log.warn("Failed to delete uploads directory for task " + id, e);
-        }
+        deleteAttachmentsFolder(id);
 
         // Delete the task from the database
         taskRepository.deleteById(id);
@@ -95,6 +76,10 @@ public class TaskService {
      */
     @Transactional
     public void deleteTasksByStatus(String status) {
+        List<Task> tasks = taskRepository.findByStatus(status);
+        for (Task task : tasks) {
+            deleteAttachmentsFolder(task.getId());
+        }
         taskRepository.deleteByStatus(status);
     }
 
@@ -102,6 +87,10 @@ public class TaskService {
      * Delete all tasks from the database.
      */
     public void deleteAllTasks() {
+        List<Task> tasks = taskRepository.findAll();
+        for (Task task : tasks) {
+            deleteAttachmentsFolder(task.getId());
+        }
         taskRepository.deleteAll();
     }
 
@@ -207,4 +196,25 @@ public class TaskService {
         } catch (Exception ignored) {}
         return task;
     }
+    
+    /**
+     * Delete all attachment files and the upload folder for a given task ID.
+     */
+    private void deleteAttachmentsFolder(Long taskId) {
+        Path taskUploadDir = Paths.get(UPLOAD_DIR, taskId.toString());
+        try {
+            if (Files.exists(taskUploadDir)) {
+                Files.walk(taskUploadDir)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (Exception e) { /* log if needed */ }
+                    });
+            }
+        } catch (Exception e) {
+            // Optional: log error
+        }
+    }
+
 }

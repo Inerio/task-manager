@@ -11,6 +11,7 @@ import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
 import { TaskService } from "../../services/task.service";
 import { TaskItemComponent } from "../task-item/task-item.component";
+import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
 @Component({
   selector: "app-task-list",
@@ -27,6 +28,7 @@ export class TaskListComponent {
   @Input({ required: true }) status!: "todo" | "in-progress" | "done";
 
   private taskService = inject(TaskService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   /** Show/hide the add form */
   showForm = signal(false);
@@ -103,9 +105,10 @@ export class TaskListComponent {
   // [COLUMN ACTIONS]
   // --------------------------------------------------------------------
   /** Delete all tasks in this column */
-  deleteAllInColumn(): void {
-    const confirmed = confirm(
-      `Supprimer toutes les tâches de "${this.title}" ?`
+  async deleteAllInColumn(): Promise<void> {
+    const confirmed = await this.confirmDialog.open(
+      "Suppression de la colonne",
+      `Voulez-vous supprimer toutes les tâches de « ${this.title} » ?`
     );
     if (!confirmed) return;
     this.taskService.deleteTasksByStatus(this.status);

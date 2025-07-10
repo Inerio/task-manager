@@ -2,11 +2,13 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  inject,
   Input,
   Output,
   signal,
   ViewChild,
 } from "@angular/core";
+import { AlertService } from "../../services/alert.service";
 
 @Component({
   selector: "app-attachment-zone",
@@ -30,6 +32,8 @@ export class AttachmentZoneComponent {
 
   /** File input reference for manual trigger */
   @ViewChild("fileInput") fileInput!: ElementRef<HTMLInputElement>;
+
+  private alertService = inject(AlertService);
 
   // --------------------------------------------------------------------
   // [OUTPUT EVENTS]
@@ -77,7 +81,10 @@ export class AttachmentZoneComponent {
         (file) => !this.attachments.includes(file.name)
       );
       if (newFiles.length < files.length) {
-        alert("Certains fichiers étaient déjà attachés et ont été ignorés.");
+        this.alertService.show(
+          "error",
+          "Certains fichiers étaient déjà attachés et ont été ignorés."
+        );
       }
       if (newFiles.length) this.filesUploaded.emit(newFiles); // Emit only new files!
     }
@@ -96,7 +103,10 @@ export class AttachmentZoneComponent {
         (file) => !this.attachments.includes(file.name)
       );
       if (newFiles.length < files.length) {
-        alert("Certains fichiers étaient déjà attachés et ont été ignorés.");
+        this.alertService.show(
+          "error",
+          "Certains fichiers étaient déjà attachés et ont été ignorés."
+        );
       }
       if (newFiles.length) this.filesUploaded.emit(newFiles);
     }

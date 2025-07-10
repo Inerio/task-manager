@@ -17,6 +17,7 @@ import { Task } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
 import { TaskService } from "../../services/task.service";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
+import { AlertService } from "../../services/alert.service";
 
 @Component({
   selector: "app-task-item",
@@ -45,6 +46,8 @@ export class TaskItemComponent implements OnChanges {
   maxSize = 5 * 1024 * 1024;
 
   private taskService = inject(TaskService);
+
+  private alertService = inject(AlertService);
 
   // --------------------------------------------------------------------
   // [LIFECYCLE]
@@ -181,14 +184,20 @@ export class TaskItemComponent implements OnChanges {
     for (const file of files) {
       // (Optional: check here, but backend will validate as well)
       if (file.size > this.maxSize) {
-        alert(`Fichier trop volumineux (${file.name})`);
+        this.alertService.show(
+          "error",
+          `Fichier trop volumineux (${file.name})`
+        );
         continue;
       }
       if (
         !file.type.match(/(image|pdf|text|word)/) &&
         !file.name.match(/\.(pdf|docx?|txt)$/i)
       ) {
-        alert(`Type de fichier non autorisé (${file.name})`);
+        this.alertService.show(
+          "error",
+          `Type de fichier non autorisé (${file.name})`
+        );
         continue;
       }
       try {
@@ -196,7 +205,7 @@ export class TaskItemComponent implements OnChanges {
         // Refresh task from backend after each upload
         await this.refreshTask(taskId);
       } catch {
-        alert("Erreur upload fichier");
+        this.alertService.show("error", "Erreur upload fichier");
       }
     }
   }
@@ -204,7 +213,9 @@ export class TaskItemComponent implements OnChanges {
   onDeleteAttachment(filename: string) {
     this.taskService
       .deleteAttachment(this.localTask().id!, filename)
-      .catch(() => alert("Erreur suppression fichier"));
+      .catch(() =>
+        this.alertService.show("error", "Erreur suppression fichier")
+      );
   }
 
   onDownloadAttachment(filename: string) {

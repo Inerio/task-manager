@@ -1,0 +1,44 @@
+.confirm-dialog-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(30, 36, 49, 0.35);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.confirm-dialog {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 24px #0002;
+  padding: 2rem 2.5rem 1.5rem 2.5rem;
+  min-width: 320px;
+  max-width: 90vw;
+  text-align: center;
+  animation: popIn 0.17s cubic-bezier(0.5, 1.2, 0.5, 1.07);
+}
+.confirm-dialog h3 {
+  margin-top: 0;
+}
+.confirm-dialog .btn-group {
+  display: flex;
+  gap: 1.2rem;
+  justify-content: center;
+  margin-top: 2.2rem;
+}
+@keyframes popIn {
+  from {
+    transform: scale(0.93);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.confirm-dialog-backdrop {
+  z-index: 9999 !important;
+}

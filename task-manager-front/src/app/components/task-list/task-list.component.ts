@@ -6,12 +6,15 @@ import {
   Input,
   signal,
   Signal,
+  effect,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
 import { TaskService } from "../../services/task.service";
 import { TaskItemComponent } from "../task-item/task-item.component";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
+import { TaskListService } from "../../services/task-list.service";
+import { TaskList } from "../../models/task-list.model";
 
 @Component({
   selector: "app-task-list",
@@ -21,111 +24,184 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   styleUrls: ["./task-list.component.scss"],
 })
 export class TaskListComponent {
-  // --------------------------------------------------------------------
-  // [STATE & SIGNALS]
-  // --------------------------------------------------------------------
+  // ------------------------------------------
+  // INPUTS
+  // ------------------------------------------
   @Input({ required: true }) title!: string;
-  @Input({ required: true }) status!: "todo" | "in-progress" | "done";
+  @Input({ required: true }) listId!: number;
 
-  private taskService = inject(TaskService);
-  private confirmDialog = inject(ConfirmDialogService);
+  // ------------------------------------------
+  // SERVICES
+  // ------------------------------------------
+  private readonly taskService = inject(TaskService);
+  private readonly taskListService = inject(TaskListService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
-  /** Show/hide the add form */
+  // ------------------------------------------
+  // LIST TITLE EDITION
+  // ------------------------------------------
+  isEditingTitle = signal(false);
+  editTitleValue = signal(""); // Holds the editing input value for the list title
+
+  constructor() {
+    // Keep edit input in sync when the title changes externally
+    effect(() => {
+      if (!this.isEditingTitle()) {
+        this.editTitleValue.set(this.title);
+      }
+    });
+  }
+
+  startEditTitle() {
+    this.editTitleValue.set(this.title);
+    this.isEditingTitle.set(true);
+    setTimeout(() => {
+      // Automatically focus input on edit mode
+      const input = document.getElementById(
+        `edit-list-title-${this.listId}`
+      ) as HTMLInputElement | null;
+      if (input) input.focus();
+    }, 0);
+  }
+
+  saveTitleEdit() {
+    const newName = this.editTitleValue().trim();
+    if (!newName || newName === this.title) {
+      this.isEditingTitle.set(false);
+      return;
+    }
+    // Update on backend (and trigger refresh on success)
+    const list: TaskList = { id: this.listId, name: newName };
+    this.taskListService.updateList(list).subscribe({
+      next: () => {
+        this.isEditingTitle.set(false);
+        this.taskListService.loadLists();
+      },
+      error: (err) => {
+        alert("Error when renaming list");
+        console.error(err);
+        this.isEditingTitle.set(false);
+      },
+    });
+  }
+
+  cancelTitleEdit() {
+    this.editTitleValue.set(this.title);
+    this.isEditingTitle.set(false);
+  }
+
+  onEditTitleInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.editTitleValue.set(input.value);
+  }
+
+  // ------------------------------------------
+  // TASK CREATION
+  // ------------------------------------------
   showForm = signal(false);
-
-  /** Temp data for new task creation */
   newTask = signal<Partial<Task>>(this.getEmptyTask());
 
-  /** Is a drag-over animation active? */
-  isDragOver = signal(false);
-
-  /** Filtered tasks for this column (signal, auto-reactive) */
-  readonly filteredTasks: Signal<Task[]> = computed(() =>
-    this.taskService.getTasksByStatus(this.status)()
-  );
-
-  // --------------------------------------------------------------------
-  // [FORM LOGIC]
-  // --------------------------------------------------------------------
-  /** Toggle the add-task form */
   toggleForm(): void {
     this.showForm.update((current) => !current);
     if (!this.showForm()) this.resetForm();
   }
 
-  /** Add a new task to this column */
   addTask(): void {
     const { title, description, dueDate } = this.newTask();
     if (!title || !description) return;
-
     const taskToCreate: Task = {
       title,
       description,
       completed: false,
-      status: this.status,
+      listId: this.listId,
       dueDate: dueDate || null,
     };
-
     this.taskService.createTask(taskToCreate);
     this.resetForm();
     this.showForm.set(false);
   }
 
-  /** Resets the add-task form */
   private resetForm(): void {
     this.newTask.set(this.getEmptyTask());
   }
 
-  /** Template for an empty task */
   private getEmptyTask(): Partial<Task> {
     return {
       title: "",
       description: "",
       completed: false,
+      dueDate: null,
     };
   }
 
-  /** Input update methods */
   updateNewTaskTitle(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.newTask.set({ ...this.newTask(), title: target.value });
   }
-
   updateNewTaskDescription(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.newTask.set({ ...this.newTask(), description: target.value });
   }
-
   updateNewTaskDueDate(event: Event): void {
     const value = (event.target as HTMLInputElement).value || null;
     this.newTask.set({ ...this.newTask(), dueDate: value });
   }
 
-  // --------------------------------------------------------------------
-  // [COLUMN ACTIONS]
-  // --------------------------------------------------------------------
-  /** Delete all tasks in this column */
+  // ------------------------------------------
+  // DELETE LIST / ALL TASKS IN LIST
+  // ------------------------------------------
   async deleteAllInColumn(): Promise<void> {
     const confirmed = await this.confirmDialog.open(
       "Suppression de la colonne",
-      `Voulez-vous supprimer toutes les tâches de « ${this.title} » ?`
+      `Voulez-vous supprimer toutes les tâches de “${this.title}”?`
     );
     if (!confirmed) return;
-    this.taskService.deleteTasksByStatus(this.status);
+    this.taskService.deleteTasksByListId(this.listId);
   }
 
-  // --------------------------------------------------------------------
-  // [DRAG & DROP - TASKS]
-  // --------------------------------------------------------------------
-  /** Drag-over: only activates for tasks */
+  async deleteList(): Promise<void> {
+    const confirmed = await this.confirmDialog.open(
+      "Suppression de la liste",
+      `Voulez-vous supprimer la liste “${this.title}” and all its tasks?`
+    );
+    if (!confirmed) return;
+    this.taskListService.deleteList(this.listId).subscribe({
+      next: () => {
+        // Signal will auto-update, nothing to do here
+      },
+      error: (err) => {
+        alert("Erreur lors de la suppression de la liste");
+        console.error(err);
+      },
+    });
+  }
+
+  // ------------------------------------------
+  // TASK FILTERING (reactive)
+  // ------------------------------------------
+  readonly filteredTasks: Signal<Task[]> = computed(() =>
+    this.taskService.tasks().filter((task) => task.listId === this.listId)
+  );
+
+  // ------------------------------------------
+  // DRAG & DROP
+  // ------------------------------------------
+  isDragOver = signal(false);
+
+  /**
+   * Handles drag over event. Prevents drag animation if dragging a task from the same list.
+   * Uses a window global variable for communication between task and list.
+   */
   onTaskDragOver(event: DragEvent): void {
-    // Ignore file drops
-    if (event.dataTransfer && event.dataTransfer.types.includes("Files")) {
+    if (event.dataTransfer && event.dataTransfer.types.includes("Files"))
       return;
-    }
-    // Get the globally tracked status
-    const sourceStatus = (window as any).CURRENT_DRAGGED_TASK_STATUS;
-    if (sourceStatus === this.status) {
+    // Block drag animation if dragging on own list (set by TaskItemComponent)
+    const draggedListId = (window as any).DRAGGED_TASK_LIST_ID;
+    if (
+      draggedListId !== undefined &&
+      draggedListId !== null &&
+      Number(draggedListId) === this.listId
+    ) {
       this.isDragOver.set(false);
       return;
     }
@@ -137,7 +213,6 @@ export class TaskListComponent {
     this.isDragOver.set(false);
   }
 
-  /** Drop a task (change its column/status) */
   onTaskDrop(event: DragEvent): void {
     if (event.dataTransfer && event.dataTransfer.types.includes("Files")) {
       this.isDragOver.set(false);
@@ -150,15 +225,14 @@ export class TaskListComponent {
     const id = parseInt(taskId, 10);
     const allTasks = this.taskService.tasks();
     const task = allTasks.find((t) => t.id === id);
-    if (!task || task.status === this.status) return;
-    const updatedTask = { ...task, status: this.status };
+    if (!task || task.listId === this.listId) return;
+    const updatedTask = { ...task, listId: this.listId };
     this.taskService.updateTask(updatedTask.id!, updatedTask);
   }
 
-  // --------------------------------------------------------------------
-  // [TEMPLATE UTILS]
-  // --------------------------------------------------------------------
-  /** TrackBy for *ngFor / @for loops */
+  // ------------------------------------------
+  // TRACK BY FOR *ngFor / @for
+  // ------------------------------------------
   trackById(index: number, task: Task): number | undefined {
     return task.id;
   }

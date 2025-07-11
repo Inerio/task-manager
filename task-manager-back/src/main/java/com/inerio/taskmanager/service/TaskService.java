@@ -1,8 +1,12 @@
 package com.inerio.taskmanager.service;
 
+import com.inerio.taskmanager.dto.TaskDto;
+import com.inerio.taskmanager.dto.TaskMapper;
 import com.inerio.taskmanager.exception.TaskNotFoundException;
 import com.inerio.taskmanager.model.Task;
+import com.inerio.taskmanager.model.TaskList;
 import com.inerio.taskmanager.repository.TaskRepository;
+import com.inerio.taskmanager.repository.TaskListRepository;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -18,24 +22,29 @@ import java.nio.file.*;
 
 /**
  * Service layer for Task business logic and persistence.
- * Handles CRUD, column actions, and file (attachment) management.
+ * Handles CRUD operations, list actions, and attachment (file) management.
  */
 @Service
 public class TaskService {
 
+    // ------------------------------------------
+    // DEPENDENCIES & CONSTANTS
+    // ------------------------------------------
     private final TaskRepository taskRepository;
+    private final TaskListRepository taskListRepository;
     private static final String UPLOAD_DIR = "uploads";
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, TaskListRepository taskListRepository) {
         this.taskRepository = taskRepository;
+        this.taskListRepository = taskListRepository;
     }
 
-    // ------------------------
-    // Basic CRUD operations
-    // ------------------------
+    // ------------------------------------------
+    // BASIC CRUD OPERATIONS
+    // ------------------------------------------
 
     /**
-     * Fetch all tasks from the database.
+     * Fetch all tasks.
      */
     public List<Task> getAllTasks() {
         return taskRepository.findAll();
@@ -49,42 +58,64 @@ public class TaskService {
     }
 
     /**
-     * Create or update a task.
+     * Get all tasks for a specific TaskList.
      */
-    public Task createTask(Task task) {
+    public List<Task> getTasksByListId(Long listId) {
+        TaskList list = taskListRepository.findById(listId)
+            .orElseThrow(() -> new RuntimeException("TaskList not found with ID " + listId));
+        return taskRepository.findByList(list);
+    }
+
+    /**
+     * Create a new Task from DTO and parent TaskList.
+     */
+    public Task createTaskFromDto(TaskDto dto, TaskList list) {
+        Task task = TaskMapper.toEntity(dto, list);
         return taskRepository.save(task);
     }
 
     /**
-     * Delete a task by ID.
-     * @throws TaskNotFoundException if ID does not exist.
+     * Update a Task from DTO and parent TaskList.
+     */
+    public Task updateTaskFromDto(Long id, TaskDto dto, TaskList list) {
+        Task existing = taskRepository.findById(id)
+            .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + id));
+        existing.setTitle(dto.getTitle());
+        existing.setDescription(dto.getDescription());
+        existing.setCompleted(dto.isCompleted());
+        existing.setDueDate(dto.getDueDate());
+        existing.setList(list);
+        // creationDate and attachments are not modified here
+        return taskRepository.save(existing);
+    }
+
+    /**
+     * Delete a Task by ID (and attachments on disk).
      */
     public void deleteTask(Long id) {
         if (!taskRepository.existsById(id)) {
             throw new TaskNotFoundException("Task not found with ID " + id);
         }
-
         deleteAttachmentsFolder(id);
-
-        // Delete the task from the database
         taskRepository.deleteById(id);
     }
 
-
     /**
-     * Delete all tasks for a specific status (column).
+     * Delete all tasks for a given TaskList (and all attachments).
      */
     @Transactional
-    public void deleteTasksByStatus(String status) {
-        List<Task> tasks = taskRepository.findByStatus(status);
+    public void deleteTasksByListId(Long listId) {
+        TaskList list = taskListRepository.findById(listId)
+            .orElseThrow(() -> new RuntimeException("TaskList not found with ID " + listId));
+        List<Task> tasks = taskRepository.findByList(list);
         for (Task task : tasks) {
             deleteAttachmentsFolder(task.getId());
         }
-        taskRepository.deleteByStatus(status);
+        taskRepository.deleteAll(tasks);
     }
 
     /**
-     * Delete all tasks from the database.
+     * Delete all tasks (and all attachments on disk).
      */
     public void deleteAllTasks() {
         List<Task> tasks = taskRepository.findAll();
@@ -94,34 +125,12 @@ public class TaskService {
         taskRepository.deleteAll();
     }
 
-    /**
-     * Update a task by its ID.
-     * @throws TaskNotFoundException if the ID does not exist.
-     */
-    public Task updateTask(Long id, Task updatedTask) {
-        Task existing = taskRepository.findById(id)
-            .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + id));
-
-        existing.setTitle(updatedTask.getTitle());
-        existing.setDescription(updatedTask.getDescription());
-        existing.setCompleted(updatedTask.isCompleted());
-        existing.setStatus(updatedTask.getStatus());
-        existing.setDueDate(updatedTask.getDueDate());
-
-        return taskRepository.save(existing);
-    }
-
-    // ------------------------
-    // Attachments management
-    // ------------------------
+    // ------------------------------------------
+    // ATTACHMENT MANAGEMENT
+    // ------------------------------------------
 
     /**
-     * Uploads a file as an attachment for a task.
-     * Files are stored in /uploads/{taskId}/.
-     * The filename is saved in the attachments list of the Task.
-     * 
-     * Throws an exception if the file already exists in the attachments list.
-     * @throws TaskNotFoundException if task does not exist.
+     * Upload a file as an attachment for a task.
      */
     public Task uploadAttachment(Long taskId, MultipartFile file) throws Exception {
         Task task = taskRepository.findById(taskId)
@@ -134,32 +143,23 @@ public class TaskService {
         if (filename == null || filename.isBlank()) {
             throw new IllegalArgumentException("Invalid filename");
         }
-
-        // Check for duplicate filename in the task's attachments list
         if (task.getAttachments().contains(filename)) {
             throw new IllegalStateException("Attachment already exists: " + filename);
         }
-
         Path filePath = uploadPath.resolve(filename);
-
-        // Extra check: file should not already exist on disk
         if (Files.exists(filePath)) {
             throw new IllegalStateException("A file with this name already exists on the server: " + filename);
         }
 
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-        // Add to task and save
         task.getAttachments().add(filename);
         taskRepository.save(task);
 
         return task;
     }
 
-
     /**
-     * Downloads a specific attachment for a task.
-     * Returns the file as a Resource, with appropriate headers.
+     * Download a specific attachment for a task.
      */
     public ResponseEntity<Resource> downloadAttachment(Long taskId, String filename) {
         try {
@@ -177,28 +177,27 @@ public class TaskService {
     }
 
     /**
-     * Deletes an attachment from disk, delete the folder if it is empty after file deletion and updates the Task's attachments list.
+     * Delete an attachment from disk and update the Task's attachments list.
      */
     public Task deleteAttachment(Long taskId, String filename) {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
-
         Path filePath = Paths.get(UPLOAD_DIR, taskId.toString(), filename);
         try {
-            Files.deleteIfExists(filePath);       
+            Files.deleteIfExists(filePath);
             task.getAttachments().remove(filename);
             taskRepository.save(task);
+            // Delete folder if empty
             Path dirPath = Paths.get(UPLOAD_DIR, taskId.toString());
             if (Files.isDirectory(dirPath) && Files.list(dirPath).findAny().isEmpty()) {
                 Files.delete(dirPath);
             }
-
         } catch (Exception ignored) {}
         return task;
     }
-    
+
     /**
-     * Delete all attachment files and the upload folder for a given task ID.
+     * Utility: Delete all attachment files and the upload folder for a given task ID.
      */
     private void deleteAttachmentsFolder(Long taskId) {
         Path taskUploadDir = Paths.get(UPLOAD_DIR, taskId.toString());
@@ -209,12 +208,11 @@ public class TaskService {
                     .forEach(path -> {
                         try {
                             Files.deleteIfExists(path);
-                        } catch (Exception e) { /* log if needed */ }
+                        } catch (Exception e) { /* Optional: log */ }
                     });
             }
         } catch (Exception e) {
             // Optional: log error
         }
     }
-
 }

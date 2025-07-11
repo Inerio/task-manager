@@ -8,7 +8,7 @@ export interface Task {
   title: string;
   description: string;
   completed: boolean;
-  status: string; // 'todo' | 'in-progress' | 'done'
+  listId: number;
   dueDate?: string | null;
   isEditing?: boolean; // Edit state (UI only)
   attachments?: string[];

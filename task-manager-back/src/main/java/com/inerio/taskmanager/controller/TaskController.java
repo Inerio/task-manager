@@ -1,7 +1,10 @@
 package com.inerio.taskmanager.controller;
 
-import com.inerio.taskmanager.model.Task;
+import com.inerio.taskmanager.dto.TaskDto;
+import com.inerio.taskmanager.dto.TaskMapper;
+import com.inerio.taskmanager.model.TaskList;
 import com.inerio.taskmanager.service.TaskService;
+import com.inerio.taskmanager.service.TaskListService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,73 +14,97 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- * REST controller for task management (CRUD, column actions, attachments).
+ * REST controller for managing tasks and attachments.
  */
 @RestController
 @RequestMapping("/api/v1/tasks")
-@CrossOrigin(origins = "*") // Restrict in production!
+@CrossOrigin(origins = "*") // TODO: Restrict in production
 public class TaskController {
 
+    // ------------------------------------------
+    // DEPENDENCY INJECTION & LOGGING
+    // ------------------------------------------
     private final TaskService taskService;
+    private final TaskListService taskListService;
     private static final Logger log = LoggerFactory.getLogger(TaskController.class);
 
-    public TaskController(TaskService taskService) {
+    public TaskController(TaskService taskService, TaskListService taskListService) {
         this.taskService = taskService;
+        this.taskListService = taskListService;
     }
 
-    // -----------
-    // Task CRUD
-    // -----------
+    // ------------------------------------------
+    // TASK CRUD ENDPOINTS
+    // ------------------------------------------
 
-    /**
-     * Get all tasks.
-     */
+    /** Return all tasks (as DTOs). */
     @GetMapping
-    public ResponseEntity<List<Task>> getAllTasks() {
-        List<Task> tasks = taskService.getAllTasks();
+    public ResponseEntity<List<TaskDto>> getAllTasks() {
+        List<TaskDto> tasks = taskService.getAllTasks()
+                .stream()
+                .map(TaskMapper::toDto)
+                .collect(Collectors.toList());
         if (tasks.isEmpty()) return ResponseEntity.noContent().build();
         return ResponseEntity.ok(tasks);
     }
 
-    /**
-     * Get task by ID.
-     */
+    /** Return a task by ID, or 404 if not found. */
     @GetMapping("/{id}")
-    public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
+    public ResponseEntity<TaskDto> getTaskById(@PathVariable Long id) {
         return taskService.getTaskById(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+                .map(TaskMapper::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Create a new task.
-     */
+    /** Return all tasks for a specific list/column. */
+    @GetMapping("/list/{listId}")
+    public ResponseEntity<List<TaskDto>> getTasksByListId(@PathVariable Long listId) {
+        List<TaskDto> tasks = taskService.getTasksByListId(listId)
+                .stream()
+                .map(TaskMapper::toDto)
+                .collect(Collectors.toList());
+        if (tasks.isEmpty()) return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(tasks);
+    }
+
+    /** Create a new task (requires valid listId). */
     @PostMapping
-    public ResponseEntity<Task> createTask(@RequestBody Task task) {
-        Task createdTask = taskService.createTask(task);
-        URI location = URI.create("/" + createdTask.getId());
-        return ResponseEntity.created(location).body(createdTask);
+    public ResponseEntity<TaskDto> createTask(@RequestBody TaskDto dto) {
+        Optional<TaskList> listOpt = taskListService.getListById(dto.getListId());
+        if (listOpt.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        TaskDto created = TaskMapper.toDto(
+                taskService.createTaskFromDto(dto, listOpt.get())
+        );
+        URI location = URI.create("/" + created.getId());
+        return ResponseEntity.created(location).body(created);
     }
 
-    /**
-     * Update an existing task.
-     */
+    /** Update an existing task (requires valid listId). */
     @PutMapping("/{id}")
-    public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody Task updatedTask) {
+    public ResponseEntity<TaskDto> updateTask(@PathVariable Long id, @RequestBody TaskDto dto) {
+        Optional<TaskList> listOpt = taskListService.getListById(dto.getListId());
+        if (listOpt.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
         try {
-            Task savedTask = taskService.updateTask(id, updatedTask);
-            return ResponseEntity.ok(savedTask);
+            TaskDto saved = TaskMapper.toDto(
+                    taskService.updateTaskFromDto(id, dto, listOpt.get())
+            );
+            return ResponseEntity.ok(saved);
         } catch (RuntimeException e) {
             log.warn("Task not found for update: {}", id, e);
             return ResponseEntity.notFound().build();
         }
     }
 
-    /**
-     * Delete a task by ID.
-     */
+    /** Delete a task by ID. */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
         if (taskService.getTaskById(id).isEmpty()) {
@@ -87,40 +114,33 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Delete all tasks for a specific status (column).
-     */
-    @DeleteMapping("/status/{status}")
-    public ResponseEntity<Void> deleteTasksByStatus(@PathVariable String status) {
-        taskService.deleteTasksByStatus(status);
+    /** Delete all tasks for a given list/column. */
+    @DeleteMapping("/list/{listId}")
+    public ResponseEntity<Void> deleteTasksByListId(@PathVariable Long listId) {
+        taskService.deleteTasksByListId(listId);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Delete all tasks.
-     */
+    /** Delete all tasks in the database. */
     @DeleteMapping("/all")
     public ResponseEntity<Void> deleteAllTasks() {
         taskService.deleteAllTasks();
         return ResponseEntity.noContent().build();
     }
 
-    // ------------------------
-    // Attachment endpoints
-    // ------------------------
+    // ------------------------------------------
+    // ATTACHMENT ENDPOINTS
+    // ------------------------------------------
 
-    /**
-     * Upload an attachment for a given task.
-     */
+    /** Upload an attachment to a task. Returns updated TaskDto. */
     @PostMapping("/{id}/attachments")
     public ResponseEntity<?> uploadAttachment(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
         try {
-            Task updatedTask = taskService.uploadAttachment(id, file);
+            TaskDto updatedTask = TaskMapper.toDto(taskService.uploadAttachment(id, file));
             return ResponseEntity.ok(updatedTask);
         } catch (IllegalStateException e) {
-            // Duplicate file error: HTTP 409 Conflict
             log.warn("Attachment upload failed for task {}: {}", id, e.getMessage());
             return ResponseEntity.status(409).body(e.getMessage());
         } catch (Exception e) {
@@ -129,10 +149,7 @@ public class TaskController {
         }
     }
 
-
-    /**
-     * Download a specific attachment for a task.
-     */
+    /** Download an attachment for a task (stream/binary). */
     @GetMapping("/{id}/attachments/{filename:.+}")
     public ResponseEntity<?> downloadAttachment(
             @PathVariable Long id,
@@ -140,14 +157,12 @@ public class TaskController {
         return taskService.downloadAttachment(id, filename);
     }
 
-    /**
-     * Delete an attachment from a task.
-     */
+    /** Delete an attachment from a task. Returns updated TaskDto. */
     @DeleteMapping("/{id}/attachments/{filename:.+}")
     public ResponseEntity<?> deleteAttachment(
             @PathVariable Long id,
             @PathVariable String filename) {
-        Task updatedTask = taskService.deleteAttachment(id, filename);
+        TaskDto updatedTask = TaskMapper.toDto(taskService.deleteAttachment(id, filename));
         return ResponseEntity.ok(updatedTask);
     }
 }

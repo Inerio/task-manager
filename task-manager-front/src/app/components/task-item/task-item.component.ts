@@ -1,6 +1,3 @@
-/** GLOBAL VARIABLE **/
-(window as any).CURRENT_DRAGGED_TASK_STATUS = null;
-
 import {
   Component,
   Input,
@@ -27,49 +24,48 @@ import { AlertService } from "../../services/alert.service";
   styleUrls: ["./task-item.component.scss"],
 })
 export class TaskItemComponent implements OnChanges {
-  // --------------------------------------------------------------------
-  // [STATE & SIGNALS]
-  // --------------------------------------------------------------------
-  /** Input: Task object (not a signal) */
+  // ------------------------------------------
+  // INPUTS
+  // ------------------------------------------
   @Input({ required: true }) task!: Task;
 
-  /** Internal reactive signal for editing/view updates */
-  readonly localTask: WritableSignal<Task> = signal({} as Task);
+  // ------------------------------------------
+  // SERVICES
+  // ------------------------------------------
+  private readonly taskService = inject(TaskService);
+  private readonly alertService = inject(AlertService);
 
-  /** Drag state for animation */
-  dragging = signal(false);
+  // ------------------------------------------
+  // STATE & SIGNALS
+  // ------------------------------------------
+  readonly localTask: WritableSignal<Task> = signal({} as Task); // Local reactive copy for editing/view
+  dragging = signal(false); // Used for drag animation
 
-  /** File types allowed for upload */
+  // ------------------------------------------
+  // ATTACHMENTS
+  // ------------------------------------------
   acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
-
-  /** Max file size (5MB) */
   maxSize = 5 * 1024 * 1024;
 
-  private taskService = inject(TaskService);
-
-  private alertService = inject(AlertService);
-
-  // --------------------------------------------------------------------
-  // [LIFECYCLE]
-  // --------------------------------------------------------------------
+  // ------------------------------------------
+  // LIFECYCLE
+  // ------------------------------------------
   constructor() {
-    // Sync localTask signal when component (or task) changes
+    // Keeps localTask in sync with input changes
     effect(() => {
       this.localTask();
     });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Rebuilds the local signal each time @Input task changes
     if (changes["task"] && this.task) {
       this.localTask.set({ ...this.task });
     }
   }
 
-  // --------------------------------------------------------------------
-  // [UI LOGIC]
-  // --------------------------------------------------------------------
-  /** Deadline badge (computed from due date) */
+  // ------------------------------------------
+  // DUE BADGE (computed)
+  // ------------------------------------------
   dueBadge = computed(() => {
     const due = this.localTask().dueDate;
     if (!due) return null;
@@ -85,9 +81,12 @@ export class TaskItemComponent implements OnChanges {
     return `${diffDays} jours restants`;
   });
 
-  // --------------------------------------------------------------------
-  // [DRAG & DROP - TASKS]
-  // --------------------------------------------------------------------
+  // ------------------------------------------
+  // DRAG & DROP
+  // ------------------------------------------
+  /**
+   * Start drag: sets global dragged list ID and a custom drag image.
+   */
   onTaskDragStart(event: DragEvent): void {
     if (this.localTask().isEditing) {
       event.preventDefault();
@@ -97,12 +96,9 @@ export class TaskItemComponent implements OnChanges {
     const task = this.localTask();
     if (!task.id) return;
     event.dataTransfer?.setData("text/plain", task.id.toString());
-    event.dataTransfer?.setData("task-status", task.status);
-
-    // Store the status in the global variable
-    (window as any).CURRENT_DRAGGED_TASK_STATUS = task.status;
-
-    // Custom drag image (task title)
+    (window as any).DRAGGED_TASK_LIST_ID = task.listId; // For cross-list logic
+    event.dataTransfer?.setData("list-id", task.listId?.toString() ?? "");
+    // Custom drag image
     const dragImage = document.createElement("div");
     dragImage.style.position = "absolute";
     dragImage.style.top = "-1000px";
@@ -121,15 +117,17 @@ export class TaskItemComponent implements OnChanges {
     }, 0);
   }
 
+  /**
+   * End drag: cleanup global variable.
+   */
   onTaskDragEnd(): void {
     this.dragging.set(false);
-    // Reset the global variable
-    (window as any).CURRENT_DRAGGED_TASK_STATUS = null;
+    (window as any).DRAGGED_TASK_LIST_ID = undefined;
   }
 
-  // --------------------------------------------------------------------
-  // [TASK EDIT / VIEW LOGIC]
-  // --------------------------------------------------------------------
+  // ------------------------------------------
+  // CRUD & EDIT
+  // ------------------------------------------
   toggleCompleted(): void {
     const updated = {
       ...this.localTask(),
@@ -152,7 +150,6 @@ export class TaskItemComponent implements OnChanges {
   }
 
   cancelEdit(): void {
-    // Reset to last parent value
     this.localTask.set({ ...this.task, isEditing: false });
   }
 
@@ -161,6 +158,9 @@ export class TaskItemComponent implements OnChanges {
     if (current.id) this.taskService.deleteTask(current.id);
   }
 
+  // ------------------------------------------
+  // EDIT FIELD HELPERS
+  // ------------------------------------------
   updateTitleFromEvent(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.localTask.set({ ...this.localTask(), title: value });
@@ -176,13 +176,12 @@ export class TaskItemComponent implements OnChanges {
     this.localTask.set({ ...this.localTask(), dueDate: value });
   }
 
-  // --------------------------------------------------------------------
-  // [ATTACHMENTS / FILES]
-  // --------------------------------------------------------------------
+  // ------------------------------------------
+  // ATTACHMENTS (UPLOAD/DOWNLOAD/DELETE)
+  // ------------------------------------------
   async onUploadFiles(files: File[]) {
     const taskId = this.localTask().id!;
     for (const file of files) {
-      // (Optional: check here, but backend will validate as well)
       if (file.size > this.maxSize) {
         this.alertService.show(
           "error",
@@ -202,7 +201,6 @@ export class TaskItemComponent implements OnChanges {
       }
       try {
         await this.taskService.uploadAttachment(taskId, file);
-        // Refresh task from backend after each upload
         await this.refreshTask(taskId);
       } catch {
         this.alertService.show("error", "Erreur upload fichier");
@@ -223,7 +221,6 @@ export class TaskItemComponent implements OnChanges {
   }
 
   async refreshTask(taskId: number) {
-    // Reload the up-to-date task from backend (replace localTask)
     const tasks = this.taskService.tasks();
     const fresh = tasks.find((t) => t.id === taskId);
     if (fresh) {

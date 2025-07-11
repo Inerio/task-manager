@@ -1,15 +1,54 @@
 <div class="task-list">
+  <!-- Remove list (red cross) -->
+  <button
+    class="btn-close-list"
+    (click)="deleteList()"
+    title="Delete this list"
+    aria-label="Delete this list"
+  >
+    &times;
+  </button>
+
   <div class="task-list-header">
-    <h2>{{ title }}</h2>
+    <!-- Title: Editable on click, input in edit mode -->
+    @if (!isEditingTitle()) {
+    <h2
+      class="list-title"
+      (click)="startEditTitle()"
+      title="Rename this list"
+      tabindex="0"
+      (keydown.enter)="startEditTitle()"
+      (keydown.space)="startEditTitle()"
+      style="cursor: pointer"
+    >
+      {{ title }}
+    </h2>
+    } @else {
+    <input
+      id="edit-list-title-{{ listId }}"
+      class="list-title-input"
+      type="text"
+      [value]="editTitleValue()"
+      (input)="onEditTitleInput($event)"
+      (blur)="saveTitleEdit()"
+      (keydown.enter)="saveTitleEdit()"
+      (keydown.escape)="cancelTitleEdit()"
+      maxlength="60"
+      required
+    />
+    }
+    <!-- Remove all tasks in this list -->
     <button
       type="button"
       class="btn btn-danger btn-delete-column"
       (click)="deleteAllInColumn()"
-      title="Delete all tasks in this column"
+      title="Delete all tasks in this list"
     >
       🗑️
     </button>
   </div>
+
+  <!-- Drag & drop area for tasks -->
   <div
     class="task-dropzone"
     [class.drag-over]="isDragOver()"
@@ -17,15 +56,15 @@
     (dragleave)="onTaskDragLeave()"
     (drop)="onTaskDrop($event)"
   >
-    <!-- Display all tasks of this status (column) -->
+    <!-- List all tasks in this column -->
     @for (task of filteredTasks(); track trackById($index, task)) {
     <app-task-item [task]="task"></app-task-item>
     }
 
-    <!-- Add new task button -->
+    <!-- Button to show the add-task form -->
     <button (click)="toggleForm()" class="add-btn">+ Add task</button>
 
-    <!-- Add task form -->
+    <!-- Add-task form, shown only if showForm() -->
     @if (showForm()) {
     <div class="add-task-form">
       <input

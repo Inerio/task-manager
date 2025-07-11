@@ -16,10 +16,9 @@ export class TaskService {
   // --------------------------------------------------------------------
   // [STATE & SETUP]
   // --------------------------------------------------------------------
-  /** Angular's HttpClient for API calls */
   private http = inject(HttpClient);
-  /** Backend API root URL */
-  private apiUrl = environment.apiUrl;
+  /** Backend API root URL pour les tâches */
+  private apiUrl = environment.apiUrlTasks;
 
   /** Internal signal: global list of tasks (source of truth) */
   private tasksSignal: WritableSignal<Task[]> = signal([]);
@@ -31,7 +30,7 @@ export class TaskService {
   // [TASKS : READ / FETCH]
   // --------------------------------------------------------------------
 
-  /** Load all tasks from backend */
+  /** Charge toutes les tâches depuis le backend */
   loadTasks(): void {
     this.http.get<Task[]>(this.apiUrl).subscribe({
       next: (data) => this.tasksSignal.set(data ?? []),
@@ -39,10 +38,10 @@ export class TaskService {
     });
   }
 
-  /** Get a reactive filtered list by column status */
-  getTasksByStatus(status: string): Signal<Task[]> {
+  /** Reactive: récupère les tâches associées à une liste par son id */
+  getTasksByListId(listId: number): Signal<Task[]> {
     return computed(() =>
-      this.tasksSignal().filter((task) => task.status === status)
+      this.tasksSignal().filter((task) => task.listId === listId)
     );
   }
 
@@ -50,7 +49,7 @@ export class TaskService {
   // [TASKS : CREATE & UPDATE]
   // --------------------------------------------------------------------
 
-  /** Create a new task (POST) */
+  /** Crée une nouvelle tâche */
   createTask(task: Task): void {
     this.http.post<Task>(this.apiUrl, task).subscribe({
       next: (newTask) => this.tasksSignal.set([...this.tasksSignal(), newTask]),
@@ -58,7 +57,7 @@ export class TaskService {
     });
   }
 
-  /** Update an existing task (PUT) */
+  /** Modifie une tâche existante */
   updateTask(id: number, updatedTask: Task): void {
     this.http.put<Task>(`${this.apiUrl}/${id}`, updatedTask).subscribe({
       next: (updated) => {
@@ -75,7 +74,7 @@ export class TaskService {
   // [TASKS : DELETE]
   // --------------------------------------------------------------------
 
-  /** Delete a single task by ID */
+  /** Supprime une tâche par son id */
   deleteTask(id: number): void {
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       next: () => {
@@ -85,21 +84,20 @@ export class TaskService {
     });
   }
 
-  /** Delete all tasks for a given status/column */
-  deleteTasksByStatus(status: string): void {
-    this.http.delete<void>(`${this.apiUrl}/status/${status}`).subscribe({
+  /** Supprime toutes les tâches d'une liste (colonne) via son id */
+  deleteTasksByListId(listId: number): void {
+    this.http.delete<void>(`${this.apiUrl}/list/${listId}`).subscribe({
       next: () => {
-        // Remove tasks with this status locally
         this.tasksSignal.set(
-          this.tasksSignal().filter((t) => t.status !== status)
+          this.tasksSignal().filter((t) => t.listId !== listId)
         );
       },
       error: (err) =>
-        console.error("Erreur suppression tâches par colonne", err),
+        console.error("Erreur suppression tâches de la colonne", err),
     });
   }
 
-  /** Delete ALL tasks (returns Observable for chaining) */
+  /** Supprime TOUTES les tâches */
   deleteAllTasks(): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/all`).pipe(
       tap(() => this.tasksSignal.set([])),
@@ -114,7 +112,7 @@ export class TaskService {
   // [ATTACHMENTS : FILE OPERATIONS]
   // --------------------------------------------------------------------
 
-  /** Upload a file for a task */
+  /** Upload un fichier en pièce jointe */
   async uploadAttachment(taskId: number, file: File): Promise<void> {
     const formData = new FormData();
     formData.append("file", file);
@@ -127,7 +125,7 @@ export class TaskService {
     );
   }
 
-  /** Download an attached file for a task */
+  /** Télécharge une pièce jointe */
   downloadAttachment(taskId: number, filename: string): void {
     this.http
       .get(
@@ -143,14 +141,14 @@ export class TaskService {
       });
   }
 
-  /** Delete an attached file for a task */
+  /** Supprime une pièce jointe */
   async deleteAttachment(taskId: number, filename: string): Promise<void> {
     const updated = await firstValueFrom(
       this.http.delete<Task>(
         `${this.apiUrl}/${taskId}/attachments/${encodeURIComponent(filename)}`
       )
     );
-    if (!updated) return; // No update returned, skip
+    if (!updated) return;
     this.tasksSignal.set(
       this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
     );

@@ -7,36 +7,46 @@ Application de gestion de tâches développée en **Angular** (frontend) et **Sp
 ## Fonctionnalités
 
 ### Backend (Spring Boot)
-- API REST sécurisée
+
+- API RESTful pour listes et tâches (CRUD)
+- Création, édition, suppression de listes (colonnes Kanban)
+- Création, édition, suppression, déplacement de tâches entre listes
+- Upload, téléchargement, suppression de pièces jointes
 - Architecture claire (Controller / Service / Repository)
 - Intégration PostgreSQL avec JPA/Hibernate
-- Configuration Docker (`docker-compose`)
+- Configuration Docker (`docker-compose.yml`)
 
 ### Frontend (Angular)
-- UI responsive et claire
-- Composants réutilisables : `TaskItem`, `TaskList`
-- Requêtes HTTP via `HttpClient`
-- Affichage dynamique des tâches
+
+- Interface responsive type Kanban (drag & drop)
+- Création et suppression de listes
+- Ajout, édition, suppression de tâches
+- Drag & drop de tâches entre listes (avec restrictions intelligentes)
+- Gestion des pièces jointes (upload, téléchargement, suppression)
+- Dialogues de confirmation & notifications
+- Composants réutilisables (`TaskItem`, `TaskList`, etc.)
+- Gestion d’état réactif (Signals Angular)
 - Prise en charge du CORS (`http://localhost:4200`)
 
 ---
 
-## Stack Technique
+## Stack technique
 
-| Technologie | Rôle                    |
-|-------------|-------------------------|
-| Angular     | Interface utilisateur   |
-| TypeScript  | Langage frontend        |
-| Spring Boot | API REST backend        |
-| Java 21     | Langage backend         |
-| PostgreSQL  | Base de données         |
-| Docker      | Conteneurisation BDD    |
+| Technologie | Rôle                  |
+| ----------- | --------------------- |
+| Angular     | Interface utilisateur |
+| TypeScript  | Langage frontend      |
+| Spring Boot | API REST backend      |
+| Java 21     | Langage backend       |
+| PostgreSQL  | Base de données       |
+| Docker      | Conteneurisation BDD  |
 
 ---
 
 ## Lancer le projet
 
 ### Prérequis
+
 - Java 21
 - Node.js + npm
 - Angular CLI
@@ -56,3 +66,4 @@ cd task-manager-back
 cd ../task-manager-front
 npm install
 ng serve
+```

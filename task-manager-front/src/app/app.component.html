@@ -1,12 +1,39 @@
+<!-- Global confirmation dialog and alert system (always available) -->
 <app-confirm-dialog></app-confirm-dialog>
 <app-alert></app-alert>
+
 <div class="header">
-  <h1>Mon gestionnaire de tâches</h1>
+  <h1>Task Manager</h1>
+  <!-- Delete all tasks button (calls method in TS) -->
   <button class="delete-btn" (click)="deleteAllTasks()">🗑️</button>
 </div>
 
 <div class="task-columns">
-  <app-task-list [status]="'todo'" [title]="'À faire'"></app-task-list>
-  <app-task-list [status]="'in-progress'" [title]="'En cours'"></app-task-list>
-  <app-task-list [status]="'done'" [title]="'Terminées'"></app-task-list>
+  <!-- Render each kanban list dynamically -->
+  @for (list of lists(); track list.id) {
+  <app-task-list [listId]="list.id!" [title]="list.name"></app-task-list>
+  }
+
+  <!-- "Add new list" column: toggles form or shows button -->
+  <div class="add-list-column">
+    @if (!showAddListForm) {
+    <button class="add-list-btn" (click)="showAddListForm = true">
+      + Add List
+    </button>
+    } @else {
+    <div class="add-list-form">
+      <input
+        type="text"
+        [value]="newListName()"
+        (input)="onListNameInput($event)"
+        placeholder="New list name"
+        required
+        autofocus
+      />
+
+      <button (click)="addList()">Add</button>
+      <button (click)="showAddListForm = false">Cancel</button>
+    </div>
+    }
+  </div>
 </div>

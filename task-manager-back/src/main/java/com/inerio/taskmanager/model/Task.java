@@ -13,70 +13,68 @@ import jakarta.persistence.*;
 @Entity
 public class Task {
 
-    /**
-     * Unique identifier for the task (auto-generated).
-     */
+    // ------------------------------------------
+    // PRIMARY KEY
+    // ------------------------------------------
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Title of the task (required).
-     */
+    // ------------------------------------------
+    // BASIC FIELDS
+    // ------------------------------------------
     @Column(nullable = false)
     private String title;
 
-    /**
-     * Optional description, limited to 500 characters.
-     */
     @Column(length = 500)
     private String description;
 
-    /**
-     * Completion status.
-     */
     @Column(nullable = false)
     private boolean completed;
 
-    /**
-     * Status/column of the task (e.g., 'todo', 'in-progress', 'done').
-     */
-    @Column(nullable = false)
-    private String status; // TODO: Replace with TaskStatus enum
+    // ------------------------------------------
+    // RELATIONSHIPS
+    // ------------------------------------------
+    /** The list/column this task belongs to. */
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "list_id", nullable = false)
+    private TaskList list;
 
-    /**
-     * Date/time when the task was created.
-     */
+    // ------------------------------------------
+    // TIMESTAMPS
+    // ------------------------------------------
+    /** Task creation datetime, set automatically on persist. */
     @Column(nullable = false, updatable = false)
     private LocalDateTime creationDate;
 
-    /**
-     * Optional due date.
-     */
+    /** Optional due date. */
     @Column(nullable = true)
     private LocalDate dueDate;
 
-    /**
-     * List of attachment filenames (stored in /uploads).
-     */
+    // ------------------------------------------
+    // ATTACHMENTS
+    // ------------------------------------------
+    /** List of attachment filenames associated with this task. */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "task_attachments", joinColumns = @JoinColumn(name = "task_id"))
     @Column(name = "filename")
     private List<String> attachments = new ArrayList<>();
 
-    // --- Constructors ---
-
+    // ------------------------------------------
+    // CONSTRUCTORS
+    // ------------------------------------------
     public Task() {}
 
-    public Task(String title, String description, boolean completed, String status) {
+    public Task(String title, String description, boolean completed, TaskList list) {
         this.title = title;
         this.description = description;
         this.completed = completed;
-        this.status = status;
+        this.list = list;
     }
 
-    // --- Getters / Setters ---
-
+    // ------------------------------------------
+    // GETTERS & SETTERS
+    // ------------------------------------------
     public Long getId() { return id; }
 
     public String getTitle() { return title; }
@@ -88,8 +86,8 @@ public class Task {
     public boolean isCompleted() { return completed; }
     public void setCompleted(boolean completed) { this.completed = completed; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public TaskList getList() { return list; }
+    public void setList(TaskList list) { this.list = list; }
 
     public LocalDateTime getCreationDate() { return creationDate; }
 
@@ -97,15 +95,15 @@ public class Task {
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
 
     public List<String> getAttachments() {
-        // Always return a non-null list
         if (attachments == null) attachments = new ArrayList<>();
         return attachments;
     }
     public void setAttachments(List<String> attachments) { this.attachments = attachments; }
 
-    /**
-     * Automatically sets the creation date before persisting.
-     */
+    // ------------------------------------------
+    // LIFECYCLE HOOKS
+    // ------------------------------------------
+    /** Automatically set creationDate when the entity is persisted. */
     @PrePersist
     protected void onCreate() {
         this.creationDate = LocalDateTime.now();

@@ -24,14 +24,14 @@ public class TaskListService {
     }
 
     // ------------------------------------------
-    // BASIC CRUD METHODS
+    // BASIC CRUD METHODS (with position logic)
     // ------------------------------------------
 
     /**
-     * Retrieve all TaskList entities.
+     * Retrieve all TaskList entities, ordered by position.
      */
     public List<TaskList> getAllLists() {
-        return listRepository.findAll();
+        return listRepository.findAllByOrderByPositionAsc();
     }
 
     /**
@@ -42,40 +42,68 @@ public class TaskListService {
     }
 
     /**
-     * Create and persist a new TaskList.
+     * Create and persist a new TaskList at the last position (max 6).
      */
     public TaskList createList(TaskList list) {
+        long count = listRepository.count();
+        if (count >= 6) throw new IllegalStateException("Maximum number of lists (6) reached");
+        // Give next available position
+        Integer maxPos = listRepository.findAll().stream()
+                .map(TaskList::getPosition)
+                .max(Integer::compareTo)
+                .orElse(0);
+        list.setPosition(maxPos + 1);
         return listRepository.save(list);
     }
 
     /**
-     * Update an existing TaskList by ID.
-     * Throws RuntimeException if the list does not exist.
+     * Update an existing TaskList by ID (name only, position stays unless explicitly set).
      */
     public TaskList updateList(Long id, TaskList updated) {
         TaskList existing = listRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("TaskList not found with id " + id));
         existing.setName(updated.getName());
+        // Optionally: allow position change (drag & drop: à prévoir si besoin)
+        if (updated.getPosition() != existing.getPosition()) {
+            existing.setPosition(updated.getPosition());
+        }
         return listRepository.save(existing);
     }
 
     /**
-     * Delete a TaskList by its ID.
+     * Delete a TaskList by its ID, then repack positions for remaining lists.
      */
     public void deleteList(Long id) {
+    	// Only check if the list exists before deleting
+        if (!listRepository.existsById(id)) {
+            throw new RuntimeException("TaskList not found with id " + id);
+        }
         listRepository.deleteById(id);
+
+        // Repack all positions to ensure continuity (no gap)
+        List<TaskList> remaining = listRepository.findAllByOrderByPositionAsc();
+        int pos = 1;
+        for (TaskList list : remaining) {
+            if (list.getPosition() != pos) {
+                list.setPosition(pos);
+                listRepository.save(list);
+            }
+            pos++;
+        }
     }
+
+
 
     // ------------------------------------------
     // DTO HELPERS
     // ------------------------------------------
 
     /**
-     * Retrieve all TaskList entities as DTOs (id + name only).
+     * Retrieve all TaskList entities as DTOs (id + name + position), ordered by position.
      */
     public List<TaskListDto> getAllListDtos() {
-        return listRepository.findAll().stream()
-            .map(list -> new TaskListDto(list.getId(), list.getName()))
+        return listRepository.findAllByOrderByPositionAsc().stream()
+            .map(list -> new TaskListDto(list.getId(), list.getName(), list.getPosition()))
             .toList();
     }
 }

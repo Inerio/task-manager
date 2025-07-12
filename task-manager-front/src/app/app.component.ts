@@ -31,6 +31,12 @@ export class AppComponent {
   showAddListForm = false; // Toggle for add-list form
   newListName = signal(""); // Input value for new list
 
+  // Signal for UX: show error if trying to add too many lists
+  addListError = signal<string | null>(null);
+
+  // ----------- CONSTANTS -----------
+  readonly MAX_LISTS = 6;
+
   // ----------- LIFECYCLE -----------
   constructor() {
     // Load lists and tasks at startup
@@ -44,6 +50,7 @@ export class AppComponent {
    * Update the input signal for the new list name.
    */
   onListNameInput(event: Event): void {
+    this.addListError.set(null);
     const input = event.target as HTMLInputElement | null;
     if (input) {
       this.newListName.set(input.value);
@@ -56,13 +63,20 @@ export class AppComponent {
   addList(): void {
     const value = this.newListName().trim();
     if (!value) return;
+    if (this.lists().length >= this.MAX_LISTS) {
+      this.addListError.set("Maximum number of lists reached.");
+      return;
+    }
     this.taskListService.createList(value).subscribe({
       next: () => {
         this.taskListService.loadLists();
         this.newListName.set("");
         this.showAddListForm = false;
+        this.addListError.set(null);
       },
-      // No error handling: backend returns error if list name invalid/duplicate
+      error: (err) => {
+        this.addListError.set("Failed to create list.");
+      },
     });
   }
 

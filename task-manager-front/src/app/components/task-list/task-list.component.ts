@@ -66,16 +66,26 @@ export class TaskListComponent {
 
   saveTitleEdit() {
     const newName = this.editTitleValue().trim();
+    // If no change or empty input, just exit edit mode
     if (!newName || newName === this.title) {
       this.isEditingTitle.set(false);
       return;
     }
-    // Update on backend (and trigger refresh on success)
-    const list: TaskList = { id: this.listId, name: newName };
+
+    // --- Retrieve the current position for this list (needed for backend update) ---
+    // We must preserve position, or backend may re-order lists on update.
+    const allLists = this.taskListService.lists();
+    const currentList = allLists.find((l) => l.id === this.listId);
+    const position = currentList?.position ?? 1; // Fallback to 1 if position missing (should not happen)
+
+    // --- Build the update payload, including the position ---
+    const list: TaskList = { id: this.listId, name: newName, position };
+
+    // --- Send PUT request to backend with full data (name + position) ---
     this.taskListService.updateList(list).subscribe({
       next: () => {
         this.isEditingTitle.set(false);
-        this.taskListService.loadLists();
+        this.taskListService.loadLists(); // Refresh to reflect new name
       },
       error: (err) => {
         alert("Error when renaming list");
@@ -138,10 +148,12 @@ export class TaskListComponent {
     const target = event.target as HTMLInputElement;
     this.newTask.set({ ...this.newTask(), title: target.value });
   }
+
   updateNewTaskDescription(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.newTask.set({ ...this.newTask(), description: target.value });
   }
+
   updateNewTaskDueDate(event: Event): void {
     const value = (event.target as HTMLInputElement).value || null;
     this.newTask.set({ ...this.newTask(), dueDate: value });

@@ -1,31 +1,19 @@
 package com.inerio.taskmanager.dto;
 
-/**
- * Data Transfer Object for a Kanban list/column (used for all list API exchanges).
- */
 public class TaskListDto {
-    // ------------------------------------------
-    // PROPERTIES
-    // ------------------------------------------
     private Long id;
     private String name;
+    private int position;
 
-    // ------------------------------------------
-    // CONSTRUCTOR
-    // ------------------------------------------
-    public TaskListDto(Long id, String name) {
+    // Constructor
+    public TaskListDto(Long id, String name, int position) {
         this.id = id;
         this.name = name;
+        this.position = position;
     }
 
-    // ------------------------------------------
-    // GETTERS
-    // ------------------------------------------
-    public Long getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
+    // Getters & Setters
+    public Long getId() { return id; }
+    public String getName() { return name; }
+    public int getPosition() { return position; }
 }

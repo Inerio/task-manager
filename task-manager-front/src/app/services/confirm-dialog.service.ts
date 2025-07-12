@@ -28,10 +28,12 @@ export class ConfirmDialogService {
     this._state().resolve?.(true);
     this.close();
   }
+
   cancel(): void {
     this._state().resolve?.(false);
     this.close();
   }
+
   close(): void {
     this._state.set({ ...this._state(), visible: false, resolve: undefined });
   }

@@ -29,9 +29,6 @@ public class TaskListController {
     // ------------------------------------------
     // GET ALL LISTS
     // ------------------------------------------
-    /**
-     * Returns all lists as DTOs.
-     */
     @GetMapping
     public ResponseEntity<List<TaskListDto>> getAllLists() {
         return ResponseEntity.ok(listService.getAllListDtos());
@@ -40,48 +37,36 @@ public class TaskListController {
     // ------------------------------------------
     // GET LIST BY ID
     // ------------------------------------------
-    /**
-     * Returns a list by its ID, or 404 if not found.
-     */
     @GetMapping("/{id}")
     public ResponseEntity<TaskListDto> getListById(@PathVariable Long id) {
         return listService.getListById(id)
-                .map(list -> ResponseEntity.ok(new TaskListDto(list.getId(), list.getName())))
+                .map(list -> ResponseEntity.ok(new TaskListDto(list.getId(), list.getName(), list.getPosition())))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     // ------------------------------------------
     // CREATE LIST
     // ------------------------------------------
-    /**
-     * Creates a new list, returns the created DTO.
-     */
     @PostMapping
     public ResponseEntity<TaskListDto> createList(@RequestBody TaskList list) {
         TaskList created = listService.createList(list);
-        TaskListDto dto = new TaskListDto(created.getId(), created.getName());
+        TaskListDto dto = new TaskListDto(created.getId(), created.getName(), created.getPosition());
         return ResponseEntity.ok(dto);
     }
 
     // ------------------------------------------
     // UPDATE LIST
     // ------------------------------------------
-    /**
-     * Updates a list, returns the updated DTO.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<TaskListDto> updateList(@PathVariable Long id, @RequestBody TaskList list) {
         TaskList updated = listService.updateList(id, list);
-        TaskListDto dto = new TaskListDto(updated.getId(), updated.getName());
+        TaskListDto dto = new TaskListDto(updated.getId(), updated.getName(), updated.getPosition());
         return ResponseEntity.ok(dto);
     }
 
     // ------------------------------------------
     // DELETE LIST
     // ------------------------------------------
-    /**
-     * Deletes a list by ID, returns 204.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteList(@PathVariable Long id) {
         listService.deleteList(id);

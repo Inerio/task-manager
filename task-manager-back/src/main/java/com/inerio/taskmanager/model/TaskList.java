@@ -23,6 +23,10 @@ public class TaskList {
     @Column(nullable = false, unique = true)
     private String name;
 
+    /** Position (ordering index) for stable display. */
+    @Column(nullable = false)
+    private int position;
+
     // ------------------------------------------
     // RELATIONSHIPS
     // ------------------------------------------
@@ -42,6 +46,9 @@ public class TaskList {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public int getPosition() { return position; }
+    public void setPosition(int position) { this.position = position; }
 
     public List<Task> getTasks() { return tasks; }
     public void setTasks(List<Task> tasks) { this.tasks = tasks; }

@@ -1,3 +1,5 @@
-<div *ngIf="alert()" class="alert-box" [ngClass]="alert()?.type">
+@if (alert()) {
+<div class="alert-box" [ngClass]="alert()?.type">
   {{ alert()?.message }}
 </div>
+}

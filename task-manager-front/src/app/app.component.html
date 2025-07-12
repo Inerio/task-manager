@@ -15,7 +15,8 @@
   }
 
   <!-- "Add new list" column: visible only if lists < max -->
-  <div class="add-list-column" *ngIf="lists().length < MAX_LISTS">
+  @if (lists().length < MAX_LISTS) {
+  <div class="add-list-column">
     @if (!showAddListForm) {
     <button class="add-list-btn" (click)="showAddListForm = true">
       + Add List
@@ -39,4 +40,5 @@
     </div>
     }
   </div>
+  }
 </div>

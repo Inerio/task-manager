@@ -46,9 +46,13 @@ export class AttachmentZoneComponent {
   @Output() fileDownloaded = new EventEmitter<string>();
 
   // --------------------------------------------------------------------
-  // [UTILS]
+  // [UTILS & PERFORMANCE]
   // --------------------------------------------------------------------
-  /** Utility for *ngFor/@for tracking (no rerender) */
+  /*
+   * Provides a stable unique identifier for each attached file.
+   * Helps Angular track DOM nodes efficiently and minimize re-rendering
+   * when the attachments array changes (important for performance and UI stability).
+   */
   trackByFilename(index: number, filename: string): string {
     return filename;
   }

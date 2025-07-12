@@ -243,8 +243,13 @@ export class TaskListComponent {
   }
 
   // ------------------------------------------
-  // TRACK BY FOR *ngFor / @for
+  // STABLE ITEM TRACKING FOR RENDER PERFORMANCE
   // ------------------------------------------
+  /**
+   * Provides a stable unique identifier for each task.
+   * This helps Angular keep track of items efficiently and avoid unnecessary DOM operations
+   * when items are added, removed, or reordered—critical for large lists or drag & drop usage.
+   */
   trackById(index: number, task: Task): number | undefined {
     return task.id;
   }

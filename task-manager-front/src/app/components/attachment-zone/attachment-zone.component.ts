@@ -9,6 +9,7 @@ import {
   ViewChild,
 } from "@angular/core";
 import { AlertService } from "../../services/alert.service";
+import { isFileDragEvent } from "../../utils/drag-drop-utils";
 
 @Component({
   selector: "app-attachment-zone",
@@ -67,7 +68,7 @@ export class AttachmentZoneComponent {
   // --------------------------------------------------------------------
   /** When a file is dragged over the zone */
   onDragOver(event: DragEvent) {
-    if (!event.dataTransfer?.types.includes("Files")) return;
+    if (!isFileDragEvent(event)) return;
     event.preventDefault();
     this.isDragging.set(true);
   }
@@ -79,7 +80,7 @@ export class AttachmentZoneComponent {
 
   /** When files are dropped into the zone */
   onFileDrop(event: DragEvent) {
-    if (!event.dataTransfer?.types.includes("Files")) return;
+    if (!isFileDragEvent(event)) return;
     event.preventDefault();
     const files = event.dataTransfer?.files;
     if (files?.length) {

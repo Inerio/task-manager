@@ -16,6 +16,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { TaskListService } from "../../services/task-list.service";
 import { TaskList } from "../../models/task-list.model";
 import { getTaskDragData, isTaskDragEvent } from "../../utils/drag-drop-utils";
+import { TaskDragDropService } from "../../services/task-drag-drop.service";
 
 @Component({
   selector: "app-task-list",
@@ -37,6 +38,7 @@ export class TaskListComponent {
   private readonly taskService = inject(TaskService);
   private readonly taskListService = inject(TaskListService);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly dragDropService = inject(TaskDragDropService);
 
   // ------------------------------------------
   // LIST TITLE EDITION
@@ -206,53 +208,23 @@ export class TaskListComponent {
    * Uses a window global variable for communication between task and list.
    */
   onTaskDragOver(event: DragEvent): void {
-    // Ignore file drops and column drags
-    if (
-      event.dataTransfer?.types.includes("Files") ||
-      event.dataTransfer?.getData("type") === "column"
-    )
-      return;
-
-    // Only proceed if this is a task drag event
-    if (!isTaskDragEvent(event)) return;
-
-    // Prevent drag-over highlight if dragging a task over its own column
-    const draggedListId = (window as any).DRAGGED_TASK_LIST_ID;
-    if (
-      draggedListId !== undefined &&
-      draggedListId !== null &&
-      Number(draggedListId) === this.listId
-    ) {
-      this.isDragOver.set(false);
-      return;
-    }
-
-    event.preventDefault();
-    this.isDragOver.set(true);
+    this.dragDropService.handleTaskListDragOver(event, this.listId, (v) =>
+      this.isDragOver.set(v)
+    );
   }
 
   onTaskDragLeave(): void {
-    this.isDragOver.set(false);
+    this.dragDropService.handleTaskListDragLeave((v) => this.isDragOver.set(v));
   }
 
   onTaskDrop(event: DragEvent): void {
-    if (
-      (event.dataTransfer && event.dataTransfer.types.includes("Files")) ||
-      event.dataTransfer?.getData("type") !== "task"
-    ) {
-      this.isDragOver.set(false);
-      return;
-    }
-    event.preventDefault();
-    this.isDragOver.set(false);
-    const dragData = getTaskDragData(event);
-    if (!dragData) return;
-    const { taskId, listId } = dragData;
-    const allTasks = this.taskService.tasks();
-    const task = allTasks.find((t) => t.id === taskId);
-    if (!task || task.listId === this.listId) return;
-    const updatedTask = { ...task, listId: this.listId };
-    this.taskService.updateTask(updatedTask.id!, updatedTask);
+    this.dragDropService.handleTaskListDrop(
+      event,
+      this.listId,
+      (v) => this.isDragOver.set(v),
+      () => this.taskService.tasks(), // get all tasks (type Task[])
+      (id, task) => this.taskService.updateTask(id, task) // update task
+    );
   }
 
   // ------------------------------------------

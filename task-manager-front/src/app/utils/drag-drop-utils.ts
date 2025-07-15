@@ -29,3 +29,7 @@ export function isTaskDragEvent(event: DragEvent): boolean {
     event.dataTransfer.types?.includes("type")
   );
 }
+
+export function isFileDragEvent(event: DragEvent): boolean {
+  return !!event.dataTransfer && event.dataTransfer.types.includes("Files");
+}

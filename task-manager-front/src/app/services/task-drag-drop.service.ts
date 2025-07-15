@@ -1,0 +1,123 @@
+import { Injectable } from "@angular/core";
+import {
+  setTaskDragData,
+  getTaskDragData,
+  isTaskDragEvent,
+} from "../utils/drag-drop-utils";
+import { Task } from "../models/task.model";
+
+@Injectable({ providedIn: "root" })
+export class TaskDragDropService {
+  /**
+   * Handles logic for starting task drag.
+   */
+  startTaskDrag(
+    event: DragEvent,
+    task: Task,
+    setDragging: (value: boolean) => void
+  ) {
+    if (task.isEditing) {
+      event.preventDefault();
+      return;
+    }
+    setDragging(true);
+
+    if (!task.id || task.listId == null) return;
+
+    setTaskDragData(event, task.id, task.listId);
+    (window as any).DRAGGED_TASK_LIST_ID = task.listId;
+
+    // Custom drag image
+    const dragImage = document.createElement("div");
+    dragImage.style.position = "absolute";
+    dragImage.style.top = "-1000px";
+    dragImage.style.padding = "0.5rem 1rem";
+    dragImage.style.background = "white";
+    dragImage.style.border = "1px solid #ccc";
+    dragImage.style.boxShadow = "0 0 5px rgba(0,0,0,0.3)";
+    dragImage.style.borderRadius = "4px";
+    dragImage.style.fontWeight = "bold";
+    dragImage.style.fontSize = "1rem";
+    dragImage.innerText = task.title;
+    document.body.appendChild(dragImage);
+    event.dataTransfer?.setDragImage(dragImage, 10, 10);
+    setTimeout(() => {
+      document.body.removeChild(dragImage);
+    }, 0);
+  }
+
+  /**
+   * Handles logic for ending task drag.
+   */
+  endTaskDrag(setDragging: (value: boolean) => void) {
+    setDragging(false);
+    (window as any).DRAGGED_TASK_LIST_ID = undefined;
+  }
+
+  /**
+   * Handles the drag over event for task
+   */
+  handleTaskListDragOver(
+    event: DragEvent,
+    listId: number,
+    setDragOver: (v: boolean) => void
+  ) {
+    if (
+      event.dataTransfer?.types.includes("Files") ||
+      event.dataTransfer?.getData("type") === "column"
+    )
+      return;
+
+    if (!isTaskDragEvent(event)) return;
+
+    // Prevent drag-over highlight if dragging a task over its own column
+    const draggedListId = (window as any).DRAGGED_TASK_LIST_ID;
+    if (
+      draggedListId !== undefined &&
+      draggedListId !== null &&
+      Number(draggedListId) === listId
+    ) {
+      setDragOver(false);
+      return;
+    }
+
+    event.preventDefault();
+    setDragOver(true);
+  }
+
+  /**
+   * Handles the drag leave event for task
+   */
+  handleTaskListDragLeave(setDragOver: (v: boolean) => void) {
+    setDragOver(false);
+  }
+
+  /**
+   * Handles the drop event for task
+   */
+  handleTaskListDrop(
+    event: DragEvent,
+    listId: number,
+    setDragOver: (v: boolean) => void,
+    getTasks: () => Task[],
+    updateTask: (id: number, task: Task) => void
+  ) {
+    if (
+      (event.dataTransfer && event.dataTransfer.types.includes("Files")) ||
+      event.dataTransfer?.getData("type") !== "task"
+    ) {
+      setDragOver(false);
+      return;
+    }
+    event.preventDefault();
+    setDragOver(false);
+    const dragData = getTaskDragData(event);
+    if (!dragData) return;
+    const { taskId } = dragData;
+    const allTasks = getTasks();
+    const task = allTasks.find((t) => t.id === taskId);
+    if (!task || task.listId === listId) return;
+    const updatedTask = { ...task, listId };
+    updateTask(updatedTask.id!, updatedTask);
+  }
+}

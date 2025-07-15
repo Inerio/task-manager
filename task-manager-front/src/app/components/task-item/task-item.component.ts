@@ -15,7 +15,7 @@ import { LinkifyPipe } from "../../pipes/linkify.pipe";
 import { TaskService } from "../../services/task.service";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
 import { AlertService } from "../../services/alert.service";
-import { setTaskDragData } from "../../utils/drag-drop-utils";
+import { TaskDragDropService } from "../../services/task-drag-drop.service";
 
 @Component({
   selector: "app-task-item",
@@ -35,6 +35,7 @@ export class TaskItemComponent implements OnChanges {
   // ------------------------------------------
   private readonly taskService = inject(TaskService);
   private readonly alertService = inject(AlertService);
+  private readonly dragDropService = inject(TaskDragDropService);
 
   // ------------------------------------------
   // STATE & SIGNALS
@@ -89,43 +90,16 @@ export class TaskItemComponent implements OnChanges {
    * Start drag: sets global dragged list ID and a custom drag image.
    */
   onTaskDragStart(event: DragEvent): void {
-    if (this.localTask().isEditing) {
-      event.preventDefault();
-      return;
-    }
-    this.dragging.set(true);
-    const task = this.localTask();
-    if (!task.id || task.listId == null) return;
-
-    setTaskDragData(event, task.id, task.listId);
-
-    (window as any).DRAGGED_TASK_LIST_ID = task.listId; // For cross-list logic
-
-    // Custom drag image
-    const dragImage = document.createElement("div");
-    dragImage.style.position = "absolute";
-    dragImage.style.top = "-1000px";
-    dragImage.style.padding = "0.5rem 1rem";
-    dragImage.style.background = "white";
-    dragImage.style.border = "1px solid #ccc";
-    dragImage.style.boxShadow = "0 0 5px rgba(0,0,0,0.3)";
-    dragImage.style.borderRadius = "4px";
-    dragImage.style.fontWeight = "bold";
-    dragImage.style.fontSize = "1rem";
-    dragImage.innerText = task.title;
-    document.body.appendChild(dragImage);
-    event.dataTransfer?.setDragImage(dragImage, 10, 10);
-    setTimeout(() => {
-      document.body.removeChild(dragImage);
-    }, 0);
+    this.dragDropService.startTaskDrag(event, this.localTask(), (v) =>
+      this.dragging.set(v)
+    );
   }
 
   /**
    * End drag: cleanup global variable.
    */
   onTaskDragEnd(): void {
-    this.dragging.set(false);
-    (window as any).DRAGGED_TASK_LIST_ID = undefined;
+    this.dragDropService.endTaskDrag((v) => this.dragging.set(v));
   }
 
   // ------------------------------------------

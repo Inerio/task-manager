@@ -1,5 +1,6 @@
 package com.inerio.taskmanager.controller;
 
+import com.inerio.taskmanager.dto.MoveListDto;
 import com.inerio.taskmanager.dto.TaskListDto;
 import com.inerio.taskmanager.model.TaskList;
 import com.inerio.taskmanager.service.TaskListService;
@@ -71,5 +72,12 @@ public class TaskListController {
     public ResponseEntity<Void> deleteList(@PathVariable Long id) {
         listService.deleteList(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    // --- MOVE (DRAG & DROP) ---
+    @PutMapping("/move")
+    public ResponseEntity<?> moveList(@RequestBody MoveListDto moveDto) {
+        listService.moveList(moveDto.getListId(), moveDto.getTargetPosition());
+        return ResponseEntity.ok().build();
     }
 }

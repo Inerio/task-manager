@@ -92,6 +92,42 @@ public class TaskListService {
         }
     }
 
+    public void moveList(Long listId, int targetPosition) {
+        List<TaskList> lists = listRepository.findAllByOrderByPositionAsc();
+        TaskList toMove = lists.stream()
+            .filter(l -> l.getId().equals(listId))
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("TaskList not found with id " + listId));
+
+        int oldPosition = toMove.getPosition();
+        int newPosition = targetPosition;
+
+        // Clamp position
+        newPosition = Math.max(1, Math.min(newPosition, lists.size()));
+
+        // Si la position n'a pas changé, rien à faire
+        if (oldPosition == newPosition) return;
+
+        // Décale les autres colonnes
+        for (TaskList l : lists) {
+            if (l.getId().equals(listId)) continue;
+            int pos = l.getPosition();
+            if (oldPosition < newPosition) {
+                // On glisse vers la droite
+                if (pos > oldPosition && pos <= newPosition) l.setPosition(pos - 1);
+            } else {
+                // On glisse vers la gauche
+                if (pos < oldPosition && pos >= newPosition) l.setPosition(pos + 1);
+            }
+        }
+        // Applique la nouvelle position
+        toMove.setPosition(newPosition);
+
+        // Sauvegarde toutes les colonnes (propre, peu importe l’ordre)
+        for (TaskList l : lists) {
+            listRepository.save(l);
+        }
+    }
 
 
     // ------------------------------------------

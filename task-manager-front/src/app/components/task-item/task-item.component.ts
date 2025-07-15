@@ -15,6 +15,7 @@ import { LinkifyPipe } from "../../pipes/linkify.pipe";
 import { TaskService } from "../../services/task.service";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
 import { AlertService } from "../../services/alert.service";
+import { setTaskDragData } from "../../utils/drag-drop-utils";
 
 @Component({
   selector: "app-task-item",
@@ -94,11 +95,12 @@ export class TaskItemComponent implements OnChanges {
     }
     this.dragging.set(true);
     const task = this.localTask();
-    if (!task.id) return;
-    event.dataTransfer?.setData("type", "task");
-    event.dataTransfer?.setData("task-id", task.id.toString());
-    event.dataTransfer?.setData("list-id", task.listId?.toString() ?? "");
+    if (!task.id || task.listId == null) return;
+
+    setTaskDragData(event, task.id, task.listId);
+
     (window as any).DRAGGED_TASK_LIST_ID = task.listId; // For cross-list logic
+
     // Custom drag image
     const dragImage = document.createElement("div");
     dragImage.style.position = "absolute";

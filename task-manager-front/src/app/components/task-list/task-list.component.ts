@@ -15,6 +15,7 @@ import { TaskItemComponent } from "../task-item/task-item.component";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { TaskListService } from "../../services/task-list.service";
 import { TaskList } from "../../models/task-list.model";
+import { getTaskDragData, isTaskDragEvent } from "../../utils/drag-drop-utils";
 
 @Component({
   selector: "app-task-list",
@@ -40,6 +41,7 @@ export class TaskListComponent {
   // ------------------------------------------
   // LIST TITLE EDITION
   // ------------------------------------------
+  isDragOver = signal(false);
   isEditingTitle = signal(false);
   editTitleValue = signal(""); // Holds the editing input value for the list title
 
@@ -198,20 +200,23 @@ export class TaskListComponent {
   // ------------------------------------------
   // DRAG & DROP
   // ------------------------------------------
-  isDragOver = signal(false);
 
   /**
    * Handles drag over event. Prevents drag animation if dragging a task from the same list.
    * Uses a window global variable for communication between task and list.
    */
   onTaskDragOver(event: DragEvent): void {
+    // Ignore file drops and column drags
     if (
-      (event.dataTransfer && event.dataTransfer.types.includes("Files")) ||
+      event.dataTransfer?.types.includes("Files") ||
       event.dataTransfer?.getData("type") === "column"
     )
       return;
 
-    // Block drag animation if dragging on own list (set by TaskItemComponent)
+    // Only proceed if this is a task drag event
+    if (!isTaskDragEvent(event)) return;
+
+    // Prevent drag-over highlight if dragging a task over its own column
     const draggedListId = (window as any).DRAGGED_TASK_LIST_ID;
     if (
       draggedListId !== undefined &&
@@ -221,6 +226,7 @@ export class TaskListComponent {
       this.isDragOver.set(false);
       return;
     }
+
     event.preventDefault();
     this.isDragOver.set(true);
   }
@@ -239,11 +245,11 @@ export class TaskListComponent {
     }
     event.preventDefault();
     this.isDragOver.set(false);
-    const taskId = event.dataTransfer?.getData("task-id");
-    if (!taskId) return;
-    const id = parseInt(taskId, 10);
+    const dragData = getTaskDragData(event);
+    if (!dragData) return;
+    const { taskId, listId } = dragData;
     const allTasks = this.taskService.tasks();
-    const task = allTasks.find((t) => t.id === id);
+    const task = allTasks.find((t) => t.id === taskId);
     if (!task || task.listId === this.listId) return;
     const updatedTask = { ...task, listId: this.listId };
     this.taskService.updateTask(updatedTask.id!, updatedTask);

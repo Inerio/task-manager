@@ -205,8 +205,12 @@ export class TaskListComponent {
    * Uses a window global variable for communication between task and list.
    */
   onTaskDragOver(event: DragEvent): void {
-    if (event.dataTransfer && event.dataTransfer.types.includes("Files"))
+    if (
+      (event.dataTransfer && event.dataTransfer.types.includes("Files")) ||
+      event.dataTransfer?.getData("type") === "column"
+    )
       return;
+
     // Block drag animation if dragging on own list (set by TaskItemComponent)
     const draggedListId = (window as any).DRAGGED_TASK_LIST_ID;
     if (
@@ -226,13 +230,16 @@ export class TaskListComponent {
   }
 
   onTaskDrop(event: DragEvent): void {
-    if (event.dataTransfer && event.dataTransfer.types.includes("Files")) {
+    if (
+      (event.dataTransfer && event.dataTransfer.types.includes("Files")) ||
+      event.dataTransfer?.getData("type") !== "task"
+    ) {
       this.isDragOver.set(false);
       return;
     }
     event.preventDefault();
     this.isDragOver.set(false);
-    const taskId = event.dataTransfer?.getData("text/plain");
+    const taskId = event.dataTransfer?.getData("task-id");
     if (!taskId) return;
     const id = parseInt(taskId, 10);
     const allTasks = this.taskService.tasks();

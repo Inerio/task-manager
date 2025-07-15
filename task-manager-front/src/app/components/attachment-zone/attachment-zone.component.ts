@@ -67,6 +67,7 @@ export class AttachmentZoneComponent {
   // --------------------------------------------------------------------
   /** When a file is dragged over the zone */
   onDragOver(event: DragEvent) {
+    if (!event.dataTransfer?.types.includes("Files")) return;
     event.preventDefault();
     this.isDragging.set(true);
   }
@@ -78,6 +79,7 @@ export class AttachmentZoneComponent {
 
   /** When files are dropped into the zone */
   onFileDrop(event: DragEvent) {
+    if (!event.dataTransfer?.types.includes("Files")) return;
     event.preventDefault();
     const files = event.dataTransfer?.files;
     if (files?.length) {

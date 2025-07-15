@@ -95,9 +95,10 @@ export class TaskItemComponent implements OnChanges {
     this.dragging.set(true);
     const task = this.localTask();
     if (!task.id) return;
-    event.dataTransfer?.setData("text/plain", task.id.toString());
-    (window as any).DRAGGED_TASK_LIST_ID = task.listId; // For cross-list logic
+    event.dataTransfer?.setData("type", "task");
+    event.dataTransfer?.setData("task-id", task.id.toString());
     event.dataTransfer?.setData("list-id", task.listId?.toString() ?? "");
+    (window as any).DRAGGED_TASK_LIST_ID = task.listId; // For cross-list logic
     // Custom drag image
     const dragImage = document.createElement("div");
     dragImage.style.position = "absolute";

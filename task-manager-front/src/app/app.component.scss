@@ -12,10 +12,38 @@
   cursor: pointer;
 }
 
+/* Fusion des propriétés task-columns : gap + spacing + align-items */
 .task-columns {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; // conserve pour l'espacement maximal
+  align-items: flex-start;
   padding: 1rem;
+  gap: 2rem; // pour le spacing "trello"
+}
+
+/* Colonne Kanban draggable (effet Trello) */
+.column-draggable {
+  transition: box-shadow 0.2s, background 0.2s, transform 0.2s;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px 0 #0001;
+  min-width: 320px;
+  max-width: 350px;
+  min-height: 200px;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.column-draggable.drag-over {
+  box-shadow: 0 0 0 3px #1976d2aa, 0 2px 12px 0 #0001;
+  background: #e3f2fd;
+  z-index: 2;
+  transform: scale(1.03);
+}
+
+.column-draggable.is-dragged {
+  opacity: 0.3;
+  z-index: 3;
 }
 
 .add-list-error {
@@ -29,4 +57,19 @@
   font-size: 0.9em;
   margin-top: 1em;
   text-align: center;
+}
+
+.column-header {
+  background: #f7f9fc;
+  border-bottom: 1px solid #eee;
+  border-radius: 12px 12px 0 0;
+  padding: 0.7rem 1rem;
+  font-weight: bold;
+  cursor: grab;
+  user-select: none;
+  transition: background 0.15s;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }

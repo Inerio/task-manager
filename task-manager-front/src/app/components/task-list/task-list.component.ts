@@ -41,75 +41,6 @@ export class TaskListComponent {
   private readonly dragDropService = inject(TaskDragDropService);
 
   // ------------------------------------------
-  // LIST TITLE EDITION
-  // ------------------------------------------
-  isDragOver = signal(false);
-  isEditingTitle = signal(false);
-  editTitleValue = signal(""); // Holds the editing input value for the list title
-
-  constructor() {
-    // Keep edit input in sync when the title changes externally
-    effect(() => {
-      if (!this.isEditingTitle()) {
-        this.editTitleValue.set(this.title);
-      }
-    });
-  }
-
-  startEditTitle() {
-    this.editTitleValue.set(this.title);
-    this.isEditingTitle.set(true);
-    setTimeout(() => {
-      // Automatically focus input on edit mode
-      const input = document.getElementById(
-        `edit-list-title-${this.listId}`
-      ) as HTMLInputElement | null;
-      if (input) input.focus();
-    }, 0);
-  }
-
-  saveTitleEdit() {
-    const newName = this.editTitleValue().trim();
-    // If no change or empty input, just exit edit mode
-    if (!newName || newName === this.title) {
-      this.isEditingTitle.set(false);
-      return;
-    }
-
-    // --- Retrieve the current position for this list (needed for backend update) ---
-    // We must preserve position, or backend may re-order lists on update.
-    const allLists = this.taskListService.lists();
-    const currentList = allLists.find((l) => l.id === this.listId);
-    const position = currentList?.position ?? 1; // Fallback to 1 if position missing (should not happen)
-
-    // --- Build the update payload, including the position ---
-    const list: TaskList = { id: this.listId, name: newName, position };
-
-    // --- Send PUT request to backend with full data (name + position) ---
-    this.taskListService.updateList(list).subscribe({
-      next: () => {
-        this.isEditingTitle.set(false);
-        this.taskListService.loadLists(); // Refresh to reflect new name
-      },
-      error: (err) => {
-        alert("Error when renaming list");
-        console.error(err);
-        this.isEditingTitle.set(false);
-      },
-    });
-  }
-
-  cancelTitleEdit() {
-    this.editTitleValue.set(this.title);
-    this.isEditingTitle.set(false);
-  }
-
-  onEditTitleInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.editTitleValue.set(input.value);
-  }
-
-  // ------------------------------------------
   // TASK CREATION
   // ------------------------------------------
   showForm = signal(false);
@@ -164,7 +95,7 @@ export class TaskListComponent {
   }
 
   // ------------------------------------------
-  // DELETE LIST / ALL TASKS IN LIST
+  // DELETE ALL TASKS IN LIST (button optionnel)
   // ------------------------------------------
   async deleteAllInColumn(): Promise<void> {
     const confirmed = await this.confirmDialog.open(
@@ -175,23 +106,6 @@ export class TaskListComponent {
     this.taskService.deleteTasksByListId(this.listId);
   }
 
-  async deleteList(): Promise<void> {
-    const confirmed = await this.confirmDialog.open(
-      "Suppression de la liste",
-      `Voulez-vous supprimer la liste “${this.title}” and all its tasks?`
-    );
-    if (!confirmed) return;
-    this.taskListService.deleteList(this.listId).subscribe({
-      next: () => {
-        // Signal will auto-update, nothing to do here
-      },
-      error: (err) => {
-        alert("Erreur lors de la suppression de la liste");
-        console.error(err);
-      },
-    });
-  }
-
   // ------------------------------------------
   // TASK FILTERING (reactive)
   // ------------------------------------------
@@ -200,13 +114,10 @@ export class TaskListComponent {
   );
 
   // ------------------------------------------
-  // DRAG & DROP
+  // DRAG & DROP TASKS (pas colonne !)
   // ------------------------------------------
+  isDragOver = signal(false);
 
-  /**
-   * Handles drag over event. Prevents drag animation if dragging a task from the same list.
-   * Uses a window global variable for communication between task and list.
-   */
   onTaskDragOver(event: DragEvent): void {
     this.dragDropService.handleTaskListDragOver(event, this.listId, (v) =>
       this.isDragOver.set(v)
@@ -230,11 +141,6 @@ export class TaskListComponent {
   // ------------------------------------------
   // STABLE ITEM TRACKING FOR RENDER PERFORMANCE
   // ------------------------------------------
-  /**
-   * Provides a stable unique identifier for each task.
-   * This helps Angular keep track of items efficiently and avoid unnecessary DOM operations
-   * when items are added, removed, or reordered—critical for large lists or drag & drop usage.
-   */
   trackById(index: number, task: Task): number | undefined {
     return task.id;
   }

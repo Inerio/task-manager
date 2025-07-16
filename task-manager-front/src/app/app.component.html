@@ -1,20 +1,79 @@
-<!-- Global confirmation dialog and alert system (always available) -->
+<!-- Global confirmation dialog and alert system -->
 <app-confirm-dialog></app-confirm-dialog>
 <app-alert></app-alert>
 
 <div class="header">
   <h1>Task Manager</h1>
-  <!-- Delete all tasks button (calls method in TS) -->
   <button class="delete-btn" (click)="deleteAllTasks()">🗑️</button>
 </div>
 
 <div class="task-columns">
-  <!-- Render each kanban list dynamically -->
-  @for (list of lists(); track list.id) {
-  <app-task-list [listId]="list.id!" [title]="list.name"></app-task-list>
+  @for (list of lists(); track list.id; let idx = $index) {
+  <div
+    class="column-draggable"
+    [class.is-dragged]="draggedListId() === list.id"
+    [class.drag-over]="dragOverIndex() === idx && draggedListId() !== null"
+  >
+    <!-- Header drag handle + actions -->
+    <div
+      class="column-header"
+      draggable="true"
+      (dragstart)="onColumnDragStart(list.id!, idx, $event)"
+      (dragenter)="onColumnDragEnter(idx, $event)"
+      (dragover)="onColumnDragOver(idx, $event)"
+      (drop)="onColumnDrop($event)"
+      (dragend)="onColumnDragEnd()"
+    >
+      <!-- Edition du titre inline -->
+      @if (!isEditingTitle(list)) {
+      <span
+        class="list-title"
+        (click)="startEditTitle(list)"
+        tabindex="0"
+        (keydown.enter)="startEditTitle(list)"
+        (keydown.space)="startEditTitle(list)"
+        title="Renommer cette liste"
+        style="cursor: pointer"
+      >
+        {{ list.name }}
+      </span>
+      } @else {
+      <input
+        id="edit-list-title-{{ list.id }}"
+        class="list-title-input"
+        type="text"
+        [value]="editingTitleValue()"
+        (input)="onEditTitleInput($event)"
+        (blur)="saveTitleEdit(list)"
+        (keydown.enter)="saveTitleEdit(list)"
+        (keydown.escape)="cancelTitleEdit()"
+        maxlength="60"
+        required
+      />
+      }
+      <!-- Actions -->
+      <button
+        class="btn-close-list"
+        (click)="deleteList(list.id!, list.name)"
+        title="Supprimer la colonne"
+        aria-label="Supprimer cette liste"
+      >
+        &times;
+      </button>
+      <button
+        class="btn btn-danger btn-delete-column"
+        (click)="deleteAllInColumn(list.id!, list.name)"
+        title="Supprimer toutes les tâches de cette colonne"
+      >
+        🗑️
+      </button>
+    </div>
+    <!-- Liste des tâches + ajout tâche -->
+    <app-task-list [listId]="list.id!" [title]="list.name"></app-task-list>
+  </div>
   }
 
-  <!-- "Add new list" column: visible only if lists < max -->
+  <!-- "Add new list" column -->
   @if (lists().length < MAX_LISTS) {
   <div class="add-list-column">
     @if (!showAddListForm) {
@@ -33,7 +92,6 @@
       />
       <button (click)="addList()">Add</button>
       <button (click)="showAddListForm = false">Cancel</button>
-      <!-- Error message, only for backend errors (duplicate, etc.) -->
       @if (addListError()) {
       <div class="add-list-error">{{ addListError() }}</div>
       }

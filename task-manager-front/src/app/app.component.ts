@@ -28,8 +28,6 @@ export class AppComponent {
   private readonly columnDnD = inject(ColumnDragDropService);
 
   readonly loading = this.taskListService.loading;
-  showAddListForm = false;
-  newListName = signal("");
   addListError = signal<string | null>(null);
   readonly MAX_LISTS = 6;
 
@@ -62,67 +60,46 @@ export class AppComponent {
   }
 
   // -------------------- DRAG & DROP COLUMN ------------------------
-
   onColumnDragStart(listId: number, idx: number, event: DragEvent) {
+    if (this.editingTitleId()) return; // Block drag if editing
     this.columnDnD.onColumnDragStart(listId, idx, event);
   }
-
   onColumnDragEnter(idx: number, event: DragEvent) {
+    if (this.editingTitleId()) return;
     this.columnDnD.onColumnDragEnter(idx, event);
   }
-
   onColumnDragOver(idx: number, event: DragEvent) {
+    if (this.editingTitleId()) return;
     this.columnDnD.onColumnDragOver(idx, event);
   }
-
   onColumnDrop(event: DragEvent) {
+    if (this.editingTitleId()) return;
     this.columnDnD.onColumnDrop(event);
   }
-
   onColumnDragEnd() {
+    if (this.editingTitleId()) return;
     this.columnDnD.onColumnDragEnd();
   }
 
-  // -------------- ADD/DELETE LISTS & TASKS (inchangé) ---------------
-
-  onListNameInput(event: Event): void {
-    this.addListError.set(null);
-    const input = event.target as HTMLInputElement | null;
-    if (input) this.newListName.set(input.value);
-  }
-
-  addList(): void {
-    const value = this.newListName().trim();
-    if (!value) return;
-    if (this.lists().length >= this.MAX_LISTS) {
-      this.addListError.set("Maximum number of lists reached.");
-      return;
-    }
-    this.taskListService.createList(value).subscribe({
+  // ----------- ADD COLUMN + OPEN EDIT MODE -----------
+  addListAndEdit(): void {
+    if (this.lists().length >= this.MAX_LISTS) return;
+    if (this.editingTitleId()) return; // block if editing
+    this.taskListService.createList("").subscribe({
       next: () => {
         this.taskListService.loadLists();
-        this.newListName.set("");
-        this.showAddListForm = false;
-        this.addListError.set(null);
+        setTimeout(() => {
+          const last = this.taskListService.lists().slice(-1)[0];
+          if (last) this.startEditTitle(last);
+        }, 150);
       },
       error: () => this.addListError.set("Failed to create list."),
     });
   }
 
-  async deleteAllTasks(): Promise<void> {
-    const confirmed = await this.confirmDialog.open(
-      "Suppression globale",
-      "Voulez-vous vraiment supprimer toutes les tâches ?"
-    );
-    if (!confirmed) return;
-    this.taskService.deleteAllTasks().subscribe({
-      next: () => this.taskService.loadTasks(),
-      error: (err) => console.error("Delete error:", err),
-    });
-  }
-
   // ----------- Suppression d'une colonne ----------
   async deleteList(listId: number, listName: string) {
+    if (this.editingTitleId()) return;
     const confirmed = await this.confirmDialog.open(
       "Suppression de la liste",
       `Voulez-vous supprimer la liste “${listName}” et toutes ses tâches ?`
@@ -139,6 +116,7 @@ export class AppComponent {
 
   // ----------- Suppression de toutes les tâches d'une colonne ----------
   async deleteAllInColumn(listId: number, listName: string) {
+    if (this.editingTitleId()) return;
     const confirmed = await this.confirmDialog.open(
       "Suppression des tâches",
       `Voulez-vous supprimer toutes les tâches de “${listName}” ?`
@@ -147,8 +125,23 @@ export class AppComponent {
     this.taskService.deleteTasksByListId(listId);
   }
 
+  // ----------- Suppression de toutes les tâches ----------
+  async deleteAllTasks(): Promise<void> {
+    if (this.editingTitleId()) return;
+    const confirmed = await this.confirmDialog.open(
+      "Suppression globale",
+      "Voulez-vous vraiment supprimer toutes les tâches ?"
+    );
+    if (!confirmed) return;
+    this.taskService.deleteAllTasks().subscribe({
+      next: () => this.taskService.loadTasks(),
+      error: (err) => console.error("Delete error:", err),
+    });
+  }
+
   // ----------- Edition du titre d'une colonne ----------
   startEditTitle(list: TaskList) {
+    if (this.editingTitleId()) return;
     this.editingTitleId.set(list.id!);
     this.editingTitleValue.set(list.name);
     setTimeout(() => {
@@ -161,7 +154,8 @@ export class AppComponent {
 
   saveTitleEdit(list: TaskList) {
     const newName = this.editingTitleValue().trim();
-    if (!newName || newName === list.name) {
+    if (!newName) return; // block empty
+    if (newName === list.name) {
       this.editingTitleId.set(null);
       return;
     }
@@ -184,7 +178,18 @@ export class AppComponent {
   }
 
   cancelTitleEdit() {
-    this.editingTitleId.set(null);
+    // ----- SI ANNULATION et nom vide, supprime la colonne -----
+    const id = this.editingTitleId();
+    const currList = this.taskListService.lists().find((l) => l.id === id);
+    if (currList && (!currList.name || currList.name.trim() === "")) {
+      // supprime la colonne "fantôme"
+      this.taskListService.deleteList(currList.id!).subscribe({
+        next: () => this.editingTitleId.set(null),
+        error: () => this.editingTitleId.set(null),
+      });
+    } else {
+      this.editingTitleId.set(null);
+    }
   }
 
   onEditTitleInput(event: Event) {

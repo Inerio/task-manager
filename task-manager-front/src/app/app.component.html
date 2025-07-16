@@ -4,7 +4,15 @@
 
 <div class="header">
   <h1>Task Manager</h1>
-  <button class="delete-btn" (click)="deleteAllTasks()">🗑️</button>
+  <button
+    class="delete-btn styled-trash-btn"
+    (click)="deleteAllTasks()"
+    [disabled]="!!editingTitleId()"
+    title="Delete all tasks"
+  >
+    <img src="/svg/trash.svg" alt="Delete all" width="19" height="19" />
+    <span class="delete-all-label">Delete all tasks</span>
+  </button>
 </div>
 
 <div class="task-columns">
@@ -13,10 +21,23 @@
     class="column-draggable"
     [class.is-dragged]="draggedListId() === list.id"
     [class.drag-over]="dragOverIndex() === idx && draggedListId() !== null"
+    [class.editing]="isEditingTitle(list)"
   >
+    <!-- BOUTON ANNULER si la colonne est en édition -->
+    @if (isEditingTitle(list)) {
+    <button
+      class="cancel-edit-btn-top"
+      (mousedown)="cancelTitleEdit()"
+      title="Annuler l'ajout/édition"
+    >
+      ✖ Cancel
+    </button>
+    }
+
     <!-- Header drag handle + actions -->
     <div
       class="column-header"
+      [class.disabled]="!!editingTitleId() && !isEditingTitle(list)"
       draggable="true"
       (dragstart)="onColumnDragStart(list.id!, idx, $event)"
       (dragenter)="onColumnDragEnter(idx, $event)"
@@ -30,6 +51,7 @@
         (click)="deleteList(list.id!, list.name)"
         title="Supprimer la colonne"
         aria-label="Supprimer cette liste"
+        [disabled]="!!editingTitleId() && !isEditingTitle(list)"
       >
         <img src="svg/x.svg" alt="Fermer" width="17" height="17" />
       </button>
@@ -58,6 +80,8 @@
         (keydown.escape)="cancelTitleEdit()"
         maxlength="60"
         required
+        [autofocus]="true"
+        [disabled]="!!editingTitleId() && !isEditingTitle(list)"
       />
       }
 
@@ -66,39 +90,29 @@
         class="btn-delete-column styled-trash-btn"
         (click)="deleteAllInColumn(list.id!, list.name)"
         title="Supprimer toutes les tâches de cette colonne"
+        [disabled]="!!editingTitleId() && !isEditingTitle(list)"
       >
         <img src="/svg/trash.svg" alt="Vider" width="19" height="19" />
       </button>
     </div>
     <!-- Liste des tâches + ajout tâche -->
     <app-task-list [listId]="list.id!" [title]="list.name"></app-task-list>
+    <!-- Overlay d'interdiction si édition sur cette colonne -->
+    @if (!!editingTitleId() && !isEditingTitle(list)) {
+    <div class="column-blocker"></div>
+    }
   </div>
   }
 
-  <!-- "Add new list" column -->
+  <!-- Floating Add Column Button: placé juste après la dernière colonne -->
   @if (lists().length < MAX_LISTS) {
-  <div class="add-list-column">
-    @if (!showAddListForm) {
-    <button class="add-list-btn" (click)="showAddListForm = true">
-      + Add List
-    </button>
-    } @else {
-    <div class="add-list-form">
-      <input
-        type="text"
-        [value]="newListName()"
-        (input)="onListNameInput($event)"
-        placeholder="New list name"
-        required
-        autofocus
-      />
-      <button (click)="addList()">Add</button>
-      <button (click)="showAddListForm = false">Cancel</button>
-      @if (addListError()) {
-      <div class="add-list-error">{{ addListError() }}</div>
-      }
-    </div>
-    }
-  </div>
+  <button
+    class="add-list-fab-inline"
+    [disabled]="!!editingTitleId() || lists().length >= MAX_LISTS"
+    (click)="addListAndEdit()"
+    title="Add column"
+  >
+    +
+  </button>
   }
 </div>

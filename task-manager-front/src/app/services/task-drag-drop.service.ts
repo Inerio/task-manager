@@ -62,15 +62,13 @@ export class TaskDragDropService {
     listId: number,
     setDragOver: (v: boolean) => void
   ) {
+    event.preventDefault();
     if (
       event.dataTransfer?.types.includes("Files") ||
       event.dataTransfer?.getData("type") === "column"
     )
       return;
 
-    if (!isTaskDragEvent(event)) return;
-
-    // Prevent drag-over highlight if dragging a task over its own column
     const draggedListId = (window as any).DRAGGED_TASK_LIST_ID;
     if (
       draggedListId !== undefined &&
@@ -81,7 +79,6 @@ export class TaskDragDropService {
       return;
     }
 
-    event.preventDefault();
     setDragOver(true);
   }
 

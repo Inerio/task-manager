@@ -26,7 +26,6 @@ export class ColumnDragDropService {
   }
 
   onColumnDragEnter(idx: number, event: DragEvent) {
-    if (!isColumnDragEvent(event)) return;
     event.preventDefault();
     if (this.draggedListId() !== null) {
       this.dragOverIndex.set(idx);
@@ -34,7 +33,6 @@ export class ColumnDragDropService {
   }
 
   onColumnDragOver(idx: number, event: DragEvent) {
-    if (!isColumnDragEvent(event)) return;
     event.preventDefault();
     if (this.draggedListId() !== null) {
       this.dragOverIndex.set(idx);

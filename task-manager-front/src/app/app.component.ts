@@ -7,6 +7,7 @@ import { AlertComponent } from "./components/alert/alert.component";
 import { ConfirmDialogComponent } from "./components/alert/confirm-dialog.component";
 import { ConfirmDialogService } from "./services/confirm-dialog.service";
 import { TaskList } from "./models/task-list.model";
+import { ColumnDragDropService } from "./services/column-drag-drop.service";
 
 @Component({
   selector: "app-root",
@@ -24,6 +25,7 @@ export class AppComponent {
   private readonly taskListService = inject(TaskListService);
   private readonly taskService = inject(TaskService);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly columnDnD = inject(ColumnDragDropService);
 
   readonly loading = this.taskListService.loading;
   showAddListForm = false;
@@ -31,13 +33,13 @@ export class AppComponent {
   addListError = signal<string | null>(null);
   readonly MAX_LISTS = 6;
 
-  // --- Drag & Drop Columns State ---
-  draggedListId = signal<number | null>(null); // id de la colonne qu'on déplace
-  dragOverIndex = signal<number | null>(null); // index où la colonne serait insérée
-
   // --- État pour édition du titre de chaque colonne ---
   editingTitleId = signal<number | null>(null); // id de la colonne éditée
   editingTitleValue = signal(""); // valeur temporaire
+
+  // DnD colonne (états via service)
+  readonly draggedListId = this.columnDnD.draggedListId;
+  readonly dragOverIndex = this.columnDnD.dragOverIndex;
 
   // Rendu réactif de la liste ordonnée (avec déplacement en cours simulé)
   readonly lists = computed(() => {
@@ -62,64 +64,23 @@ export class AppComponent {
   // -------------------- DRAG & DROP COLUMN ------------------------
 
   onColumnDragStart(listId: number, idx: number, event: DragEvent) {
-    this.draggedListId.set(listId);
-    this.dragOverIndex.set(idx); // position actuelle (avant move)
-    if (event.dataTransfer) {
-      event.dataTransfer.setData("type", "column");
-      event.dataTransfer.setData("list-id", String(listId));
-      event.dataTransfer.effectAllowed = "move";
-    }
+    this.columnDnD.onColumnDragStart(listId, idx, event);
   }
 
   onColumnDragEnter(idx: number, event: DragEvent) {
-    event.preventDefault();
-    if (this.draggedListId() !== null) {
-      this.dragOverIndex.set(idx);
-    }
+    this.columnDnD.onColumnDragEnter(idx, event);
   }
 
   onColumnDragOver(idx: number, event: DragEvent) {
-    event.preventDefault();
-    if (this.draggedListId() !== null) {
-      this.dragOverIndex.set(idx);
-    }
+    this.columnDnD.onColumnDragOver(idx, event);
   }
 
   onColumnDrop(event: DragEvent) {
-    event.preventDefault();
-    const draggedId = this.draggedListId();
-    const targetIdx = this.dragOverIndex();
-    if (draggedId == null || targetIdx == null) {
-      this.resetDragState();
-      return;
-    }
-    // Met à jour l'ordre local
-    const listsRaw = this.taskListService.lists();
-    const currIdx = listsRaw.findIndex((l) => l.id === draggedId);
-    if (currIdx === -1 || currIdx === targetIdx) {
-      this.resetDragState();
-      return;
-    }
-    // on fait la mutation "persistée" via le service
-    this.taskListService.moveList(draggedId, targetIdx).subscribe({
-      next: () => {
-        this.taskListService.loadLists();
-        this.resetDragState();
-      },
-      error: (err) => {
-        console.error("Move error:", err);
-        this.resetDragState();
-      },
-    });
+    this.columnDnD.onColumnDrop(event);
   }
 
   onColumnDragEnd() {
-    this.resetDragState();
-  }
-
-  resetDragState() {
-    this.draggedListId.set(null);
-    this.dragOverIndex.set(null);
+    this.columnDnD.onColumnDragEnd();
   }
 
   // -------------- ADD/DELETE LISTS & TASKS (inchangé) ---------------

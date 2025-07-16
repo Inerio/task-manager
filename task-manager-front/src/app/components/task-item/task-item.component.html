@@ -1,7 +1,9 @@
 <div
   class="task-card"
+  [class.has-badge]="dueBadge()"
   [class.completed]="localTask().completed"
   [class.dragging]="dragging()"
+  [class.editing]="localTask().isEditing"
   draggable="true"
   (dragstart)="onTaskDragStart($event)"
   (dragend)="onTaskDragEnd()"

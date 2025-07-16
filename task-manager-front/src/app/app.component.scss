@@ -15,10 +15,10 @@
 /* Fusion des propriétés task-columns : gap + spacing + align-items */
 .task-columns {
   display: flex;
-  justify-content: space-between; // conserve pour l'espacement maximal
+  justify-content: space-between; /* conserve pour l'espacement maximal */
   align-items: flex-start;
   padding: 1rem;
-  gap: 2rem; // pour le spacing "trello"
+  gap: 2rem; /* pour le spacing "trello" */
 }
 
 /* Colonne Kanban draggable (effet Trello) */
@@ -27,9 +27,8 @@
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 12px 0 #0001;
-  min-width: 320px;
-  max-width: 350px;
-  min-height: 200px;
+  min-width: 260px;
+  max-width: 260px;
   margin-bottom: 1rem;
   position: relative;
 }
@@ -72,4 +71,94 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0; // utile pour flexbox quand input long
+}
+
+/* Bouton croix à gauche, même style que la corbeille */
+.styled-x-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ececec;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px 0 #0001;
+  margin-right: 0.4rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+.styled-x-btn:hover {
+  background: #ffd6d6;
+  box-shadow: 0 0 0 3px #f36c6c33;
+}
+
+/* Stylise la corbeille à droite (effet cercle, fond gris clair, hover) */
+.styled-trash-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ececec;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px 0 #0001;
+  margin-left: auto;
+  margin-right: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+.styled-trash-btn:hover {
+  background: #ffd6d6;
+  box-shadow: 0 0 0 3px #f36c6c33;
+}
+
+/* Titre centré, toujours bold */
+.list-title,
+.list-title-input {
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Affichage du titre */
+.list-title {
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+  font-size: 1.08rem;
+  outline: none;
+  padding: 0.3rem 1.3rem;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+}
+
+/* input inline titre - même style que .list-title, mais en champ éditable */
+.list-title-input {
+  font-weight: bold;
+  text-align: center;
+  border: 2px solid #222;
+  border-radius: 8px;
+  padding: 0.3rem 1.3rem;
+  font-size: 1.08rem;
+  background: #fff;
+  outline: none;
+  margin: 0 0.1rem;
+  transition: border 0.15s;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.list-title-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px #3b82f633;
 }

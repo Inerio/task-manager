@@ -2,91 +2,95 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #f9f9f9;
-  padding: 1rem;
+  background: #f7f9fc; // Harmonisé avec le header
   border-radius: 12px;
+  box-shadow: 0 2px 12px 0 #0001;
   min-width: 260px;
-  max-width: 300px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  max-width: 260px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1rem 0 0 0;
 
-  .btn-close-list {
-    position: absolute;
-    top: 2px;
-    left: 8px;
-    background: transparent;
-    border: none;
-    color: #e53935;
-    font-size: 1.25rem;
+  // HEADER style (boutons, titre)
+  .column-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1rem;
+    background: #f7f9fc;
+    border-bottom: 1px solid #eee;
+    border-radius: 12px 12px 0 0;
+    min-height: 40px;
+    cursor: grab;
+    user-select: none;
+    transition: background 0.15s;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .list-title,
+  .list-title-input {
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+    text-align: center;
     font-weight: 700;
-    padding: 0;
-    line-height: 1;
-    cursor: pointer;
-    z-index: 10;
-    transition: color 0.15s;
+    font-size: 1.13rem;
+    border-radius: 8px;
+    padding: 0.3rem 1.3rem;
+    width: 100%;
+  }
 
-    &:hover {
-      color: #b71c1c;
-      background: transparent;
+  .list-title-input {
+    border: 2px solid #222;
+    background: #fff;
+    outline: none;
+    margin: 0 0.1rem;
+    transition: border 0.15s, box-shadow 0.15s;
+    &:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px #3b82f633;
     }
   }
 
-  .task-list-header {
+  // BOUTONS stylés
+  .styled-x-btn,
+  .styled-trash-btn {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    padding-left: 0.2rem;
+    justify-content: center;
+    background: #ececec;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px 0 #0001;
+    transition: background 0.2s, box-shadow 0.2s;
+    padding: 0;
+  }
 
-    .list-title {
-      margin: 0;
-      font-size: 1.3rem;
-      font-weight: bold;
-      flex: 1;
-      text-align: left;
-      padding-left: 0.6rem;
-      cursor: pointer;
-      user-select: text;
-      transition: color 0.18s;
-      &:hover {
-        color: #1762af;
-        text-decoration: underline dashed;
-      }
+  .styled-x-btn {
+    width: 32px;
+    height: 32px;
+    margin-right: 0.4rem;
+    flex-shrink: 0;
+    &:hover {
+      background: #ffd6d6;
+      box-shadow: 0 0 0 3px #f36c6c33;
     }
+  }
 
-    .list-title-input {
-      font-size: 1.3rem;
-      font-weight: bold;
-      border: 1.5px solid #aaa;
-      border-radius: 6px;
-      padding: 0.12em 0.5em;
-      margin-left: 0.15em;
-      width: 90%;
-      outline: none;
-      transition: border 0.15s;
-      background: #fff;
-
-      &:focus {
-        border-color: #1976d2;
-        background: #f7faff;
-      }
-    }
-
-    .btn-delete-column {
-      margin-left: 1rem;
-      background: #e0e0e0;
-      color: #444;
-      border: none;
-      padding: 0.35rem 0.8rem;
-      border-radius: 6px;
-      font-size: 1.1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-      line-height: 1.1;
-
-      &:hover {
-        background: #c62828;
-        color: #222;
-      }
+  .styled-trash-btn {
+    width: 36px;
+    height: 36px;
+    margin-left: auto;
+    margin-right: 0;
+    flex-shrink: 0;
+    &:hover {
+      background: #ffd6d6;
+      box-shadow: 0 0 0 3px #f36c6c33;
     }
   }
 
@@ -94,20 +98,27 @@
     margin-bottom: 0.8rem;
   }
 
+  // BOUTON "Add task"
   .add-btn {
     align-self: center;
-    margin-top: 0.5rem;
-    padding: 0.4rem 0.8rem;
-    font-size: 0.9rem;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    margin-top: 0.7rem;
+    margin-bottom: 0.7rem;
+    padding: 0.4rem 1rem;
+    font-size: 1rem;
+    font-family: "Poppins", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    background: #fff;
+    border: 1.5px solid #d7dbe7;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background 0.2s ease;
-
+    transition: background 0.18s, border 0.18s;
+    box-shadow: 0 1px 3px 0 #0001;
     &:hover {
-      background: #eee;
+      background: #f7f9fc;
+      border-color: #b9bfcf;
     }
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .add-task-form {
@@ -115,10 +126,11 @@
     flex-direction: column;
     gap: 0.5rem;
     margin-top: 1rem;
+    font-family: "Poppins", "Roboto", "Helvetica Neue", Arial, sans-serif;
   }
 }
 
-// Visual dropzone effect when dragging over
+/* --- ANIMATION DRAG OVER : conserve le code de la V2 (ne pas toucher !) --- */
 .task-dropzone {
   transition: min-height 0.3s ease, padding-bottom 0.3s ease;
   border: 2px dashed transparent;

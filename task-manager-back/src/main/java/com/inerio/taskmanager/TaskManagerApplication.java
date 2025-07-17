@@ -7,27 +7,46 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Main entry point for the Spring Boot application.
- * Enables global CORS configuration for Angular frontend.
+ * Main class and entry point for the TaskManager Spring Boot application.
+ * <p>
+ * This class configures global CORS settings to allow the Angular frontend
+ * (typically running on http://localhost:4200) to communicate with the backend.
+ * <p>
+ * <b>PRODUCTION WARNING:</b> Do not use wildcard origins or broad CORS rules in production!
+ * Adapt the allowed origins before deployment for security.
  */
 @SpringBootApplication
 public class TaskManagerApplication {
 
+    /**
+     * Application entry point.
+     *
+     * @param args command-line arguments (unused)
+     */
     public static void main(String[] args) {
         SpringApplication.run(TaskManagerApplication.class, args);
     }
 
     /**
-     * Allows CORS requests from Angular frontend (http://localhost:4200).
-     * Adapt origins for production!
+     * Configures global CORS policy for all endpoints.
+     * Allows requests from the Angular development server.
+     * 
+     * @return the CORS configuration bean
      */
     @Bean
     WebMvcConfigurer corsConfigurer() {
+        // Anonymous inner class implementing WebMvcConfigurer
         return new WebMvcConfigurer() {
+            /**
+             * Add mappings to allow CORS requests for all endpoints.
+             * Adjust allowed origins in production!
+             *
+             * @param registry the CORS registry to configure
+             */
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                    .allowedOrigins("http://localhost:4200")
+                    .allowedOrigins("http://localhost:4200") // Update for prod!
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*");
             }

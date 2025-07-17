@@ -64,16 +64,19 @@
 	<build>
 		<plugins>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<annotationProcessorPaths>
-						<path>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</path>
-					</annotationProcessorPaths>
-				</configuration>
+    			<groupId>org.apache.maven.plugins</groupId>
+    			<artifactId>maven-compiler-plugin</artifactId>
+    			<configuration>
+        			<source>21</source>
+        			<target>21</target>
+        			<encoding>UTF-8</encoding>
+        			<annotationProcessorPaths>
+            			<path>
+                			<groupId>org.projectlombok</groupId>
+                			<artifactId>lombok</artifactId>
+            			</path>
+        			</annotationProcessorPaths>
+    			</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
@@ -86,6 +89,15 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+  				<groupId>org.apache.maven.plugins</groupId>
+  				<artifactId>maven-javadoc-plugin</artifactId>
+  				<configuration>
+    				<source>21</source>
+    				<encoding>UTF-8</encoding>
+    				<failOnError>false</failOnError>
+  				</configuration>
 			</plugin>
 		</plugins>
 	</build>

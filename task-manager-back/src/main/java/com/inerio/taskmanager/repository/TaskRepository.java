@@ -87,7 +87,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByListAndPositionGreaterThanOrderByPositionAsc(TaskList list, int position);
 
     /**
-     * Finds all tasks in a column with position < {@code max}, ordered by position ASC.
+     * Finds all tasks in a column with position &lt; {@code max}, ordered by position ASC.
      * <p>
      * Can be used to get tasks above a certain index.
      * </p>

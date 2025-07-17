@@ -9,13 +9,11 @@ package com.inerio.taskmanager.exception;
  * exception handler (see {@link org.springframework.web.bind.annotation.ControllerAdvice}).
  * </p>
  *
- * <p>
  * Usage example:
  * <pre>
  *     taskRepository.findById(id)
  *         .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + id));
  * </pre>
- * </p>
  */
 public class TaskNotFoundException extends RuntimeException {
 

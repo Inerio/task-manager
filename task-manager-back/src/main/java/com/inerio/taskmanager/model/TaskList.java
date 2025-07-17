@@ -79,19 +79,34 @@ public class TaskList {
     //      GETTERS & SETTERS
     // ===========================
 
-    /** @return the unique ID of the column */
+    /**
+     * Gets the unique ID of the column.
+     * @return the unique ID of the column
+     */
     public Long getId() { return id; }
 
-    /** @return the name of the column (never null) */
+    /**
+     * Gets the name of the column.
+     * @return the name of the column (never null)
+     */
     public String getName() { return name; }
 
-    /** @param name the new name (must be unique) */
+    /**
+     * Sets the name of the column.
+     * @param name the new name (must be unique)
+     */
     public void setName(String name) { this.name = name; }
 
-    /** @return the persistent position (for drag &amp; drop ordering) */
+    /**
+     * Gets the persistent position of the column for drag &amp; drop ordering.
+     * @return the persistent position (lower = leftmost)
+     */
     public int getPosition() { return position; }
 
-    /** @param position set the ordering position (lower = leftmost) */
+    /**
+     * Sets the ordering position of the column.
+     * @param position the ordering position (lower = leftmost)
+     */
     public void setPosition(int position) { this.position = position; }
 
     /**
@@ -103,8 +118,12 @@ public class TaskList {
      */
     public List<Task> getTasks() { return tasks; }
 
-    /** @param tasks sets the entire list of tasks for this column */
+    /**
+     * Sets the entire list of tasks for this column.
+     * @param tasks the new list of tasks (never null, can be empty)
+     */
     public void setTasks(List<Task> tasks) { this.tasks = tasks != null ? tasks : new ArrayList<>(); }
+
 
     // ===========================
     //      HELPERS (OPTIONAL)

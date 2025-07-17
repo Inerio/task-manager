@@ -11,12 +11,24 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * <p>
  * This class configures global CORS settings to allow the Angular frontend
  * (typically running on http://localhost:4200) to communicate with the backend.
+ * </p>
  * <p>
  * <b>PRODUCTION WARNING:</b> Do not use wildcard origins or broad CORS rules in production!
  * Adapt the allowed origins before deployment for security.
+ * </p>
  */
 @SpringBootApplication
 public class TaskManagerApplication {
+
+    /**
+     * Default constructor.
+     * <p>
+     * Required by Spring Boot.
+     * </p>
+     */
+    public TaskManagerApplication() {
+        // No initialization required.
+    }
 
     /**
      * Application entry point.

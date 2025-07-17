@@ -25,6 +25,14 @@ import java.util.List;
  */
 public class TaskDto {
 
+	/**
+	 * Default constructor.
+	 * <p>
+	 * Required for frameworks and serialization.
+	 * </p>
+	 */
+	public TaskDto() {}
+	
     /**
      * Task unique identifier.
      * <p>
@@ -88,6 +96,11 @@ public class TaskDto {
      * @return the task ID, or null if not yet persisted
      */
     public Long getId() { return id; }
+
+    /**
+     * Sets the task ID.
+     * @param id the unique identifier, can be null for new tasks
+     */
     public void setId(Long id) { this.id = id; }
 
     /**
@@ -95,6 +108,11 @@ public class TaskDto {
      * @return the title (never null)
      */
     public String getTitle() { return title; }
+
+    /**
+     * Sets the task title.
+     * @param title the new task title (must not be null)
+     */
     public void setTitle(String title) { this.title = title; }
 
     /**
@@ -102,6 +120,11 @@ public class TaskDto {
      * @return the description (nullable)
      */
     public String getDescription() { return description; }
+
+    /**
+     * Sets the task description.
+     * @param description the new description (optional)
+     */
     public void setDescription(String description) { this.description = description; }
 
     /**
@@ -109,6 +132,11 @@ public class TaskDto {
      * @return true if the task is completed
      */
     public boolean isCompleted() { return completed; }
+
+    /**
+     * Sets the completion status.
+     * @param completed true if the task is completed, false otherwise
+     */
     public void setCompleted(boolean completed) { this.completed = completed; }
 
     /**
@@ -116,6 +144,11 @@ public class TaskDto {
      * @return the TaskList (column) ID
      */
     public Long getListId() { return listId; }
+
+    /**
+     * Sets the parent list ID.
+     * @param listId the ID of the parent TaskList (column)
+     */
     public void setListId(Long listId) { this.listId = listId; }
 
     /**
@@ -123,6 +156,11 @@ public class TaskDto {
      * @return the position (index)
      */
     public int getPosition() { return position; }
+
+    /**
+     * Sets the position of the task in its list.
+     * @param position the index/position for drag &amp; drop
+     */
     public void setPosition(int position) { this.position = position; }
 
     /**
@@ -130,6 +168,11 @@ public class TaskDto {
      * @return the creation date/time
      */
     public LocalDateTime getCreationDate() { return creationDate; }
+
+    /**
+     * Sets the creation timestamp.
+     * @param creationDate the creation date/time (set by backend)
+     */
     public void setCreationDate(LocalDateTime creationDate) { this.creationDate = creationDate; }
 
     /**
@@ -137,6 +180,11 @@ public class TaskDto {
      * @return the due date, or null if not set
      */
     public LocalDate getDueDate() { return dueDate; }
+
+    /**
+     * Sets the optional due date.
+     * @param dueDate the due date (nullable)
+     */
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
 
     /**
@@ -144,5 +192,11 @@ public class TaskDto {
      * @return list of filenames, can be empty but never null
      */
     public List<String> getAttachments() { return attachments; }
+
+    /**
+     * Sets the list of attachment filenames.
+     * @param attachments list of filenames for uploaded files
+     */
     public void setAttachments(List<String> attachments) { this.attachments = attachments; }
+
 }

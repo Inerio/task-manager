@@ -6,7 +6,7 @@ import com.inerio.taskmanager.model.TaskList;
 /**
  * Utility class for converting between {@link Task} entity and {@link TaskDto}.
  * <p>
- * This class contains only static mapping methods (Entity <-> DTO) to ensure clean
+ * This class contains only static mapping methods (Entity &lt;-&gt; DTO) to ensure clean
  * separation between database models and objects exchanged with the frontend (Angular).
  * </p>
  *

@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from "@angular/core";
-import { TaskListService } from "./task-list.service";
+import { KanbanColumnService } from "./kanban-column.service";
 import {
   setColumnDragData,
   getColumnDragData,
@@ -9,17 +9,17 @@ import {
 @Injectable({ providedIn: "root" })
 export class ColumnDragDropService {
   // Etat du DnD colonne
-  readonly draggedListId = signal<number | null>(null);
+  readonly draggedKanbanColumnId = signal<number | null>(null);
   readonly dragOverIndex = signal<number | null>(null);
 
-  constructor(private taskListService: TaskListService) {}
+  constructor(private kanbanColumnService: KanbanColumnService) {}
 
   // DnD Handlers
 
-  onColumnDragStart(listId: number, idx: number, event: DragEvent) {
-    this.draggedListId.set(listId);
+  onColumnDragStart(kanbanColumnId: number, idx: number, event: DragEvent) {
+    this.draggedKanbanColumnId.set(kanbanColumnId);
     this.dragOverIndex.set(idx);
-    setColumnDragData(event, listId);
+    setColumnDragData(event, kanbanColumnId);
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = "move";
     }
@@ -27,14 +27,14 @@ export class ColumnDragDropService {
 
   onColumnDragEnter(idx: number, event: DragEvent) {
     event.preventDefault();
-    if (this.draggedListId() !== null) {
+    if (this.draggedKanbanColumnId() !== null) {
       this.dragOverIndex.set(idx);
     }
   }
 
   onColumnDragOver(idx: number, event: DragEvent) {
     event.preventDefault();
-    if (this.draggedListId() !== null) {
+    if (this.draggedKanbanColumnId() !== null) {
       this.dragOverIndex.set(idx);
     }
   }
@@ -45,23 +45,23 @@ export class ColumnDragDropService {
       return;
     }
     event.preventDefault();
-    const draggedId = this.draggedListId();
+    const draggedId = this.draggedKanbanColumnId();
     const targetIdx = this.dragOverIndex();
     if (draggedId == null || targetIdx == null) {
       this.resetDragState();
       return;
     }
     // Met à jour l'ordre local
-    const listsRaw = this.taskListService.lists();
-    const currIdx = listsRaw.findIndex((l) => l.id === draggedId);
+    const kanbanColumnsRaw = this.kanbanColumnService.kanbanColumns();
+    const currIdx = kanbanColumnsRaw.findIndex((l) => l.id === draggedId);
     if (currIdx === -1 || currIdx === targetIdx) {
       this.resetDragState();
       return;
     }
     // Appel API pour déplacer
-    this.taskListService.moveList(draggedId, targetIdx).subscribe({
+    this.kanbanColumnService.moveKanbanColumn(draggedId, targetIdx).subscribe({
       next: () => {
-        this.taskListService.loadLists();
+        this.kanbanColumnService.loadKanbanColumns();
         this.resetDragState();
         afterDrop?.();
       },
@@ -77,7 +77,7 @@ export class ColumnDragDropService {
   }
 
   resetDragState() {
-    this.draggedListId.set(null);
+    this.draggedKanbanColumnId.set(null);
     this.dragOverIndex.set(null);
   }
 }

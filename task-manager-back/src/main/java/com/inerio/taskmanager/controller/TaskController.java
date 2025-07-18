@@ -2,10 +2,10 @@ package com.inerio.taskmanager.controller;
 
 import com.inerio.taskmanager.dto.TaskMoveDto;
 import com.inerio.taskmanager.dto.TaskDto;
-import com.inerio.taskmanager.dto.TaskMapper;
-import com.inerio.taskmanager.model.TaskList;
+import com.inerio.taskmanager.dto.TaskMapperDto;
+import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.service.TaskService;
-import com.inerio.taskmanager.service.TaskListService;
+import com.inerio.taskmanager.service.KanbanColumnService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class TaskController {
 
     private final TaskService taskService;
-    private final TaskListService taskListService;
+    private final KanbanColumnService kanbanColumnService;
 
     /** SLF4J logger for logging request/response and warnings. */
     private static final Logger log = LoggerFactory.getLogger(TaskController.class);
@@ -39,11 +39,11 @@ public class TaskController {
      * Constructor with dependency injection for required services.
      *
      * @param taskService      Service for business logic related to tasks.
-     * @param taskListService  Service for business logic related to lists/columns.
+     * @param kanbanColumnService  Service for business logic related to columns.
      */
-    public TaskController(TaskService taskService, TaskListService taskListService) {
+    public TaskController(TaskService taskService, KanbanColumnService kanbanColumnService) {
         this.taskService = taskService;
-        this.taskListService = taskListService;
+        this.kanbanColumnService = kanbanColumnService;
     }
 
     // ======================= TASK CRUD ENDPOINTS =======================
@@ -57,7 +57,7 @@ public class TaskController {
     public ResponseEntity<List<TaskDto>> getAllTasks() {
         List<TaskDto> tasks = taskService.getAllTasks()
                 .stream()
-                .map(TaskMapper::toDto)
+                .map(TaskMapperDto::toDto)
                 .collect(Collectors.toList());
         if (tasks.isEmpty()) return ResponseEntity.noContent().build();
         return ResponseEntity.ok(tasks);
@@ -72,60 +72,60 @@ public class TaskController {
     @GetMapping("/{id}")
     public ResponseEntity<TaskDto> getTaskById(@PathVariable Long id) {
         return taskService.getTaskById(id)
-                .map(TaskMapper::toDto)
+                .map(TaskMapperDto::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * Get all tasks in a specific list/column, ordered by position.
+     * Get all tasks in a specific column, ordered by position.
      *
-     * @param listId List (column) ID
+     * @param kanbanColumnId List (column) ID
      * @return List of TaskDto or HTTP 204 if empty.
      */
-    @GetMapping("/list/{listId}")
-    public ResponseEntity<List<TaskDto>> getTasksByListId(@PathVariable Long listId) {
-        List<TaskDto> tasks = taskService.getTasksByListId(listId)
+    @GetMapping("/kanbanColumn/{kanbanColumnId}")
+    public ResponseEntity<List<TaskDto>> getTasksByListId(@PathVariable Long kanbanColumnId) {
+        List<TaskDto> tasks = taskService.getTasksByKanbanColumnId(kanbanColumnId)
                 .stream()
-                .map(TaskMapper::toDto)
+                .map(TaskMapperDto::toDto)
                 .collect(Collectors.toList());
         if (tasks.isEmpty()) return ResponseEntity.noContent().build();
         return ResponseEntity.ok(tasks);
     }
 
     /**
-     * Create a new task. Requires a valid list ID.
+     * Create a new task. Requires a valid column ID.
      *
      * @param dto TaskDto to create
-     * @return Created TaskDto with HTTP 201, or 400 if invalid list.
+     * @return Created TaskDto with HTTP 201, or 400 if invalid column.
      */
     @PostMapping
     public ResponseEntity<TaskDto> createTask(@RequestBody TaskDto dto) {
-        Optional<TaskList> listOpt = taskListService.getListById(dto.getListId());
-        if (listOpt.isEmpty()) {
+        Optional<KanbanColumn> kanbanColumnOpt = kanbanColumnService.getKanbanColumnById(dto.getKanbanColumnId());
+        if (kanbanColumnOpt.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        TaskDto created = TaskMapper.toDto(taskService.createTaskFromDto(dto, listOpt.get()));
+        TaskDto created = TaskMapperDto.toDto(taskService.createTaskFromDto(dto, kanbanColumnOpt.get()));
         URI location = URI.create("/" + created.getId());
         return ResponseEntity.created(location).body(created);
     }
 
     /**
-     * Update an existing task. Requires valid list ID.
+     * Update an existing task. Requires valid column ID.
      *
      * @param id  Task ID
      * @param dto Updated TaskDto
-     * @return Updated TaskDto or 404 if not found, 400 if invalid list.
+     * @return Updated TaskDto or 404 if not found, 400 if invalid column.
      */
     @PutMapping("/{id}")
     public ResponseEntity<TaskDto> updateTask(@PathVariable Long id, @RequestBody TaskDto dto) {
-        Optional<TaskList> listOpt = taskListService.getListById(dto.getListId());
-        if (listOpt.isEmpty()) {
+        Optional<KanbanColumn> kanbanColumnOpt = kanbanColumnService.getKanbanColumnById(dto.getKanbanColumnId());
+        if (kanbanColumnOpt.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
         try {
-            TaskDto saved = TaskMapper.toDto(
-                    taskService.updateTaskFromDto(id, dto, listOpt.get())
+            TaskDto saved = TaskMapperDto.toDto(
+                    taskService.updateTaskFromDto(id, dto, kanbanColumnOpt.get())
             );
             return ResponseEntity.ok(saved);
         } catch (RuntimeException e) {
@@ -150,14 +150,14 @@ public class TaskController {
     }
 
     /**
-     * Delete all tasks for a given list/column.
+     * Delete all tasks for a given column.
      *
-     * @param listId List ID
+     * @param kanbanColumnId KanbanColumn ID
      * @return HTTP 204
      */
-    @DeleteMapping("/list/{listId}")
-    public ResponseEntity<Void> deleteTasksByListId(@PathVariable Long listId) {
-        taskService.deleteTasksByListId(listId);
+    @DeleteMapping("/kanbanColumn/{kanbanColumnId}")
+    public ResponseEntity<Void> deleteTasksByKanbanColumnId(@PathVariable Long kanbanColumnId) {
+        taskService.deleteTasksByKanbanColumnId(kanbanColumnId);
         return ResponseEntity.noContent().build();
     }
 
@@ -175,8 +175,8 @@ public class TaskController {
     // ==================== DRAG & DROP: MOVE & REORDER TASK ====================
 
     /**
-     * Move a task to a target list and position (with reorder).  
-     * Body: { "taskId": ..., "targetListId": ..., "targetPosition": ... }
+     * Move a task to a target column and position (with reorder).  
+     * Body: { "taskId": ..., "targetKanbanColumnId": ..., "targetPosition": ... }
      *
      * @param moveRequest TaskMoveDto containing move parameters
      * @return HTTP 200 on success, 400 on error
@@ -186,7 +186,7 @@ public class TaskController {
         try {
             taskService.moveTask(
                 moveRequest.getTaskId(),
-                moveRequest.getTargetListId(),
+                moveRequest.getTargetKanbanColumnId(),
                 moveRequest.getTargetPosition()
             );
             return ResponseEntity.ok().build();
@@ -210,7 +210,7 @@ public class TaskController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
         try {
-            TaskDto updatedTask = TaskMapper.toDto(taskService.uploadAttachment(id, file));
+            TaskDto updatedTask = TaskMapperDto.toDto(taskService.uploadAttachment(id, file));
             return ResponseEntity.ok(updatedTask);
         } catch (IllegalStateException e) {
             log.warn("Attachment upload failed for task {}: {}", id, e.getMessage());
@@ -246,7 +246,7 @@ public class TaskController {
     public ResponseEntity<?> deleteAttachment(
             @PathVariable Long id,
             @PathVariable String filename) {
-        TaskDto updatedTask = TaskMapper.toDto(taskService.deleteAttachment(id, filename));
+        TaskDto updatedTask = TaskMapperDto.toDto(taskService.deleteAttachment(id, filename));
         return ResponseEntity.ok(updatedTask);
     }
 }

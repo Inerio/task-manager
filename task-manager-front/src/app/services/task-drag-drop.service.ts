@@ -22,10 +22,10 @@ export class TaskDragDropService {
     }
     setDragging(true);
 
-    if (!task.id || task.listId == null) return;
+    if (!task.id || task.kanbanColumnId == null) return;
 
-    setTaskDragData(event, task.id, task.listId);
-    (window as any).DRAGGED_TASK_LIST_ID = task.listId;
+    setTaskDragData(event, task.id, task.kanbanColumnId);
+    (window as any).DRAGGED_TASK_KANBANCOLUMN_ID = task.kanbanColumnId;
 
     // Custom drag image
     const dragImage = document.createElement("div");
@@ -51,15 +51,15 @@ export class TaskDragDropService {
    */
   endTaskDrag(setDragging: (value: boolean) => void) {
     setDragging(false);
-    (window as any).DRAGGED_TASK_LIST_ID = undefined;
+    (window as any).DRAGGED_TASK_KANBANCOLUMN_ID = undefined;
   }
 
   /**
    * Handles the drag over event for task
    */
-  handleTaskListDragOver(
+  handleKanbanColumnDragOver(
     event: DragEvent,
-    listId: number,
+    kanbanColumnId: number,
     setDragOver: (v: boolean) => void
   ) {
     event.preventDefault();
@@ -69,11 +69,11 @@ export class TaskDragDropService {
     )
       return;
 
-    const draggedListId = (window as any).DRAGGED_TASK_LIST_ID;
+    const draggedKanbanColumnId = (window as any).DRAGGED_TASK_KANBANCOLUMN_ID;
     if (
-      draggedListId !== undefined &&
-      draggedListId !== null &&
-      Number(draggedListId) === listId
+      draggedKanbanColumnId !== undefined &&
+      draggedKanbanColumnId !== null &&
+      Number(draggedKanbanColumnId) === kanbanColumnId
     ) {
       setDragOver(false);
       return;
@@ -85,16 +85,16 @@ export class TaskDragDropService {
   /**
    * Handles the drag leave event for task
    */
-  handleTaskListDragLeave(setDragOver: (v: boolean) => void) {
+  handleKanbanColumnDragLeave(setDragOver: (v: boolean) => void) {
     setDragOver(false);
   }
 
   /**
    * Handles the drop event for task
    */
-  handleTaskListDrop(
+  handleKanbanColumnDrop(
     event: DragEvent,
-    listId: number,
+    kanbanColumnId: number,
     setDragOver: (v: boolean) => void,
     getTasks: () => Task[],
     updateTask: (id: number, task: Task) => void
@@ -113,8 +113,8 @@ export class TaskDragDropService {
     const { taskId } = dragData;
     const allTasks = getTasks();
     const task = allTasks.find((t) => t.id === taskId);
-    if (!task || task.listId === listId) return;
-    const updatedTask = { ...task, listId };
+    if (!task || task.kanbanColumnId === kanbanColumnId) return;
+    const updatedTask = { ...task, kanbanColumnId };
     updateTask(updatedTask.id!, updatedTask);
   }
 }

@@ -1,7 +1,7 @@
 package com.inerio.taskmanager.repository;
 
 import com.inerio.taskmanager.model.Task;
-import com.inerio.taskmanager.model.TaskList;
+import com.inerio.taskmanager.model.KanbanColumn;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
@@ -26,10 +26,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * Used for displaying column tasks in the correct order.
      * </p>
      *
-     * @param list the target Kanban column (TaskList entity)
+     * @param kanbanColumn the target Kanban column (KanbanColumn entity)
      * @return ordered list of {@link Task} for this column
      */
-    List<Task> findByListOrderByPositionAsc(TaskList list);
+    List<Task> findByKanbanColumnOrderByPositionAsc(KanbanColumn kanbanColumn);
 
     /**
      * Finds all tasks that match the given completed status.
@@ -45,11 +45,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     /**
      * Finds all tasks in a specific Kanban column with a specific completed status.
      *
-     * @param list      the Kanban column
+     * @param kanbanColumn      the Kanban column
      * @param completed the completed status to filter on
      * @return list of tasks matching criteria
      */
-    List<Task> findByListAndCompleted(TaskList list, boolean completed);
+    List<Task> findByKanbanColumnAndCompleted(KanbanColumn kanbanColumn, boolean completed);
 
     /**
      * Finds all tasks for a given column (without ordering).
@@ -57,10 +57,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * Used for operations where ordering does not matter (e.g., bulk delete).
      * </p>
      *
-     * @param list the Kanban column
+     * @param kanbanColumn the Kanban column
      * @return list of all tasks in this column
      */
-    List<Task> findByList(TaskList list);
+    List<Task> findByKanbanColumn(KanbanColumn kanbanColumn);
 
     /**
      * Finds all tasks in a column with position >= {@code min}, ordered by position ASC.
@@ -68,11 +68,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * Used when shifting tasks "down" during a drag-and-drop operation.
      * </p>
      *
-     * @param list     the Kanban column
+     * @param kanbanColumn     the Kanban column
      * @param position the minimum (inclusive) position
      * @return ordered list of tasks matching criteria
      */
-    List<Task> findByListAndPositionGreaterThanEqualOrderByPositionAsc(TaskList list, int position);
+    List<Task> findByKanbanColumnAndPositionGreaterThanEqualOrderByPositionAsc(KanbanColumn kanbanColumn, int position);
 
     /**
      * Finds all tasks in a column with position > {@code min}, ordered by position ASC.
@@ -80,11 +80,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * Used to update positions after a task has been moved or deleted.
      * </p>
      *
-     * @param list     the Kanban column
+     * @param kanbanColumn     the Kanban column
      * @param position the minimum (exclusive) position
      * @return ordered list of tasks to update
      */
-    List<Task> findByListAndPositionGreaterThanOrderByPositionAsc(TaskList list, int position);
+    List<Task> findByKanbanColumnAndPositionGreaterThanOrderByPositionAsc(KanbanColumn kanbanColumn, int position);
 
     /**
      * Finds all tasks in a column with position &lt; {@code max}, ordered by position ASC.
@@ -92,11 +92,9 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * Can be used to get tasks above a certain index.
      * </p>
      *
-     * @param list     the Kanban column
+     * @param kanbanColumn     the Kanban column
      * @param position the maximum (exclusive) position
      * @return ordered list of tasks
      */
-    List<Task> findByListAndPositionLessThanOrderByPositionAsc(TaskList list, int position);
-
-    // -- No redundant methods; all CRUD and custom queries are covered.
+    List<Task> findByKanbanColumnAndPositionLessThanOrderByPositionAsc(KanbanColumn kanbanColumn, int position);
 }

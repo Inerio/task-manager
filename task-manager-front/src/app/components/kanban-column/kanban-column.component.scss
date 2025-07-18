@@ -1,4 +1,4 @@
-.task-list {
+.task-kanbanColumn {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -29,8 +29,8 @@
     box-sizing: border-box;
   }
 
-  .list-title,
-  .list-title-input {
+  .kanbanColumn-title,
+  .kanbanColumn-title-input {
     flex: 1 1 0%;
     min-width: 0;
     max-width: 100%;
@@ -44,7 +44,7 @@
     width: 100%;
   }
 
-  .list-title-input {
+  .kanbanColumn-title-input {
     border: 2px solid #222;
     background: #fff;
     outline: none;

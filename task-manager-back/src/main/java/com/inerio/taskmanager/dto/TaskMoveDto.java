@@ -1,15 +1,15 @@
 package com.inerio.taskmanager.dto;
 
 /**
- * Data Transfer Object (DTO) for moving a task (drag &amp; drop) between lists/columns.
+ * Data Transfer Object (DTO) for moving a task (drag &amp; drop) between columns.
  * <p>
  * Used as the request body for the <b>POST</b> <code>/api/v1/tasks/move</code> endpoint.
  * </p>
  *
  * <ul>
  *     <li><b>taskId</b> — The ID of the task to move.</li>
- *     <li><b>targetListId</b> — The ID of the target list/column.</li>
- *     <li><b>targetPosition</b> — The 0-based index to place the task at in the new list.</li>
+ *     <li><b>targetKanbanColumnId</b> — The ID of the target column.</li>
+ *     <li><b>targetPosition</b> — The 0-based index to place the task at in the new column.</li>
  * </ul>
  *
  * <p>
@@ -27,15 +27,15 @@ public class TaskMoveDto {
     private Long taskId;
 
     /**
-     * The ID of the target list/column where the task should be moved.
+     * The ID of the target column where the task should be moved.
      * <p>
      * Must be provided by the frontend.
      * </p>
      */
-    private Long targetListId;
+    private Long targetKanbanColumnId;
 
     /**
-     * The index (0-based) in the target list where the task should be placed.
+     * The index (0-based) in the target column where the task should be placed.
      */
     private int targetPosition;
 
@@ -55,12 +55,12 @@ public class TaskMoveDto {
      * Full constructor for TaskMoveDto.
      *
      * @param taskId        The task ID
-     * @param targetListId  The target list/column ID
-     * @param targetPosition The index in the target list
+     * @param targetKanbanColumnId  The target column ID
+     * @param targetPosition The index in the target column
      */
-    public TaskMoveDto(Long taskId, Long targetListId, int targetPosition) {
+    public TaskMoveDto(Long taskId, Long targetKanbanColumnId, int targetPosition) {
         this.taskId = taskId;
-        this.targetListId = targetListId;
+        this.targetKanbanColumnId = targetKanbanColumnId;
         this.targetPosition = targetPosition;
     }
 
@@ -85,19 +85,19 @@ public class TaskMoveDto {
     }
 
     /**
-     * Gets the target list/column ID.
-     * @return the target list/column ID (never null for a valid request)
+     * Gets the target column ID.
+     * @return the target column ID (never null for a valid request)
      */
-    public Long getTargetListId() {
-        return targetListId;
+    public Long getTargetKanbanColumnId() {
+        return targetKanbanColumnId;
     }
 
     /**
-     * Sets the target list/column ID.
-     * @param targetListId The ID of the target list/column
+     * Sets the target column ID.
+     * @param targetKanbanColumnId The ID of the target column
      */
-    public void setTargetListId(Long targetListId) {
-        this.targetListId = targetListId;
+    public void setTargetKanbanColumnId(Long targetKanbanColumnId) {
+        this.targetKanbanColumnId = targetKanbanColumnId;
     }
 
     /**

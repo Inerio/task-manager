@@ -8,7 +8,7 @@ export interface Task {
   title: string;
   description: string;
   completed: boolean;
-  listId: number;
+  kanbanColumnId: number;
   dueDate?: string | null;
   isEditing?: boolean; // Edit state (UI only)
   attachments?: string[];

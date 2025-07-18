@@ -11,32 +11,32 @@ import {
 import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
 import { TaskService } from "../../services/task.service";
-import { TaskItemComponent } from "../task-item/task-item.component";
+import { TaskComponent } from "../task/task.component";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
-import { TaskListService } from "../../services/task-list.service";
-import { TaskList } from "../../models/task-list.model";
+import { KanbanColumnService } from "../../services/kanban-column.service";
+import { KanbanColumn } from "../../models/kanban-column.model";
 import { getTaskDragData, isTaskDragEvent } from "../../utils/drag-drop-utils";
 import { TaskDragDropService } from "../../services/task-drag-drop.service";
 
 @Component({
-  selector: "app-task-list",
+  selector: "app-kanban-column",
   standalone: true,
-  imports: [CommonModule, FormsModule, TaskItemComponent],
-  templateUrl: "./task-list.component.html",
-  styleUrls: ["./task-list.component.scss"],
+  imports: [CommonModule, FormsModule, TaskComponent],
+  templateUrl: "./kanban-column.component.html",
+  styleUrls: ["./kanban-column.component.scss"],
 })
-export class TaskListComponent {
+export class KanbanColumnComponent {
   // ------------------------------------------
   // INPUTS
   // ------------------------------------------
   @Input({ required: true }) title!: string;
-  @Input({ required: true }) listId!: number;
+  @Input({ required: true }) kanbanColumnId!: number;
 
   // ------------------------------------------
   // SERVICES
   // ------------------------------------------
   private readonly taskService = inject(TaskService);
-  private readonly taskListService = inject(TaskListService);
+  private readonly kanbanColumnService = inject(KanbanColumnService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dragDropService = inject(TaskDragDropService);
 
@@ -58,7 +58,7 @@ export class TaskListComponent {
       title,
       description,
       completed: false,
-      listId: this.listId,
+      kanbanColumnId: this.kanbanColumnId,
       dueDate: dueDate || null,
     };
     this.taskService.createTask(taskToCreate);
@@ -95,7 +95,7 @@ export class TaskListComponent {
   }
 
   // ------------------------------------------
-  // DELETE ALL TASKS IN LIST (button optionnel)
+  // DELETE ALL TASKS IN KANBANCOLUMN (button optionnel)
   // ------------------------------------------
   async deleteAllInColumn(): Promise<void> {
     const confirmed = await this.confirmDialog.open(
@@ -103,14 +103,16 @@ export class TaskListComponent {
       `Voulez-vous supprimer toutes les tâches de “${this.title}”?`
     );
     if (!confirmed) return;
-    this.taskService.deleteTasksByListId(this.listId);
+    this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
   // ------------------------------------------
   // TASK FILTERING (reactive)
   // ------------------------------------------
   readonly filteredTasks: Signal<Task[]> = computed(() =>
-    this.taskService.tasks().filter((task) => task.listId === this.listId)
+    this.taskService
+      .tasks()
+      .filter((task) => task.kanbanColumnId === this.kanbanColumnId)
   );
 
   // ------------------------------------------
@@ -119,19 +121,23 @@ export class TaskListComponent {
   isDragOver = signal(false);
 
   onTaskDragOver(event: DragEvent): void {
-    this.dragDropService.handleTaskListDragOver(event, this.listId, (v) =>
-      this.isDragOver.set(v)
+    this.dragDropService.handleKanbanColumnDragOver(
+      event,
+      this.kanbanColumnId,
+      (v) => this.isDragOver.set(v)
     );
   }
 
   onTaskDragLeave(): void {
-    this.dragDropService.handleTaskListDragLeave((v) => this.isDragOver.set(v));
+    this.dragDropService.handleKanbanColumnDragLeave((v) =>
+      this.isDragOver.set(v)
+    );
   }
 
   onTaskDrop(event: DragEvent): void {
-    this.dragDropService.handleTaskListDrop(
+    this.dragDropService.handleKanbanColumnDrop(
       event,
-      this.listId,
+      this.kanbanColumnId,
       (v) => this.isDragOver.set(v),
       () => this.taskService.tasks(), // get all tasks (type Task[])
       (id, task) => this.taskService.updateTask(id, task) // update task

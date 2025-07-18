@@ -16,15 +16,18 @@
 </div>
 
 <div class="task-columns">
-  @for (list of lists(); track list.id; let idx = $index) {
+  @for (kanbanColumn of kanbanColumns(); track kanbanColumn.id; let idx =
+  $index) {
   <div
     class="column-draggable"
-    [class.is-dragged]="draggedListId() === list.id"
-    [class.drag-over]="dragOverIndex() === idx && draggedListId() !== null"
-    [class.editing]="isEditingTitle(list)"
+    [class.is-dragged]="draggedKanbanColumnId() === kanbanColumn.id"
+    [class.drag-over]="
+      dragOverIndex() === idx && draggedKanbanColumnId() !== null
+    "
+    [class.editing]="isEditingTitle(kanbanColumn)"
   >
     <!-- BOUTON ANNULER si la colonne est en édition -->
-    @if (isEditingTitle(list)) {
+    @if (isEditingTitle(kanbanColumn)) {
     <button
       class="cancel-edit-btn-top"
       (mousedown)="cancelTitleEdit()"
@@ -37,9 +40,9 @@
     <!-- Header drag handle + actions -->
     <div
       class="column-header"
-      [class.disabled]="!!editingTitleId() && !isEditingTitle(list)"
+      [class.disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       draggable="true"
-      (dragstart)="onColumnDragStart(list.id!, idx, $event)"
+      (dragstart)="onColumnDragStart(kanbanColumn.id!, idx, $event)"
       (dragenter)="onColumnDragEnter(idx, $event)"
       (dragover)="onColumnDragOver(idx, $event)"
       (drop)="onColumnDrop($event)"
@@ -47,69 +50,74 @@
     >
       <!-- Croix stylée à gauche -->
       <button
-        class="btn-close-list styled-x-btn"
-        (click)="deleteList(list.id!, list.name)"
+        class="btn-close-kanbanColumn styled-x-btn"
+        (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
         title="Supprimer la colonne"
-        aria-label="Supprimer cette liste"
-        [disabled]="!!editingTitleId() && !isEditingTitle(list)"
+        aria-label="Supprimer cette kanbanColumne"
+        [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       >
         <img src="svg/x.svg" alt="Fermer" width="17" height="17" />
       </button>
 
       <!-- Edition du titre inline -->
-      @if (!isEditingTitle(list)) {
+      @if (!isEditingTitle(kanbanColumn)) {
       <span
-        class="list-title"
-        (click)="startEditTitle(list)"
+        class="kanbanColumn-title"
+        (click)="startEditTitle(kanbanColumn)"
         tabindex="0"
-        (keydown.enter)="startEditTitle(list)"
-        (keydown.space)="startEditTitle(list)"
-        title="Renommer cette liste"
+        (keydown.enter)="startEditTitle(kanbanColumn)"
+        (keydown.space)="startEditTitle(kanbanColumn)"
+        title="Renommer cette kanbanColumne"
       >
-        {{ list.name }}
+        {{ kanbanColumn.name }}
       </span>
       } @else {
       <input
-        id="edit-list-title-{{ list.id }}"
-        class="list-title-input"
+        id="edit-kanbanColumn-title-{{ kanbanColumn.id }}"
+        class="kanbanColumn-title-input"
         type="text"
         [value]="editingTitleValue()"
         (input)="onEditTitleInput($event)"
-        (blur)="saveTitleEdit(list)"
-        (keydown.enter)="saveTitleEdit(list)"
+        (blur)="saveTitleEdit(kanbanColumn)"
+        (keydown.enter)="saveTitleEdit(kanbanColumn)"
         (keydown.escape)="cancelTitleEdit()"
         maxlength="60"
         required
         [autofocus]="true"
-        [disabled]="!!editingTitleId() && !isEditingTitle(list)"
+        [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       />
       }
 
       <!-- Poubelle à droite, stylée -->
       <button
         class="btn-delete-column styled-trash-btn"
-        (click)="deleteAllInColumn(list.id!, list.name)"
+        (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
         title="Supprimer toutes les tâches de cette colonne"
-        [disabled]="!!editingTitleId() && !isEditingTitle(list)"
+        [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       >
         <img src="/svg/trash.svg" alt="Vider" width="19" height="19" />
       </button>
     </div>
-    <!-- Liste des tâches + ajout tâche -->
-    <app-task-list [listId]="list.id!" [title]="list.name"></app-task-list>
+    <!-- KanbanColumne des tâches + ajout tâche -->
+    <app-kanban-column
+      [kanbanColumnId]="kanbanColumn.id!"
+      [title]="kanbanColumn.name"
+    ></app-kanban-column>
     <!-- Overlay d'interdiction si édition sur cette colonne -->
-    @if (!!editingTitleId() && !isEditingTitle(list)) {
+    @if (!!editingTitleId() && !isEditingTitle(kanbanColumn)) {
     <div class="column-blocker"></div>
     }
   </div>
   }
 
   <!-- Floating Add Column Button: placé juste après la dernière colonne -->
-  @if (lists().length < MAX_LISTS) {
+  @if (kanbanColumns().length < MAX_KANBANCOLUMNS) {
   <button
-    class="add-list-fab-inline"
-    [disabled]="!!editingTitleId() || lists().length >= MAX_LISTS"
-    (click)="addListAndEdit()"
+    class="add-kanbanColumn-fab-inline"
+    [disabled]="
+      !!editingTitleId() || kanbanColumns().length >= MAX_KANBANCOLUMNS
+    "
+    (click)="addKanbanColumnAndEdit()"
     title="Add column"
   >
     +

@@ -1,7 +1,7 @@
 package com.inerio.taskmanager.dto;
 
 import com.inerio.taskmanager.model.Task;
-import com.inerio.taskmanager.model.TaskList;
+import com.inerio.taskmanager.model.KanbanColumn;
 
 /**
  * Utility class for converting between {@link Task} entity and {@link TaskDto}.
@@ -12,14 +12,14 @@ import com.inerio.taskmanager.model.TaskList;
  *
  * <ul>
  *     <li>toDto: Converts an entity to its DTO for API responses</li>
- *     <li>toEntity: Creates a Task entity from a DTO and its parent list</li>
+ *     <li>toEntity: Creates a Task entity from a DTO and its parent column</li>
  * </ul>
  *
  * <p>
  * No state or business logic should be added here.
  * </p>
  */
-public class TaskMapper {
+public class TaskMapperDto {
 
     /**
      * Converts a {@link Task} entity to a {@link TaskDto} for API exchange.
@@ -36,7 +36,7 @@ public class TaskMapper {
         dto.setTitle(task.getTitle());
         dto.setDescription(task.getDescription());
         dto.setCompleted(task.isCompleted());
-        dto.setListId(task.getList() != null ? task.getList().getId() : null);
+        dto.setKanbanColumnId(task.getKanbanColumn() != null ? task.getKanbanColumn().getId() : null);
         dto.setPosition(task.getPosition());
         dto.setCreationDate(task.getCreationDate());
         dto.setDueDate(task.getDueDate());
@@ -45,27 +45,27 @@ public class TaskMapper {
     }
 
     /**
-     * Converts a {@link TaskDto} and its parent {@link TaskList} to a new {@link Task} entity.
+     * Converts a {@link TaskDto} and its parent {@link KanbanColumn} to a new {@link Task} entity.
      * <p>
      * <b>Note:</b> creationDate and attachments are managed elsewhere (not set here).
      * </p>
      *
      * @param dto  The TaskDto to convert (must not be null)
-     * @param list The parent TaskList entity (must not be null)
+     * @param kanbanColumn The parent KanbanColumn entity (must not be null)
      * @return A new Task entity populated from the DTO
      */
-    public static Task toEntity(TaskDto dto, TaskList list) {
+    public static Task toEntity(TaskDto dto, KanbanColumn kanbanColumn) {
         if (dto == null) {
             throw new IllegalArgumentException("TaskDto must not be null");
         }
-        if (list == null) {
-            throw new IllegalArgumentException("TaskList must not be null");
+        if (kanbanColumn == null) {
+            throw new IllegalArgumentException("KanbanColumn must not be null");
         }
         Task task = new Task();
         task.setTitle(dto.getTitle());
         task.setDescription(dto.getDescription());
         task.setCompleted(dto.isCompleted());
-        task.setList(list);
+        task.setKanbanColumn(kanbanColumn);
         task.setDueDate(dto.getDueDate());
         task.setPosition(dto.getPosition());
         // creationDate and attachments are set in service/entity layer
@@ -73,5 +73,5 @@ public class TaskMapper {
     }
 
     // Private constructor to prevent instantiation (utility class)
-    private TaskMapper() {}
+    private TaskMapperDto() {}
 }

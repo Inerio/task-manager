@@ -1,12 +1,12 @@
 package com.inerio.taskmanager.service;
 
 import com.inerio.taskmanager.dto.TaskDto;
-import com.inerio.taskmanager.dto.TaskMapper;
+import com.inerio.taskmanager.dto.TaskMapperDto;
 import com.inerio.taskmanager.exception.TaskNotFoundException;
 import com.inerio.taskmanager.model.Task;
-import com.inerio.taskmanager.model.TaskList;
+import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.repository.TaskRepository;
-import com.inerio.taskmanager.repository.TaskListRepository;
+import com.inerio.taskmanager.repository.KanbanColumnRepository;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ import java.util.Optional;
  * </p>
  * <ul>
  *     <li>Ensures tasks are always ordered and correctly positioned.</li>
- *     <li>Supports moving tasks between lists and positions.</li>
+ *     <li>Supports moving tasks between columns and positions.</li>
  *     <li>Manages file upload, download, and deletion per task.</li>
  * </ul>
  */
@@ -36,8 +36,8 @@ public class TaskService {
 
     /** JPA repository for Task persistence and custom queries. */
     private final TaskRepository taskRepository;
-    /** JPA repository for TaskList access (used for parent/column operations). */
-    private final TaskListRepository taskListRepository;
+    /** JPA repository for KanbanColumn access (used for parent/column operations). */
+    private final KanbanColumnRepository kanbanColumnRepository;
     /** Directory where all task attachments are stored (per task ID subfolder). */
     private static final String UPLOAD_DIR = "uploads";
 
@@ -45,11 +45,11 @@ public class TaskService {
      * Dependency injection constructor.
      *
      * @param taskRepository     Repository for Task.
-     * @param taskListRepository Repository for TaskList.
+     * @param kanbanColumnRepository Repository for KanbanColumn.
      */
-    public TaskService(TaskRepository taskRepository, TaskListRepository taskListRepository) {
+    public TaskService(TaskRepository taskRepository, KanbanColumnRepository kanbanColumnRepository) {
         this.taskRepository = taskRepository;
-        this.taskListRepository = taskListRepository;
+        this.kanbanColumnRepository = kanbanColumnRepository;
     }
 
     // ==============================
@@ -74,60 +74,60 @@ public class TaskService {
     }
 
     /**
-     * Gets all tasks belonging to a given list (Kanban column), sorted by position.
-     * @param listId ID of the TaskList (column).
+     * Gets all tasks belonging to a given column, sorted by position.
+     * @param kanbanColumnId ID of the KanbanColumn (column).
      * @return All tasks, ordered by position.
-     * @throws RuntimeException if TaskList does not exist.
+     * @throws RuntimeException if KanbanColumn does not exist.
      */
-    public List<Task> getTasksByListId(Long listId) {
-        TaskList list = taskListRepository.findById(listId)
-            .orElseThrow(() -> new RuntimeException("TaskList not found with ID " + listId));
-        return taskRepository.findByListOrderByPositionAsc(list);
+    public List<Task> getTasksByKanbanColumnId(Long kanbanColumnId) {
+        KanbanColumn kanbanColumn = kanbanColumnRepository.findById(kanbanColumnId)
+            .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + kanbanColumnId));
+        return taskRepository.findByKanbanColumnOrderByPositionAsc(kanbanColumn);
     }
 
     /**
-     * Creates a new Task from a DTO and a parent TaskList, placing it at the end of the column.
+     * Creates a new Task from a DTO and a parent KanbanColumn, placing it at the end of the column.
      * <p>
      * Ensures no gaps in position indices.
      * </p>
      *
      * @param dto  DTO describing the new task.
-     * @param list Parent TaskList entity.
+     * @param kanbanColumn Parent KanbanColumn entity.
      * @return Persisted Task entity.
      */
     @Transactional
-    public Task createTaskFromDto(TaskDto dto, TaskList list) {
-        Task task = TaskMapper.toEntity(dto, list);
+    public Task createTaskFromDto(TaskDto dto, KanbanColumn kanbanColumn) {
+        Task task = TaskMapperDto.toEntity(dto, kanbanColumn);
         int maxPosition = 0;
-        List<Task> current = taskRepository.findByListOrderByPositionAsc(list);
+        List<Task> current = taskRepository.findByKanbanColumnOrderByPositionAsc(kanbanColumn);
         if (!current.isEmpty()) {
             maxPosition = current.get(current.size() - 1).getPosition() + 1;
         }
-        task.setPosition(maxPosition); // Always append at the end
+        task.setPosition(maxPosition);
         return taskRepository.save(task);
     }
 
     /**
-     * Updates an existing Task's core fields from DTO. Does not change its position or list.
+     * Updates an existing Task's core fields from DTO. Does not change its position or column.
      * <p>
      * Use {@link #moveTask(Long, Long, int)} to change position or column.
      * </p>
      *
      * @param id   ID of the Task to update.
      * @param dto  DTO with new values.
-     * @param list Target list (must be valid).
+     * @param column Target column (must be valid).
      * @return Updated Task entity.
      * @throws TaskNotFoundException if task does not exist.
      */
     @Transactional
-    public Task updateTaskFromDto(Long id, TaskDto dto, TaskList list) {
+    public Task updateTaskFromDto(Long id, TaskDto dto, KanbanColumn kanbanColumn) {
         Task existing = taskRepository.findById(id)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + id));
         existing.setTitle(dto.getTitle());
         existing.setDescription(dto.getDescription());
         existing.setCompleted(dto.isCompleted());
         existing.setDueDate(dto.getDueDate());
-        existing.setList(list);
+        existing.setKanbanColumn(kanbanColumn);
         // position is NOT updated here
         return taskRepository.save(existing);
     }
@@ -145,14 +145,14 @@ public class TaskService {
     public void deleteTask(Long id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + id));
-        TaskList list = task.getList();
+        KanbanColumn kanbanColumn = task.getKanbanColumn();
         int deletedPos = task.getPosition();
 
         deleteAttachmentsFolder(id);
         taskRepository.deleteById(id);
 
         // Shift positions for tasks below the deleted one in the column
-        List<Task> toShift = taskRepository.findByListAndPositionGreaterThanOrderByPositionAsc(list, deletedPos);
+        List<Task> toShift = taskRepository.findByKanbanColumnAndPositionGreaterThanOrderByPositionAsc(kanbanColumn, deletedPos);
         for (Task t : toShift) {
             t.setPosition(t.getPosition() - 1);
         }
@@ -160,15 +160,15 @@ public class TaskService {
     }
 
     /**
-     * Deletes all tasks for a given list/column (and all their attachments).
-     * @param listId List ID.
-     * @throws RuntimeException if list does not exist.
+     * Deletes all tasks for a given column (and all their attachments).
+     * @param kanbanColumnId Column ID.
+     * @throws RuntimeException if column does not exist.
      */
     @Transactional
-    public void deleteTasksByListId(Long listId) {
-        TaskList list = taskListRepository.findById(listId)
-            .orElseThrow(() -> new RuntimeException("TaskList not found with ID " + listId));
-        List<Task> tasks = taskRepository.findByList(list);
+    public void deleteTasksByKanbanColumnId(Long kanbanColumnId) {
+        KanbanColumn kanbanColumn = kanbanColumnRepository.findById(kanbanColumnId)
+            .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + kanbanColumnId));
+        List<Task> tasks = taskRepository.findByKanbanColumn(kanbanColumn);
         for (Task task : tasks) {
             deleteAttachmentsFolder(task.getId());
         }
@@ -191,32 +191,32 @@ public class TaskService {
     // ==============================
 
     /**
-     * Moves a task to a new list (column) and/or a new position.
+     * Moves a task to a new column and/or a new position.
      * <p>
      * Ensures all positions in each column remain unique and continuous.
      * </p>
      *
      * @param taskId         ID of the task to move.
-     * @param targetListId   ID of the target column.
+     * @param targetKanbanColumnId   ID of the target column.
      * @param targetPosition Zero-based position in the target column.
      * @throws TaskNotFoundException if the task does not exist.
-     * @throws RuntimeException if the target list does not exist.
+     * @throws RuntimeException if the target column does not exist.
      */
     @Transactional
-    public void moveTask(Long taskId, Long targetListId, int targetPosition) {
+    public void moveTask(Long taskId, Long targetKanbanColumnId, int targetPosition) {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
-        TaskList oldList = task.getList();
+        KanbanColumn oldKanbanColumn = task.getKanbanColumn();
         int oldPosition = task.getPosition();
 
-        TaskList newList = taskListRepository.findById(targetListId)
-            .orElseThrow(() -> new RuntimeException("TaskList not found with ID " + targetListId));
+        KanbanColumn newKanbanColumn = kanbanColumnRepository.findById(targetKanbanColumnId)
+            .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + targetKanbanColumnId));
 
-        if (oldList.getId().equals(newList.getId())) {
+        if (oldKanbanColumn.getId().equals(newKanbanColumn.getId())) {
             // Move within same column
             if (targetPosition == oldPosition) return; // nothing to do
 
-            List<Task> tasks = taskRepository.findByListOrderByPositionAsc(oldList);
+            List<Task> tasks = taskRepository.findByKanbanColumnOrderByPositionAsc(oldKanbanColumn);
             if (targetPosition < oldPosition) {
                 // Moving up: shift down all between [targetPosition, oldPosition-1]
                 for (Task t : tasks) {
@@ -240,21 +240,21 @@ public class TaskService {
         } else {
             // Move to different column
             // Shift positions up in old column
-            List<Task> oldTasks = taskRepository.findByListAndPositionGreaterThanOrderByPositionAsc(oldList, oldPosition);
+            List<Task> oldTasks = taskRepository.findByKanbanColumnAndPositionGreaterThanOrderByPositionAsc(oldKanbanColumn, oldPosition);
             for (Task t : oldTasks) {
                 t.setPosition(t.getPosition() - 1);
             }
             taskRepository.saveAll(oldTasks);
 
             // Shift positions down in new column starting from targetPosition
-            List<Task> newTasks = taskRepository.findByListAndPositionGreaterThanEqualOrderByPositionAsc(newList, targetPosition);
+            List<Task> newTasks = taskRepository.findByKanbanColumnAndPositionGreaterThanEqualOrderByPositionAsc(newKanbanColumn, targetPosition);
             for (Task t : newTasks) {
                 t.setPosition(t.getPosition() + 1);
             }
             taskRepository.saveAll(newTasks);
 
             // Move task itself
-            task.setList(newList);
+            task.setKanbanColumn(newKanbanColumn);
             task.setPosition(targetPosition);
             taskRepository.save(task);
         }
@@ -358,12 +358,12 @@ public class TaskService {
                         try {
                             Files.deleteIfExists(path);
                         } catch (Exception e) {
-                            // Optional: log error
+                            // log error
                         }
                     });
             }
         } catch (Exception e) {
-            // Optional: log error
+            // log error
         }
     }
 }

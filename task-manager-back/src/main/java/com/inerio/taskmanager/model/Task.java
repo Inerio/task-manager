@@ -10,7 +10,7 @@ import jakarta.persistence.*;
 /**
  * Entity representing a Task in the Kanban application.
  * <p>
- * Each task belongs to a {@link TaskList} (column), has a title, completion status,
+ * Each task belongs to a {@link KanbanColumn} (column), has a title, completion status,
  * order/position within the column, timestamps, and optional attachments.
  * </p>
  *
@@ -52,10 +52,10 @@ public class Task {
     @Column(nullable = false)
     private int position = 0;
 
-    /** The list/column this task belongs to (mandatory). */
+    /** The column this task belongs to (mandatory). */
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "list_id", nullable = false)
-    private TaskList list;
+    @JoinColumn(name = "kanbanColumn_id", nullable = false)
+    private KanbanColumn kanbanColumn;
 
     /** Task creation datetime (set automatically on persist, not updatable). */
     @Column(nullable = false, updatable = false)
@@ -86,13 +86,13 @@ public class Task {
      * @param title      Task title (required)
      * @param description Task description (optional)
      * @param completed  Completion status
-     * @param list       The column/list the task belongs to
+     * @param kanbanColumn       The column the task belongs to
      */
-    public Task(String title, String description, boolean completed, TaskList list) {
+    public Task(String title, String description, boolean completed, KanbanColumn kanbanColumn) {
         this.title = title;
         this.description = description;
         this.completed = completed;
-        this.list = list;
+        this.kanbanColumn = kanbanColumn;
     }
 
     // ===========================
@@ -154,16 +154,16 @@ public class Task {
     public void setPosition(int position) { this.position = position; }
 
     /**
-     * Returns the parent list/column this task belongs to.
-     * @return the parent TaskList
+     * Returns the parent column this task belongs to.
+     * @return the parent KanbanColumn
      */
-    public TaskList getList() { return list; }
+    public KanbanColumn getKanbanColumn() { return kanbanColumn; }
 
     /**
-     * Sets the parent list/column for this task.
-     * @param list the parent list/column
+     * Sets the parent column for this task.
+     * @param kanbanColumn the parent column
      */
-    public void setList(TaskList list) { this.list = list; }
+    public void setKanbanColumn(KanbanColumn kanbanColumn) { this.kanbanColumn = kanbanColumn; }
 
     /**
      * Returns the creation date of the task (set automatically).

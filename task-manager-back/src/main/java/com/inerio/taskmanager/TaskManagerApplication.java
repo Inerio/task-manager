@@ -26,9 +26,7 @@ public class TaskManagerApplication {
      * Required by Spring Boot.
      * </p>
      */
-    public TaskManagerApplication() {
-        // No initialization required.
-    }
+    public TaskManagerApplication() {}
 
     /**
      * Application entry point.
@@ -58,7 +56,7 @@ public class TaskManagerApplication {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                    .allowedOrigins("http://localhost:4200") // Update for prod!
+                    .allowedOrigins("http://localhost:4200")
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*");
             }

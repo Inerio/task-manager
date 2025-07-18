@@ -80,13 +80,13 @@
   z-index: 3;
 }
 
-.add-list-error {
+.add-kanbanColumn-error {
   color: #b1001e;
   font-size: 0.9em;
   margin-top: 0.25em;
 }
 
-.add-list-max-warning {
+.add-kanbanColumn-max-warning {
   color: #6c757d;
   font-size: 0.9em;
   margin-top: 1em;
@@ -189,8 +189,8 @@
 }
 
 /* Titre centré, toujours bold */
-.list-title,
-.list-title-input {
+.kanbanColumn-title,
+.kanbanColumn-title-input {
   flex: 1 1 0%;
   min-width: 0;
   max-width: 100%;
@@ -198,7 +198,7 @@
 }
 
 /* Affichage du titre */
-.list-title {
+.kanbanColumn-title {
   font-weight: bold;
   text-align: center;
   cursor: pointer;
@@ -210,8 +210,8 @@
   border: none;
 }
 
-/* input inline titre - même style que .list-title, mais en champ éditable */
-.list-title-input {
+/* input inline titre - même style que .kanbanColumn-title, mais en champ éditable */
+.kanbanColumn-title-input {
   font-weight: bold;
   text-align: center;
   border: 2px solid #222;
@@ -227,13 +227,13 @@
   min-width: 0;
 }
 
-.list-title-input:focus {
+.kanbanColumn-title-input:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px #3b82f633;
 }
 
 /* Nouveau style pour le bouton "+" à la droite des colonnes */
-.add-list-fab-inline {
+.add-kanbanColumn-fab-inline {
   display: flex;
   align-items: center;
   justify-content: center;

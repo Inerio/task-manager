@@ -3,25 +3,25 @@
 export function setTaskDragData(
   event: DragEvent,
   taskId: number,
-  listId: number
+  kanbanColumnId: number
 ) {
   event.dataTransfer?.setData("type", "task");
   event.dataTransfer?.setData("task-id", String(taskId));
-  event.dataTransfer?.setData("list-id", String(listId));
+  event.dataTransfer?.setData("kanbanColumn-id", String(kanbanColumnId));
 }
 
 export function getTaskDragData(
   event: DragEvent
-): { taskId: number; listId: number } | null {
+): { taskId: number; kanbanColumnId: number } | null {
   if (!event.dataTransfer) return null;
   if (event.dataTransfer.getData("type") !== "task") return null;
   const taskIdRaw = event.dataTransfer.getData("task-id");
-  const listIdRaw = event.dataTransfer.getData("list-id");
-  if (!taskIdRaw || !listIdRaw) return null;
+  const kanbanColumnIdRaw = event.dataTransfer.getData("kanbanColumn-id");
+  if (!taskIdRaw || !kanbanColumnIdRaw) return null;
   const taskId = Number(taskIdRaw);
-  const listId = Number(listIdRaw);
-  if (Number.isNaN(taskId) || Number.isNaN(listId)) return null;
-  return { taskId, listId };
+  const kanbanColumnId = Number(kanbanColumnIdRaw);
+  if (Number.isNaN(taskId) || Number.isNaN(kanbanColumnId)) return null;
+  return { taskId, kanbanColumnId };
 }
 
 export function isTaskDragEvent(event: DragEvent): boolean {
@@ -30,19 +30,21 @@ export function isTaskDragEvent(event: DragEvent): boolean {
 
 // DRAG & DROP UTILS — COLUMNS
 
-export function setColumnDragData(event: DragEvent, listId: number) {
+export function setColumnDragData(event: DragEvent, kanbanColumnId: number) {
   event.dataTransfer?.setData("type", "column");
-  event.dataTransfer?.setData("list-id", String(listId));
+  event.dataTransfer?.setData("kanbanColumn-id", String(kanbanColumnId));
 }
 
-export function getColumnDragData(event: DragEvent): { listId: number } | null {
+export function getColumnDragData(
+  event: DragEvent
+): { kanbanColumnId: number } | null {
   if (!event.dataTransfer) return null;
   if (event.dataTransfer.getData("type") !== "column") return null;
-  const listIdRaw = event.dataTransfer.getData("list-id");
-  if (!listIdRaw) return null;
-  const listId = Number(listIdRaw);
-  if (Number.isNaN(listId)) return null;
-  return { listId };
+  const kanbanColumnIdRaw = event.dataTransfer.getData("kanbanColumn-id");
+  if (!kanbanColumnIdRaw) return null;
+  const kanbanColumnId = Number(kanbanColumnIdRaw);
+  if (Number.isNaN(kanbanColumnId)) return null;
+  return { kanbanColumnId };
 }
 
 export function isColumnDragEvent(event: DragEvent): boolean {

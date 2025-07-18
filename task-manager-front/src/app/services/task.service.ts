@@ -34,10 +34,12 @@ export class TaskService {
     });
   }
 
-  /** Reactive computed: returns only tasks belonging to a given list */
-  getTasksByListId(listId: number): Signal<Task[]> {
+  /** Reactive computed: returns only tasks belonging to a given kanbanColumn */
+  getTasksByKanbanColumnId(kanbanColumnId: number): Signal<Task[]> {
     return computed(() =>
-      this.tasksSignal().filter((task) => task.listId === listId)
+      this.tasksSignal().filter(
+        (task) => task.kanbanColumnId === kanbanColumnId
+      )
     );
   }
 
@@ -78,16 +80,21 @@ export class TaskService {
     });
   }
 
-  /** Deletes all tasks for a specific list (column) by its id */
-  deleteTasksByListId(listId: number): void {
-    this.http.delete<void>(`${this.apiUrl}/list/${listId}`).subscribe({
-      next: () => {
-        this.tasksSignal.set(
-          this.tasksSignal().filter((t) => t.listId !== listId)
-        );
-      },
-      error: (err) => console.error("Error deleting tasks by list", err),
-    });
+  /** Deletes all tasks for a specific kanbanColumn (column) by its id */
+  deleteTasksByKanbanColumnId(kanbanColumnId: number): void {
+    this.http
+      .delete<void>(`${this.apiUrl}/kanbanColumn/${kanbanColumnId}`)
+      .subscribe({
+        next: () => {
+          this.tasksSignal.set(
+            this.tasksSignal().filter(
+              (t) => t.kanbanColumnId !== kanbanColumnId
+            )
+          );
+        },
+        error: (err) =>
+          console.error("Error deleting tasks by kanbanColumn", err),
+      });
   }
 
   /** Deletes ALL tasks (irreversible!) */

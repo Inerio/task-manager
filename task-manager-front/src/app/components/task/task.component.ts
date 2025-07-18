@@ -21,10 +21,10 @@ import { TaskDragDropService } from "../../services/task-drag-drop.service";
   selector: "app-task-item",
   standalone: true,
   imports: [FormsModule, LinkifyPipe, AttachmentZoneComponent],
-  templateUrl: "./task-item.component.html",
-  styleUrls: ["./task-item.component.scss"],
+  templateUrl: "./task.component.html",
+  styleUrls: ["./task.component.scss"],
 })
-export class TaskItemComponent implements OnChanges {
+export class TaskComponent implements OnChanges {
   // ------------------------------------------
   // INPUTS
   // ------------------------------------------
@@ -87,7 +87,7 @@ export class TaskItemComponent implements OnChanges {
   // DRAG & DROP
   // ------------------------------------------
   /**
-   * Start drag: sets global dragged list ID and a custom drag image.
+   * Start drag: sets global dragged kanbanColumn ID and a custom drag image.
    */
   onTaskDragStart(event: DragEvent): void {
     this.dragDropService.startTaskDrag(event, this.localTask(), (v) =>

@@ -14,7 +14,7 @@ import java.util.List;
  * <ul>
  *   <li>Immutable ID (nullable on create, filled on update/fetch)</li>
  *   <li>Column position management for drag &amp; drop (position)</li>
- *   <li>Reference to parent list/column by ID (listId)</li>
+ *   <li>Reference to parent column by ID (kanbanColumnId)</li>
  *   <li>Attachment filenames for file upload/download</li>
  *   <li>Timestamps for auditing/UX</li>
  * </ul>
@@ -57,17 +57,17 @@ public class TaskDto {
     private boolean completed;
 
     /**
-     * ID of the parent TaskList (Kanban column).
+     * ID of the parent KanbanColumn (Kanban column).
      * <p>
      * Required for all create/update requests.
      * </p>
      */
-    private Long listId;
+    private Long kanbanColumnId;
 
     /**
-     * Persistent index/position of this task in its list (for drag &amp; drop).
+     * Persistent index/position of this task in its column (for drag &amp; drop).
      * <p>
-     * Lower values are higher in the list.
+     * Lower values are higher in the column.
      * </p>
      */
     private int position;
@@ -140,25 +140,25 @@ public class TaskDto {
     public void setCompleted(boolean completed) { this.completed = completed; }
 
     /**
-     * Gets the parent list ID.
-     * @return the TaskList (column) ID
+     * Gets the parent column ID.
+     * @return the KanbanColumn (column) ID
      */
-    public Long getListId() { return listId; }
+    public Long getKanbanColumnId() { return kanbanColumnId; }
 
     /**
-     * Sets the parent list ID.
-     * @param listId the ID of the parent TaskList (column)
+     * Sets the parent column ID.
+     * @param kanbanColumnId the ID of the parent KanbanColumn (column)
      */
-    public void setListId(Long listId) { this.listId = listId; }
+    public void setKanbanColumnId(Long kanbanColumnId) { this.kanbanColumnId = kanbanColumnId; }
 
     /**
-     * Gets the position of the task in its list.
+     * Gets the position of the task in its column.
      * @return the position (index)
      */
     public int getPosition() { return position; }
 
     /**
-     * Sets the position of the task in its list.
+     * Sets the position of the task in its column.
      * @param position the index/position for drag &amp; drop
      */
     public void setPosition(int position) { this.position = position; }

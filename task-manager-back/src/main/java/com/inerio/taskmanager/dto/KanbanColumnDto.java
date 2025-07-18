@@ -1,7 +1,7 @@
 package com.inerio.taskmanager.dto;
 
 /**
- * Data Transfer Object for TaskList (Kanban column).
+ * Data Transfer Object for KanbanColumn (Kanban column).
  * <p>
  * Used for exchanging Kanban column data between frontend (Angular) and backend (Spring Boot) via the API.
  * Contains essential properties for board display and logic.
@@ -17,10 +17,10 @@ package com.inerio.taskmanager.dto;
  * This class is a pure DTO: no business logic, only field structure.
  * </p>
  */
-public class TaskListDto {
+public class KanbanColumnDto {
 
     /**
-     * Unique identifier of the list/column.
+     * Unique identifier of the column.
      * <p>
      * May be null for creation requests.
      * </p>
@@ -28,7 +28,7 @@ public class TaskListDto {
     private Long id;
 
     /**
-     * Display name of the list/column (e.g. "To Do", "In Progress").
+     * Display name of the column (e.g. "To Do", "In Progress").
      * <p>
      * Must be unique in database.
      * </p>
@@ -50,16 +50,16 @@ public class TaskListDto {
     /**
      * Default no-args constructor required for frameworks (e.g. Jackson).
      */
-    public TaskListDto() {}
+    public KanbanColumnDto() {}
     
     /**
-     * Main constructor for TaskListDto.
+     * Main constructor for KanbanColumnDto.
      *
-     * @param id       List/column unique ID
+     * @param id       Column unique ID
      * @param name     Display name
      * @param position Persistent position/index (for ordering)
      */
-    public TaskListDto(Long id, String name, int position) {
+    public KanbanColumnDto(Long id, String name, int position) {
         this.id = id;
         this.name = name;
         this.position = position;
@@ -70,8 +70,8 @@ public class TaskListDto {
     // ===========================
 
     /**
-     * Gets the list/column unique ID.
-     * @return the list ID, or null if not set
+     * Gets the column unique ID.
+     * @return the column ID, or null if not set
      */
     public Long getId() { return id; }
 

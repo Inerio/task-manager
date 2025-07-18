@@ -1,10 +1,6 @@
 import { Injectable, signal, computed } from "@angular/core";
 import { KanbanColumnService } from "./kanban-column.service";
-import {
-  setColumnDragData,
-  getColumnDragData,
-  isColumnDragEvent,
-} from "../utils/drag-drop-utils";
+import { setColumnDragData, isColumnDragEvent } from "../utils/drag-drop-utils";
 
 @Injectable({ providedIn: "root" })
 export class ColumnDragDropService {

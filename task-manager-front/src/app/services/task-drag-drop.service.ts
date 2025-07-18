@@ -1,9 +1,5 @@
 import { Injectable } from "@angular/core";
-import {
-  setTaskDragData,
-  getTaskDragData,
-  isTaskDragEvent,
-} from "../utils/drag-drop-utils";
+import { setTaskDragData, getTaskDragData } from "../utils/drag-drop-utils";
 import { Task } from "../models/task.model";
 
 @Injectable({ providedIn: "root" })

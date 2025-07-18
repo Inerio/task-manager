@@ -6,7 +6,6 @@ import {
   Input,
   signal,
   Signal,
-  effect,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
@@ -14,8 +13,6 @@ import { TaskService } from "../../services/task.service";
 import { TaskComponent } from "../task/task.component";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { KanbanColumnService } from "../../services/kanban-column.service";
-import { KanbanColumn } from "../../models/kanban-column.model";
-import { getTaskDragData, isTaskDragEvent } from "../../utils/drag-drop-utils";
 import { TaskDragDropService } from "../../services/task-drag-drop.service";
 
 @Component({

@@ -1,6 +1,6 @@
 export interface KanbanColumn {
   id?: number;
-  boardId: number; // <-- à ajouter
+  boardId: number;
   name: string;
   position?: number;
 }

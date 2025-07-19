@@ -61,7 +61,7 @@ public class KanbanColumnService {
     /**
      * Creates a new KanbanColumn (Kanban column) at the last available position.
      * <p>
-     * Business rule: Maximum of 6 columns allowed.
+     * Business rule: Maximum of 5 columns allowed.
      * </p>
      *
      * @param kanbanColumn KanbanColumn to persist (should have name set).
@@ -70,8 +70,8 @@ public class KanbanColumnService {
      */
     public KanbanColumn createKanbanColumn(KanbanColumn kanbanColumn) {
         long count = kanbanColumnRepository.count();
-        if (count >= 6) {
-            throw new IllegalStateException("Maximum number of columns (6) reached");
+        if (count >= 5) {
+            throw new IllegalStateException("Maximum number of columns (5) reached");
         }
         // Determine the next available position (1-based).
         Integer maxPos = kanbanColumnRepository.findAll().stream()

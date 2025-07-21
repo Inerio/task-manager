@@ -5,10 +5,10 @@
   <aside class="sidebar">
     <h1>Task Manager</h1>
     <nav class="boards-list">
-      @for (board of boards; track board.name; let i = $index) {
+      @for (board of boards(); track board.id) {
       <div
-        (click)="selectBoard(i)"
-        [class.selected]="i === selectedBoardIndex"
+        (click)="selectBoard(board.id)"
+        [class.selected]="selectedBoardId() === board.id"
         class="board-item"
       >
         {{ board.name }}
@@ -18,11 +18,12 @@
     </nav>
   </aside>
 
-  <section class="board-area">
+  <section class="board-area" *ngIf="selectedBoardId() !== null">
     <header class="board-header">
-      <h2>{{ boards[selectedBoardIndex].name }}</h2>
+      <h2>
+        {{ selectedBoardName }}
+      </h2>
     </header>
-    <!-- Passer le nom/id plus tard avec un @Input -->
-    <app-board></app-board>
+    <app-board [boardId]="selectedBoardId()!"></app-board>
   </section>
 </div>

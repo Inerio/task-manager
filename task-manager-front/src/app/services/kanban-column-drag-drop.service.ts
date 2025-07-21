@@ -35,7 +35,8 @@ export class ColumnDragDropService {
     }
   }
 
-  onColumnDrop(event: DragEvent, afterDrop?: () => void) {
+  // Correction : ajoute boardId en paramètre !
+  onColumnDrop(boardId: number, event: DragEvent, afterDrop?: () => void) {
     if (!isColumnDragEvent(event)) {
       this.resetDragState();
       return;
@@ -55,17 +56,19 @@ export class ColumnDragDropService {
       return;
     }
     // Appel API pour déplacer
-    this.kanbanColumnService.moveKanbanColumn(draggedId, targetIdx).subscribe({
-      next: () => {
-        this.kanbanColumnService.loadKanbanColumns();
-        this.resetDragState();
-        afterDrop?.();
-      },
-      error: (err) => {
-        console.error("Move error:", err);
-        this.resetDragState();
-      },
-    });
+    this.kanbanColumnService
+      .moveKanbanColumn(boardId, draggedId, targetIdx)
+      .subscribe({
+        next: () => {
+          this.kanbanColumnService.loadKanbanColumns(boardId); // Charge les colonnes du bon board !
+          this.resetDragState();
+          afterDrop?.();
+        },
+        error: (err) => {
+          console.error("Move error:", err);
+          this.resetDragState();
+        },
+      });
   }
 
   onColumnDragEnd() {

@@ -1,8 +1,10 @@
-import { Component, signal } from "@angular/core";
+import { Component, signal, inject, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { AlertComponent } from "./components/alert/alert.component";
 import { ConfirmDialogComponent } from "./components/alert/confirm-dialog.component";
 import { BoardComponent } from "./components/board/board.component";
+import { BoardService } from "./services/board.service";
+import { Board } from "./models/board.model";
 
 @Component({
   selector: "app-root",
@@ -17,16 +19,46 @@ import { BoardComponent } from "./components/board/board.component";
   ],
 })
 export class AppComponent {
-  boards = [{ name: "Lorem Ipsum" }, { name: "Perso" }, { name: "Travail" }];
-  selectedBoardIndex = 0;
+  private readonly boardService = inject(BoardService);
+  readonly boards = this.boardService.boards;
+  selectedBoardId = signal<number | null>(null);
 
-  selectBoard(i: number) {
-    this.selectedBoardIndex = i;
-    // (plus tard : charger données spécifiques au board)
+  constructor() {
+    this.boardService.loadBoards();
+
+    // Sélection automatique du premier board si dispo (après chargement)
+    computed(() => {
+      const firstId = this.boards()[0]?.id;
+      if (typeof firstId === "number" && this.selectedBoardId() === null) {
+        this.selectedBoardId.set(firstId);
+      }
+    });
+  }
+
+  selectBoard(id: number | undefined) {
+    if (typeof id === "number" && this.selectedBoardId() !== id) {
+      this.selectedBoardId.set(id);
+    }
   }
 
   addBoard() {
     const name = prompt("Nom du nouveau board ?");
-    if (name) this.boards.push({ name });
+    if (name) {
+      this.boardService.createBoard(name).subscribe({
+        next: (board) => {
+          this.boardService.loadBoards();
+          setTimeout(() => {
+            if (typeof board.id === "number") {
+              this.selectedBoardId.set(board.id);
+            }
+          }, 300);
+        },
+      });
+    }
+  }
+
+  get selectedBoardName(): string {
+    const board = this.boards().find((b) => b.id === this.selectedBoardId());
+    return board?.name ?? "Aucun board sélectionné";
   }
 }

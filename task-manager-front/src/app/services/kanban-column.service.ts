@@ -6,7 +6,7 @@ import { environment } from "../../environments/environment.local";
 
 @Injectable({ providedIn: "root" })
 export class KanbanColumnService {
-  private readonly apiUrl = environment.apiUrlKanbanColumns;
+  // On n'a plus besoin d'une seule URL : elle dépend du board sélectionné
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
   readonly kanbanColumns = computed(() => this._kanbanColumns());
   private readonly _loading = signal(false);
@@ -14,53 +14,55 @@ export class KanbanColumnService {
 
   constructor(private http: HttpClient) {}
 
-  loadKanbanColumns(): void {
+  /** Charge les colonnes pour un board donné ! */
+  loadKanbanColumns(boardId: number): void {
+    console.log("Reload kanban columns", boardId);
+    if (!boardId) {
+      this._kanbanColumns.set([]);
+      return;
+    }
     this._loading.set(true);
-    this.http.get<KanbanColumn[]>(this.apiUrl).subscribe({
-      next: (data) => {
-        this._kanbanColumns.set(data ?? []);
-      },
+    const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns`;
+    this.http.get<KanbanColumn[]>(url).subscribe({
+      next: (data) => this._kanbanColumns.set(data ?? []),
       error: () => this._kanbanColumns.set([]),
       complete: () => this._loading.set(false),
     });
   }
 
-  createKanbanColumn(name: string): Observable<KanbanColumn> {
-    return this.http.post<KanbanColumn>(this.apiUrl, { name });
+  /** Crée une colonne dans le board sélectionné */
+  createKanbanColumn(name: string, boardId: number): Observable<KanbanColumn> {
+    const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns`;
+    return this.http.post<KanbanColumn>(url, { name });
   }
 
+  /** Update sur la colonne : on va supposer que le boardId est stocké dessus */
   updateKanbanColumn(kanbanColumn: KanbanColumn): Observable<KanbanColumn> {
     if (!kanbanColumn.id) throw new Error("KanbanColumn ID required");
-    return this.http.put<KanbanColumn>(
-      `${this.apiUrl}/${kanbanColumn.id}`,
-      kanbanColumn
-    );
+    if (!kanbanColumn.boardId) throw new Error("KanbanColumn boardId required");
+    const url = `${environment.apiUrlBoards}/${kanbanColumn.boardId}/kanbanColumns/${kanbanColumn.id}`;
+    return this.http.put<KanbanColumn>(url, kanbanColumn);
   }
 
-  deleteKanbanColumn(kanbanColumnId: number): Observable<void> {
-    return new Observable<void>((observer) => {
-      this.http.delete<void>(`${this.apiUrl}/${kanbanColumnId}`).subscribe({
-        next: () => {
-          this._kanbanColumns.set(
-            this._kanbanColumns().filter((l) => l.id !== kanbanColumnId)
-          );
-          observer.next();
-          observer.complete();
-        },
-        error: (err) => observer.error(err),
-      });
-    });
+  /** Suppression */
+  deleteKanbanColumn(
+    kanbanColumnId: number,
+    boardId: number
+  ): Observable<void> {
+    const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns/${kanbanColumnId}`;
+    return this.http.delete<void>(url);
   }
 
-  /** Ajoute la méthode pour déplacer une colonne (PUT /kanbanColumns/move) */
+  /** Déplacement de colonne */
   moveKanbanColumn(
     kanbanColumnId: number,
-    targetIndex: number
+    targetIndex: number,
+    boardId: number
   ): Observable<any> {
-    // Correction : JS index (0-based) -> SQL position (1-based)
-    return this.http.put(`${this.apiUrl}/move`, {
+    const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns/move`;
+    return this.http.put(url, {
       kanbanColumnId,
-      targetPosition: targetIndex + 1, // <= ajout du +1 ici
+      targetPosition: targetIndex + 1,
     });
   }
 }

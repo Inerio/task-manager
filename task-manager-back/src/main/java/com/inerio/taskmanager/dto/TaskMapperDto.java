@@ -68,7 +68,6 @@ public class TaskMapperDto {
         task.setKanbanColumn(kanbanColumn);
         task.setDueDate(dto.getDueDate());
         task.setPosition(dto.getPosition());
-        // creationDate and attachments are set in service/entity layer
         return task;
     }
 

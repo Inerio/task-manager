@@ -115,7 +115,7 @@ public class TaskService {
      *
      * @param id   ID of the Task to update.
      * @param dto  DTO with new values.
-     * @param column Target column (must be valid).
+     * @param kanbanColumn Target column (must be valid).
      * @return Updated Task entity.
      * @throws TaskNotFoundException if task does not exist.
      */

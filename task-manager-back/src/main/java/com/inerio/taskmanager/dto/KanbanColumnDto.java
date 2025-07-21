@@ -10,7 +10,8 @@ package com.inerio.taskmanager.dto;
  * <ul>
  *     <li>Immutable ID (null for creation, set after persistence)</li>
  *     <li>Display name (required)</li>
- *     <li>Stable position for drag &amp; drop ordering</li>
+ *     <li>Stable position for drag and drop ordering</li>
+ *     <li>Reference to parent board by ID (boardId)</li>
  * </ul>
  *
  * <p>
@@ -19,71 +20,85 @@ package com.inerio.taskmanager.dto;
  */
 public class KanbanColumnDto {
 
-    /**
-     * Unique identifier of the column.
-     * <p>
-     * May be null for creation requests.
-     * </p>
-     */
+    /** Unique identifier of the column (nullable for creation). */
     private Long id;
 
-    /**
-     * Display name of the column (e.g. "To Do", "In Progress").
-     * <p>
-     * Must be unique in database.
-     * </p>
-     */
+    /** Display name of the column. */
     private String name;
 
-    /**
-     * Persistent display position (used for ordering columns).
-     * <p>
-     * Lower values mean columns are shown leftmost.
-     * </p>
-     */
+    /** Persistent display position (for ordering columns on board). */
     private int position;
 
-    // ===========================
-    //   CONSTRUCTORS
-    // ===========================
+    /** Reference to the parent board by ID. */
+    private Long boardId;
+
+    // =========================
+    //      CONSTRUCTORS
+    // =========================
+
+    /** Default no-args constructor (required for frameworks). */
+    public KanbanColumnDto() {}
 
     /**
-     * Default no-args constructor required for frameworks (e.g. Jackson).
-     */
-    public KanbanColumnDto() {}
-    
-    /**
-     * Main constructor for KanbanColumnDto.
+     * Full constructor for KanbanColumnDto.
      *
      * @param id       Column unique ID
      * @param name     Display name
      * @param position Persistent position/index (for ordering)
+     * @param boardId  ID of the parent board
      */
-    public KanbanColumnDto(Long id, String name, int position) {
+    public KanbanColumnDto(Long id, String name, int position, Long boardId) {
         this.id = id;
         this.name = name;
         this.position = position;
+        this.boardId = boardId;
     }
 
-    // ===========================
-    //   GETTERS
-    // ===========================
-
     /**
-     * Gets the column unique ID.
-     * @return the column ID, or null if not set
+     * Gets the column ID.
+     * @return Column ID.
      */
     public Long getId() { return id; }
 
     /**
-     * Gets the display name of the column.
-     * @return the column name (never null)
+     * Gets the column name.
+     * @return Column name.
      */
     public String getName() { return name; }
 
     /**
-     * Gets the persistent position of the column.
-     * @return the position/index
+     * Gets the position of the column.
+     * @return Position index.
      */
     public int getPosition() { return position; }
+
+    /**
+     * Gets the parent board ID.
+     * @return Board ID.
+     */
+    public Long getBoardId() { return boardId; }
+
+    /**
+     * Sets the column ID.
+     * @param id Column ID.
+     */
+    public void setId(Long id) { this.id = id; }
+
+    /**
+     * Sets the column name.
+     * @param name Column name.
+     */
+    public void setName(String name) { this.name = name; }
+
+    /**
+     * Sets the column position.
+     * @param position Position index.
+     */
+    public void setPosition(int position) { this.position = position; }
+
+    /**
+     * Sets the board ID.
+     * @param boardId Board ID.
+     */
+    public void setBoardId(Long boardId) { this.boardId = boardId; }
 }

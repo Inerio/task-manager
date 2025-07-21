@@ -1,7 +1,9 @@
 package com.inerio.taskmanager.service;
 
 import com.inerio.taskmanager.dto.KanbanColumnDto;
+import com.inerio.taskmanager.model.Board;
 import com.inerio.taskmanager.model.KanbanColumn;
+import com.inerio.taskmanager.repository.BoardRepository;
 import com.inerio.taskmanager.repository.KanbanColumnRepository;
 import org.springframework.stereotype.Service;
 
@@ -9,30 +11,32 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Service layer for business logic related to Kanban columns (KanbanColumn).
+ * Service layer for business logic related to Kanban columns (KanbanColumn) in a multi-board setup.
  * <p>
- * Handles CRUD operations, position management for drag &amp; drop, and conversions to DTOs.
+ * Handles CRUD operations, position management for drag and drop, and conversions to DTOs.
  * </p>
  *
  * <ul>
- *     <li>Ensures column order and unique naming.</li>
- *     <li>Limits the number of columns if required by business logic.</li>
+ *     <li>Ensures column order and unique naming within a board.</li>
+ *     <li>Limits the number of columns per board if required by business logic.</li>
  *     <li>Provides helpers for UI-friendly API responses.</li>
  * </ul>
  */
 @Service
 public class KanbanColumnService {
 
-    /** Repository for persistence and queries on KanbanColumn entities. */
     private final KanbanColumnRepository kanbanColumnRepository;
+    private final BoardRepository boardRepository;
 
     /**
      * Constructs the service with required dependency injection.
      *
      * @param kanbanColumnRepository The JPA repository for KanbanColumn.
+     * @param boardRepository        The JPA repository for Board.
      */
-    public KanbanColumnService(KanbanColumnRepository kanbanColumnRepository) {
+    public KanbanColumnService(KanbanColumnRepository kanbanColumnRepository, BoardRepository boardRepository) {
         this.kanbanColumnRepository = kanbanColumnRepository;
+        this.boardRepository = boardRepository;
     }
 
     // ==========================
@@ -40,12 +44,14 @@ public class KanbanColumnService {
     // ==========================
 
     /**
-     * Retrieves all KanbanColumn entities, ordered by their position for display.
+     * Retrieves all KanbanColumn entities for a board, ordered by their position for display.
      *
-     * @return Ordered list of KanbanColumn entities.
+     * @param boardId ID of the Board.
+     * @return Ordered list of KanbanColumn entities for the given board.
      */
-    public List<KanbanColumn> getAllKanbanColumns() {
-        return kanbanColumnRepository.findAllByOrderByPositionAsc();
+    public List<KanbanColumn> getAllKanbanColumns(Long boardId) {
+        Board board = getBoardOrThrow(boardId);
+        return kanbanColumnRepository.findByBoardOrderByPositionAsc(board);
     }
 
     /**
@@ -59,26 +65,29 @@ public class KanbanColumnService {
     }
 
     /**
-     * Creates a new KanbanColumn (Kanban column) at the last available position.
+     * Creates a new KanbanColumn (Kanban column) at the last available position on the specified board.
      * <p>
-     * Business rule: Maximum of 5 columns allowed.
+     * Business rule: Maximum of 5 columns per board allowed.
      * </p>
      *
      * @param kanbanColumn KanbanColumn to persist (should have name set).
+     * @param boardId      ID of the board to add the column to.
      * @return The persisted KanbanColumn with position and ID.
-     * @throws IllegalStateException if max column limit reached.
+     * @throws IllegalStateException if max column limit reached on this board.
      */
-    public KanbanColumn createKanbanColumn(KanbanColumn kanbanColumn) {
-        long count = kanbanColumnRepository.count();
+    public KanbanColumn createKanbanColumn(KanbanColumn kanbanColumn, Long boardId) {
+        Board board = getBoardOrThrow(boardId);
+        long count = kanbanColumnRepository.countByBoard(board);
         if (count >= 5) {
-            throw new IllegalStateException("Maximum number of columns (5) reached");
+            throw new IllegalStateException("Maximum number of columns (5) reached for this board");
         }
         // Determine the next available position (1-based).
-        Integer maxPos = kanbanColumnRepository.findAll().stream()
+        Integer maxPos = kanbanColumnRepository.findByBoardOrderByPositionAsc(board).stream()
                 .map(KanbanColumn::getPosition)
                 .max(Integer::compareTo)
                 .orElse(0);
         kanbanColumn.setPosition(maxPos + 1);
+        kanbanColumn.setBoard(board);
         return kanbanColumnRepository.save(kanbanColumn);
     }
 
@@ -104,7 +113,7 @@ public class KanbanColumnService {
     }
 
     /**
-     * Deletes a KanbanColumn by ID and repacks all other columns to ensure positions are continuous.
+     * Deletes a KanbanColumn by ID and repacks all other columns to ensure positions are continuous within the board.
      * <p>
      * Ensures no "holes" remain in ordering after a column is deleted.
      * </p>
@@ -113,13 +122,13 @@ public class KanbanColumnService {
      * @throws RuntimeException if the column does not exist.
      */
     public void deleteKanbanColumn(Long id) {
-        if (!kanbanColumnRepository.existsById(id)) {
-            throw new RuntimeException("KanbanColumn not found with id " + id);
-        }
+        KanbanColumn column = kanbanColumnRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("KanbanColumn not found with id " + id));
+        Board board = column.getBoard();
         kanbanColumnRepository.deleteById(id);
 
-        // After deletion, ensure all column positions are contiguous (starting from 1)
-        List<KanbanColumn> remaining = kanbanColumnRepository.findAllByOrderByPositionAsc();
+        // After deletion, ensure all column positions on the board are contiguous (starting from 1)
+        List<KanbanColumn> remaining = kanbanColumnRepository.findByBoardOrderByPositionAsc(board);
         int pos = 1;
         for (KanbanColumn kanbanColumn : remaining) {
             if (kanbanColumn.getPosition() != pos) {
@@ -131,54 +140,63 @@ public class KanbanColumnService {
     }
 
     /**
-     * Moves a KanbanColumn (column) to a new position and adjusts all other columns.
+     * Moves a KanbanColumn (column) to a new position and adjusts all other columns in the same board.
      * <p>
      * Used for drag-and-drop reordering of Kanban columns.
+     * Guarantees that after the move, all columns on the board have unique and contiguous positions (starting at 1).
      * </p>
      *
-     * @param kanbanColumnId        ID of the column to move.
-     * @param targetPosition New position (1-based index).
+     * @param kanbanColumnId  ID of the column to move.
+     * @param targetPosition  New position (1-based index).
      * @throws RuntimeException if the column does not exist.
      */
     public void moveKanbanColumn(Long kanbanColumnId, int targetPosition) {
-        List<KanbanColumn> kanbanColumns = kanbanColumnRepository.findAllByOrderByPositionAsc();
-        KanbanColumn toMove = kanbanColumns.stream()
-                .filter(l -> l.getId().equals(kanbanColumnId))
-                .findFirst()
+        KanbanColumn toMove = kanbanColumnRepository.findById(kanbanColumnId)
                 .orElseThrow(() -> new RuntimeException("KanbanColumn not found with id " + kanbanColumnId));
+        Board board = toMove.getBoard();
 
-        int oldPosition = toMove.getPosition();
-        int newPosition = Math.max(1, Math.min(targetPosition, kanbanColumns.size()));
+        // Get all columns, sorted by position
+        List<KanbanColumn> columns = kanbanColumnRepository.findByBoardOrderByPositionAsc(board);
 
-        if (oldPosition == newPosition) return;
+        // Remove the column to move from the list
+        columns.removeIf(col -> col.getId().equals(kanbanColumnId));
 
-        for (KanbanColumn l : kanbanColumns) {
-            if (l.getId().equals(kanbanColumnId)) continue;
-            int pos = l.getPosition();
-            if (oldPosition < newPosition) {
-                // Shift left: decrement positions of columns between old and new.
-                if (pos > oldPosition && pos <= newPosition) l.setPosition(pos - 1);
-            } else {
-                // Shift right: increment positions of columns between new and old.
-                if (pos < oldPosition && pos >= newPosition) l.setPosition(pos + 1);
-            }
-        }
-        toMove.setPosition(newPosition);
+        // Clamp the new position within allowed range
+        int newPos = Math.max(1, Math.min(targetPosition, columns.size() + 1));
 
-        // Save all affected columns.
-        for (KanbanColumn l : kanbanColumns) {
-            kanbanColumnRepository.save(l);
+        // Insert the moved column at the desired position (index = newPos - 1)
+        columns.add(newPos - 1, toMove);
+
+        // Re-assign positions (1, 2, ..., N)
+        for (int i = 0; i < columns.size(); i++) {
+            KanbanColumn col = columns.get(i);
+            col.setPosition(i + 1);
+            kanbanColumnRepository.save(col);
         }
     }
 
     /**
-     * Converts all KanbanColumn entities into DTOs for API responses, ordered by position.
+     * Converts all KanbanColumn entities for a board into DTOs for API responses, ordered by position.
      *
+     * @param boardId Board ID.
      * @return List of KanbanColumnDto.
      */
-    public List<KanbanColumnDto> getAllKanbanColumnDtos() {
-        return kanbanColumnRepository.findAllByOrderByPositionAsc().stream()
-                .map(kanbanColumn -> new KanbanColumnDto(kanbanColumn.getId(), kanbanColumn.getName(), kanbanColumn.getPosition()))
+    public List<KanbanColumnDto> getAllKanbanColumnDtos(Long boardId) {
+        Board board = getBoardOrThrow(boardId);
+        return kanbanColumnRepository.findByBoardOrderByPositionAsc(board).stream()
+                .map(kanbanColumn -> new KanbanColumnDto(
+                        kanbanColumn.getId(),
+                        kanbanColumn.getName(),
+                        kanbanColumn.getPosition(),
+                        board.getId()
+                ))
                 .toList();
+    }
+
+    // ============== INTERNAL HELPERS ==============
+
+    private Board getBoardOrThrow(Long boardId) {
+        return boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found with id " + boardId));
     }
 }

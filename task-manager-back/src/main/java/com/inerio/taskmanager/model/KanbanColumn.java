@@ -56,6 +56,13 @@ public class KanbanColumn {
         fetch = FetchType.LAZY
     )
     private List<Task> tasks = new ArrayList<>();
+    
+    /**
+     * The board this column belongs to (mandatory).
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "board_id", nullable = false)
+    private Board board;
 
     // ===========================
     //      CONSTRUCTORS
@@ -84,6 +91,13 @@ public class KanbanColumn {
      * @return the unique ID of the column
      */
     public Long getId() { return id; }
+
+    /**
+     * Sets the unique ID of the column.
+     * Should only be used by frameworks or DTO mapping.
+     * @param id the unique ID to set
+     */
+    public void setId(Long id) { this.id = id; }
 
     /**
      * Gets the name of the column.
@@ -124,6 +138,17 @@ public class KanbanColumn {
      */
     public void setTasks(List<Task> tasks) { this.tasks = tasks != null ? tasks : new ArrayList<>(); }
 
+    /**
+     * Gets the board this column belongs to.
+     * @return the parent Board entity
+     */
+    public Board getBoard() { return board; }
+
+    /**
+     * Sets the board for this column.
+     * @param board the parent Board entity
+     */
+    public void setBoard(Board board) { this.board = board; }
 
     // ===========================
     //      HELPERS (OPTIONAL)

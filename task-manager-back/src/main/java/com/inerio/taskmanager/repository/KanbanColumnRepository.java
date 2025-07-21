@@ -1,5 +1,6 @@
 package com.inerio.taskmanager.repository;
 
+import com.inerio.taskmanager.model.Board;
 import com.inerio.taskmanager.model.KanbanColumn;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
@@ -36,4 +37,30 @@ public interface KanbanColumnRepository extends JpaRepository<KanbanColumn, Long
      */
     List<KanbanColumn> findAllByOrderByPositionAsc();
 
+    /**
+     * Finds all columns belonging to a given board, ordered by position (by board ID).
+     * <p>
+     * Used for legacy or direct ID-based access.
+     * </p>
+     * @param boardId ID of the parent board
+     * @return List of columns for the board
+     */
+    List<KanbanColumn> findByBoardIdOrderByPositionAsc(Long boardId);
+
+    /**
+     * Finds all columns belonging to a given board, ordered by position (by Board object).
+     * <p>
+     * Preferred in service/business logic.
+     * </p>
+     * @param board the parent Board entity
+     * @return List of columns for the board
+     */
+    List<KanbanColumn> findByBoardOrderByPositionAsc(Board board);
+
+    /**
+     * Counts columns belonging to a given board.
+     * @param board the parent Board entity
+     * @return count of columns in the board
+     */
+    long countByBoard(Board board);
 }

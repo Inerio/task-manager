@@ -1,7 +1,9 @@
 import { signal, WritableSignal } from "@angular/core";
 
+/* ==== TASK MODEL ==== */
+
 /**
- * Interface representing a task in the app.
+ * Interface representing a task.
  */
 export interface Task {
   id?: number;
@@ -10,13 +12,13 @@ export interface Task {
   completed: boolean;
   kanbanColumnId: number;
   dueDate?: string | null;
-  isEditing?: boolean; // Edit state (UI only)
+  isEditing?: boolean; // Used only in UI for edit state
   attachments?: string[];
 }
 
 /**
- * Utility: creates a WritableSignal from a plain task.
- * Useful for wrapping a task in a local signal.
+ * Creates a WritableSignal from a plain Task object.
+ * Useful for managing local reactive task state.
  */
 export function createTaskSignal(task: Task): WritableSignal<Task> {
   return signal({ ...task });

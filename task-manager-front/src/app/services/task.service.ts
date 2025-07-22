@@ -13,9 +13,7 @@ import { Task } from "../models/task.model";
 
 @Injectable({ providedIn: "root" })
 export class TaskService {
-  // ------------------------------------------
-  // API & STATE SIGNALS
-  // ------------------------------------------
+  /* ==== API & STATE SIGNALS ==== */
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrlTasks;
 
@@ -23,10 +21,11 @@ export class TaskService {
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
   readonly tasks: Signal<Task[]> = computed(() => this.tasksSignal());
 
-  // ------------------------------------------
-  // TASKS: READ / FETCH
-  // ------------------------------------------
-  /** Loads all tasks from the backend and updates the signal */
+  /* ==== TASKS: READ / FETCH ==== */
+
+  /**
+   * Loads all tasks from the backend and updates the signal.
+   */
   loadTasks(): void {
     this.http.get<Task[]>(this.apiUrl).subscribe({
       next: (data) => this.tasksSignal.set(data ?? []),
@@ -34,7 +33,10 @@ export class TaskService {
     });
   }
 
-  /** Reactive computed: returns only tasks belonging to a given kanbanColumn */
+  /**
+   * Returns a reactive signal with tasks for a given kanbanColumn.
+   * @param kanbanColumnId Column id
+   */
   getTasksByKanbanColumnId(kanbanColumnId: number): Signal<Task[]> {
     return computed(() =>
       this.tasksSignal().filter(
@@ -43,10 +45,11 @@ export class TaskService {
     );
   }
 
-  // ------------------------------------------
-  // TASKS: CREATE & UPDATE
-  // ------------------------------------------
-  /** Creates a new task and adds it to the state */
+  /* ==== TASKS: CREATE & UPDATE ==== */
+
+  /**
+   * Creates a new task and adds it to the state.
+   */
   createTask(task: Task): void {
     this.http.post<Task>(this.apiUrl, task).subscribe({
       next: (newTask) => this.tasksSignal.set([...this.tasksSignal(), newTask]),
@@ -54,7 +57,9 @@ export class TaskService {
     });
   }
 
-  /** Updates an existing task (by id) */
+  /**
+   * Updates an existing task by id.
+   */
   updateTask(id: number, updatedTask: Task): void {
     this.http.put<Task>(`${this.apiUrl}/${id}`, updatedTask).subscribe({
       next: (updated) => {
@@ -67,10 +72,11 @@ export class TaskService {
     });
   }
 
-  // ------------------------------------------
-  // TASKS: DELETE
-  // ------------------------------------------
-  /** Deletes a single task by id */
+  /* ==== TASKS: DELETE ==== */
+
+  /**
+   * Deletes a single task by id.
+   */
   deleteTask(id: number): void {
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       next: () => {
@@ -80,7 +86,9 @@ export class TaskService {
     });
   }
 
-  /** Deletes all tasks for a specific kanbanColumn (column) by its id */
+  /**
+   * Deletes all tasks for a specific kanbanColumn (by column id).
+   */
   deleteTasksByKanbanColumnId(kanbanColumnId: number): void {
     this.http
       .delete<void>(`${this.apiUrl}/kanbanColumn/${kanbanColumnId}`)
@@ -97,7 +105,10 @@ export class TaskService {
       });
   }
 
-  /** Deletes ALL tasks (irreversible!) */
+  /**
+   * Deletes all tasks (irreversible).
+   * @returns Observable for completion tracking
+   */
   deleteAllTasks(): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/all`).pipe(
       tap(() => this.tasksSignal.set([])),
@@ -108,10 +119,11 @@ export class TaskService {
     );
   }
 
-  // ------------------------------------------
-  // ATTACHMENTS: FILE UPLOAD / DOWNLOAD / DELETE
-  // ------------------------------------------
-  /** Uploads a file attachment for a given task */
+  /* ==== ATTACHMENTS: UPLOAD / DOWNLOAD / DELETE ==== */
+
+  /**
+   * Uploads a file attachment for a given task.
+   */
   async uploadAttachment(taskId: number, file: File): Promise<void> {
     const formData = new FormData();
     formData.append("file", file);
@@ -124,7 +136,9 @@ export class TaskService {
     );
   }
 
-  /** Downloads an attachment file for a given task */
+  /**
+   * Downloads an attachment for a given task.
+   */
   downloadAttachment(taskId: number, filename: string): void {
     this.http
       .get(
@@ -140,7 +154,9 @@ export class TaskService {
       });
   }
 
-  /** Deletes an attachment for a given task */
+  /**
+   * Deletes an attachment for a given task.
+   */
   async deleteAttachment(taskId: number, filename: string): Promise<void> {
     const updated = await firstValueFrom(
       this.http.delete<Task>(

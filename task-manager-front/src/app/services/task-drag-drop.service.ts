@@ -2,10 +2,12 @@ import { Injectable } from "@angular/core";
 import { setTaskDragData, getTaskDragData } from "../utils/drag-drop-utils";
 import { Task } from "../models/task.model";
 
+/* ==== TASK DRAG & DROP SERVICE ==== */
 @Injectable({ providedIn: "root" })
 export class TaskDragDropService {
   /**
-   * Handles logic for starting task drag.
+   * Starts task drag operation.
+   * Also stores the source column id globally on window to track the dragged task.
    */
   startTaskDrag(
     event: DragEvent,
@@ -21,6 +23,7 @@ export class TaskDragDropService {
     if (!task.id || task.kanbanColumnId == null) return;
 
     setTaskDragData(event, task.id, task.kanbanColumnId);
+    // HACK: Store source column id globally for cross-component drag tracking.
     (window as any).DRAGGED_TASK_KANBANCOLUMN_ID = task.kanbanColumnId;
 
     // Custom drag image
@@ -43,7 +46,7 @@ export class TaskDragDropService {
   }
 
   /**
-   * Handles logic for ending task drag.
+   * Ends task drag operation and clears global drag state.
    */
   endTaskDrag(setDragging: (value: boolean) => void) {
     setDragging(false);
@@ -51,7 +54,7 @@ export class TaskDragDropService {
   }
 
   /**
-   * Handles the drag over event for task
+   * Handles the dragover event on a kanban column drop zone for tasks.
    */
   handleKanbanColumnDragOver(
     event: DragEvent,
@@ -74,19 +77,18 @@ export class TaskDragDropService {
       setDragOver(false);
       return;
     }
-
     setDragOver(true);
   }
 
   /**
-   * Handles the drag leave event for task
+   * Handles the dragleave event on a kanban column drop zone for tasks.
    */
   handleKanbanColumnDragLeave(setDragOver: (v: boolean) => void) {
     setDragOver(false);
   }
 
   /**
-   * Handles the drop event for task
+   * Handles the drop event on a kanban column drop zone for tasks.
    */
   handleKanbanColumnDrop(
     event: DragEvent,

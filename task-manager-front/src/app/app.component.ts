@@ -4,7 +4,6 @@ import { AlertComponent } from "./components/alert/alert.component";
 import { ConfirmDialogComponent } from "./components/alert/confirm-dialog.component";
 import { BoardComponent } from "./components/board/board.component";
 import { BoardService } from "./services/board.service";
-import { Board } from "./models/board.model";
 
 @Component({
   selector: "app-root",
@@ -26,7 +25,7 @@ export class AppComponent {
   constructor() {
     this.boardService.loadBoards();
 
-    // Sélection automatique du premier board si dispo (après chargement)
+    // Automatically select the first board after loading, if any
     computed(() => {
       const firstId = this.boards()[0]?.id;
       if (typeof firstId === "number" && this.selectedBoardId() === null) {
@@ -42,7 +41,7 @@ export class AppComponent {
   }
 
   addBoard() {
-    const name = prompt("Nom du nouveau board ?");
+    const name = prompt("Enter the name of the new board:");
     if (name) {
       this.boardService.createBoard(name).subscribe({
         next: (board) => {
@@ -59,6 +58,6 @@ export class AppComponent {
 
   get selectedBoardName(): string {
     const board = this.boards().find((b) => b.id === this.selectedBoardId());
-    return board?.name ?? "Aucun board sélectionné";
+    return board?.name ?? "No board selected";
   }
 }

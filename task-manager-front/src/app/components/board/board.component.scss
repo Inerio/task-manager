@@ -4,48 +4,6 @@
   margin-bottom: 1.5rem;
 }
 
-.styled-trash-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ececec;
-  border: none;
-  border-radius: 50px;
-  height: 36px;
-  min-width: 36px;
-  width: auto;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px 0 #0001;
-  padding: 0 1em 0 0.5em;
-  gap: 0.45em;
-  font-family: "Poppins", Arial, sans-serif;
-  font-weight: 500;
-  font-size: 1rem;
-
-  &:hover {
-    background: #ffd6d6;
-    box-shadow: 0 0 0 3px #f36c6c33;
-  }
-
-  img {
-    width: 19px;
-    height: 19px;
-    margin: 0;
-    pointer-events: none;
-  }
-
-  .delete-all-label {
-    color: #b1001e;
-    margin-left: 0.5em;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    user-select: none;
-    pointer-events: none;
-  }
-}
-
 .task-columns {
   display: flex;
   justify-content: flex-start;
@@ -110,6 +68,8 @@
   }
 }
 
+// --- Only for local layout ---
+
 .cancel-edit-btn-top {
   display: block;
   position: absolute;
@@ -136,27 +96,6 @@
     color: #b1001e;
     border-color: #d32f2f;
   }
-}
-
-.styled-x-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ececec;
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px 0 #0001;
-  margin-right: 0.4rem;
-  padding: 0;
-  flex-shrink: 0;
-}
-.styled-x-btn:hover {
-  background: #ffd6d6;
-  box-shadow: 0 0 0 3px #f36c6c33;
 }
 
 .kanbanColumn-title,

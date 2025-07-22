@@ -1,4 +1,4 @@
-// DRAG & DROP UTILS — TASKS
+/* ==== DRAG & DROP UTILS — TASKS ==== */
 
 export function setTaskDragData(
   event: DragEvent,
@@ -28,7 +28,7 @@ export function isTaskDragEvent(event: DragEvent): boolean {
   return !!event.dataTransfer && event.dataTransfer.getData("type") === "task";
 }
 
-// DRAG & DROP UTILS — COLUMNS
+/* ==== DRAG & DROP UTILS — COLUMNS ==== */
 
 export function setColumnDragData(event: DragEvent, kanbanColumnId: number) {
   event.dataTransfer?.setData("type", "column");
@@ -53,7 +53,11 @@ export function isColumnDragEvent(event: DragEvent): boolean {
   );
 }
 
-// DRAG & DROP UTILS — MEDIAS
+/* ==== DRAG & DROP UTILS — FILES ==== */
+
+/**
+ * Returns true if the DragEvent contains files.
+ */
 export function isFileDragEvent(event: DragEvent): boolean {
   return !!event.dataTransfer && event.dataTransfer.types.includes("Files");
 }

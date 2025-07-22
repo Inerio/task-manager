@@ -25,33 +25,21 @@ import { TaskDragDropService } from "../../services/task-drag-drop.service";
   styleUrls: ["./task.component.scss"],
 })
 export class TaskComponent implements OnChanges {
-  // ------------------------------------------
-  // INPUTS
-  // ------------------------------------------
+  /* ==== INPUTS ==== */
   @Input({ required: true }) task!: Task;
 
-  // ------------------------------------------
-  // SERVICES
-  // ------------------------------------------
+  /* ==== SERVICES ==== */
   private readonly taskService = inject(TaskService);
   private readonly alertService = inject(AlertService);
   private readonly dragDropService = inject(TaskDragDropService);
 
-  // ------------------------------------------
-  // STATE & SIGNALS
-  // ------------------------------------------
-  readonly localTask: WritableSignal<Task> = signal({} as Task); // Local reactive copy for editing/view
-  dragging = signal(false); // Used for drag animation
-
-  // ------------------------------------------
-  // ATTACHMENTS
-  // ------------------------------------------
+  /* ==== STATE ==== */
+  readonly localTask: WritableSignal<Task> = signal({} as Task);
+  dragging = signal(false);
   acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
   maxSize = 5 * 1024 * 1024;
 
-  // ------------------------------------------
-  // LIFECYCLE
-  // ------------------------------------------
+  /* ==== LIFECYCLE ==== */
   constructor() {
     // Keeps localTask in sync with input changes
     effect(() => {
@@ -65,46 +53,17 @@ export class TaskComponent implements OnChanges {
     }
   }
 
-  // ------------------------------------------
-  // DUE BADGE (computed)
-  // ------------------------------------------
-  dueBadge = computed(() => {
-    const due = this.localTask().dueDate;
-    if (!due) return null;
-    const dueDate = new Date(due);
-    const now = new Date();
-    dueDate.setHours(0, 0, 0, 0);
-    now.setHours(0, 0, 0, 0);
-    const diffMs = dueDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return "En retard !";
-    if (diffDays === 0) return "Dernier jour !";
-    if (diffDays === 1) return "1 jour restant";
-    return `${diffDays} jours restants`;
-  });
-
-  // ------------------------------------------
-  // DRAG & DROP
-  // ------------------------------------------
-  /**
-   * Start drag: sets global dragged kanbanColumn ID and a custom drag image.
-   */
+  /* ==== DRAG & DROP ==== */
   onTaskDragStart(event: DragEvent): void {
     this.dragDropService.startTaskDrag(event, this.localTask(), (v) =>
       this.dragging.set(v)
     );
   }
-
-  /**
-   * End drag: cleanup global variable.
-   */
   onTaskDragEnd(): void {
     this.dragDropService.endTaskDrag((v) => this.dragging.set(v));
   }
 
-  // ------------------------------------------
-  // CRUD & EDIT
-  // ------------------------------------------
+  /* ==== CRUD & EDIT ==== */
   toggleCompleted(): void {
     const updated = {
       ...this.localTask(),
@@ -118,85 +77,63 @@ export class TaskComponent implements OnChanges {
     const current = this.localTask();
     this.localTask.set({ ...current, isEditing: true });
   }
-
   saveEdit(): void {
     const current = this.localTask();
     if (!current.title.trim()) return;
     this.localTask.set({ ...current, isEditing: false });
     this.taskService.updateTask(current.id!, this.localTask());
   }
-
   cancelEdit(): void {
     this.localTask.set({ ...this.task, isEditing: false });
   }
-
   deleteTask(): void {
     const current = this.localTask();
     if (current.id) this.taskService.deleteTask(current.id);
   }
-
-  // ------------------------------------------
-  // EDIT FIELD HELPERS
-  // ------------------------------------------
   updateTitleFromEvent(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.localTask.set({ ...this.localTask(), title: value });
   }
-
   updateDescriptionFromEvent(event: Event): void {
     const value = (event.target as HTMLTextAreaElement).value;
     this.localTask.set({ ...this.localTask(), description: value });
   }
-
   updateDueDateFromEvent(event: Event): void {
     const value = (event.target as HTMLInputElement).value || null;
     this.localTask.set({ ...this.localTask(), dueDate: value });
   }
 
-  // ------------------------------------------
-  // ATTACHMENTS (UPLOAD/DOWNLOAD/DELETE)
-  // ------------------------------------------
+  /* ==== ATTACHMENTS ==== */
   async onUploadFiles(files: File[]) {
     const taskId = this.localTask().id!;
     for (const file of files) {
       if (file.size > this.maxSize) {
-        this.alertService.show(
-          "error",
-          `Fichier trop volumineux (${file.name})`
-        );
+        this.alertService.show("error", `File too large (${file.name})`);
         continue;
       }
       if (
         !file.type.match(/(image|pdf|text|word)/) &&
         !file.name.match(/\.(pdf|docx?|txt)$/i)
       ) {
-        this.alertService.show(
-          "error",
-          `Type de fichier non autorisé (${file.name})`
-        );
+        this.alertService.show("error", `File type not allowed (${file.name})`);
         continue;
       }
       try {
         await this.taskService.uploadAttachment(taskId, file);
         await this.refreshTask(taskId);
       } catch {
-        this.alertService.show("error", "Erreur upload fichier");
+        this.alertService.show("error", "File upload error");
       }
     }
   }
-
   onDeleteAttachment(filename: string) {
     this.taskService
       .deleteAttachment(this.localTask().id!, filename)
-      .catch(() =>
-        this.alertService.show("error", "Erreur suppression fichier")
-      );
+      .catch(() => this.alertService.show("error", "File deletion error"));
   }
-
   onDownloadAttachment(filename: string) {
     this.taskService.downloadAttachment(this.localTask().id!, filename);
   }
-
   async refreshTask(taskId: number) {
     const tasks = this.taskService.tasks();
     const fresh = tasks.find((t) => t.id === taskId);
@@ -204,4 +141,20 @@ export class TaskComponent implements OnChanges {
       this.localTask.set({ ...fresh });
     }
   }
+
+  /* ==== DUE BADGE (computed) ==== */
+  dueBadge = computed(() => {
+    const due = this.localTask().dueDate;
+    if (!due) return null;
+    const dueDate = new Date(due);
+    const now = new Date();
+    dueDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffMs = dueDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return "Late!";
+    if (diffDays === 0) return "Due today!";
+    if (diffDays === 1) return "1 day left";
+    return `${diffDays} days left`;
+  });
 }

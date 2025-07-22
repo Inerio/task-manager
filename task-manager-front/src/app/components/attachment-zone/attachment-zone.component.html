@@ -7,7 +7,7 @@
   (dragleave)="onDragLeave()"
   (click)="triggerFileSelect()"
 >
-  <!-- Hidden file input, accessible everywhere via #fileInput -->
+  <!-- Hidden file input (accessible everywhere via #fileInput) -->
   <input
     type="file"
     #fileInput
@@ -39,10 +39,10 @@
     } }
   </div>
 
-  <!-- Show invite text if no file is attached -->
+  <!-- Invite text if no file is attached -->
   @if (!attachments.length) {
   <div class="empty-upload-text">
-    <span class="fake-link">Choisir un fichier</span>
+    <span class="fake-link">Choose a file</span>
   </div>
   }
 </div>

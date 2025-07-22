@@ -23,23 +23,17 @@ import { TaskDragDropService } from "../../services/task-drag-drop.service";
   styleUrls: ["./kanban-column.component.scss"],
 })
 export class KanbanColumnComponent {
-  // ------------------------------------------
-  // INPUTS
-  // ------------------------------------------
+  /* ==== INPUTS ==== */
   @Input({ required: true }) title!: string;
   @Input({ required: true }) kanbanColumnId!: number;
 
-  // ------------------------------------------
-  // SERVICES
-  // ------------------------------------------
+  /* ==== SERVICES ==== */
   private readonly taskService = inject(TaskService);
   private readonly kanbanColumnService = inject(KanbanColumnService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dragDropService = inject(TaskDragDropService);
 
-  // ------------------------------------------
-  // TASK CREATION
-  // ------------------------------------------
+  /* ==== TASK CREATION ==== */
   showForm = signal(false);
   newTask = signal<Partial<Task>>(this.getEmptyTask());
 
@@ -91,30 +85,24 @@ export class KanbanColumnComponent {
     this.newTask.set({ ...this.newTask(), dueDate: value });
   }
 
-  // ------------------------------------------
-  // DELETE ALL TASKS IN KANBANCOLUMN (button optionnel)
-  // ------------------------------------------
+  /* ==== DELETE ALL TASKS ==== */
   async deleteAllInColumn(): Promise<void> {
     const confirmed = await this.confirmDialog.open(
-      "Suppression de la colonne",
-      `Voulez-vous supprimer toutes les tâches de “${this.title}”?`
+      "Delete all tasks",
+      `Do you want to delete all tasks from “${this.title}”?`
     );
     if (!confirmed) return;
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
-  // ------------------------------------------
-  // TASK FILTERING (reactive)
-  // ------------------------------------------
+  /* ==== TASK FILTERING ==== */
   readonly filteredTasks: Signal<Task[]> = computed(() =>
     this.taskService
       .tasks()
       .filter((task) => task.kanbanColumnId === this.kanbanColumnId)
   );
 
-  // ------------------------------------------
-  // DRAG & DROP TASKS (pas colonne !)
-  // ------------------------------------------
+  /* ==== DRAG & DROP TASKS ==== */
   isDragOver = signal(false);
 
   onTaskDragOver(event: DragEvent): void {
@@ -136,14 +124,12 @@ export class KanbanColumnComponent {
       event,
       this.kanbanColumnId,
       (v) => this.isDragOver.set(v),
-      () => this.taskService.tasks(), // get all tasks (type Task[])
-      (id, task) => this.taskService.updateTask(id, task) // update task
+      () => this.taskService.tasks(),
+      (id, task) => this.taskService.updateTask(id, task)
     );
   }
 
-  // ------------------------------------------
-  // STABLE ITEM TRACKING FOR RENDER PERFORMANCE
-  // ------------------------------------------
+  /* ==== TRACKING ==== */
   trackById(index: number, task: Task): number | undefined {
     return task.id;
   }

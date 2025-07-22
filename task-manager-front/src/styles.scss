@@ -1,12 +1,10 @@
 @use "./app/shared/styles/shared";
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap");
 
-// Apply box-sizing globally
 * {
   box-sizing: border-box;
 }
 
-// Basic body reset and typography
 body {
   margin: 0;
   background-color: #f9f9f9;
@@ -14,7 +12,6 @@ body {
   font-family: "Poppins", "Roboto", "Helvetica Neue", Arial, sans-serif;
 }
 
-// Ensure full height layout for html and body
 html,
 body {
   height: 100%;

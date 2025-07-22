@@ -10,7 +10,7 @@
 >
   <!-- Due date badge -->
   @if (dueBadge()) {
-  <span class="due-badge" [class.late]="dueBadge() === 'En retard !'">
+  <span class="due-badge" [class.late]="dueBadge() === 'Late!'">
     {{ dueBadge() }}
   </span>
   }

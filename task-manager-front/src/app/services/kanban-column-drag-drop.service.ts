@@ -1,17 +1,20 @@
-import { Injectable, signal, computed } from "@angular/core";
+import { Injectable, signal } from "@angular/core";
 import { KanbanColumnService } from "./kanban-column.service";
 import { setColumnDragData, isColumnDragEvent } from "../utils/drag-drop-utils";
 
+/* ==== COLUMN DRAG & DROP SERVICE ==== */
 @Injectable({ providedIn: "root" })
 export class ColumnDragDropService {
-  // Etat du DnD colonne
+  // Currently dragged column id, or null if none.
   readonly draggedKanbanColumnId = signal<number | null>(null);
+  // Index currently hovered during drag, or null if none.
   readonly dragOverIndex = signal<number | null>(null);
 
   constructor(private kanbanColumnService: KanbanColumnService) {}
 
-  // DnD Handlers
-
+  /**
+   * Called when a column drag starts.
+   */
   onColumnDragStart(kanbanColumnId: number, idx: number, event: DragEvent) {
     this.draggedKanbanColumnId.set(kanbanColumnId);
     this.dragOverIndex.set(idx);
@@ -21,6 +24,9 @@ export class ColumnDragDropService {
     }
   }
 
+  /**
+   * Called when a column drag enters a new index (target).
+   */
   onColumnDragEnter(idx: number, event: DragEvent) {
     event.preventDefault();
     if (this.draggedKanbanColumnId() !== null) {
@@ -28,6 +34,9 @@ export class ColumnDragDropService {
     }
   }
 
+  /**
+   * Called repeatedly as a dragged column moves over other columns.
+   */
   onColumnDragOver(idx: number, event: DragEvent) {
     event.preventDefault();
     if (this.draggedKanbanColumnId() !== null) {
@@ -35,7 +44,10 @@ export class ColumnDragDropService {
     }
   }
 
-  // Correction : ajoute boardId en paramètre !
+  /**
+   * Handles drop event for column DnD.
+   * Calls API to move column and refreshes local state.
+   */
   onColumnDrop(boardId: number, event: DragEvent, afterDrop?: () => void) {
     if (!isColumnDragEvent(event)) {
       this.resetDragState();
@@ -48,19 +60,17 @@ export class ColumnDragDropService {
       this.resetDragState();
       return;
     }
-    // Met à jour l'ordre local
     const kanbanColumnsRaw = this.kanbanColumnService.kanbanColumns();
     const currIdx = kanbanColumnsRaw.findIndex((l) => l.id === draggedId);
     if (currIdx === -1 || currIdx === targetIdx) {
       this.resetDragState();
       return;
     }
-    // Appel API pour déplacer
     this.kanbanColumnService
       .moveKanbanColumn(boardId, draggedId, targetIdx)
       .subscribe({
         next: () => {
-          this.kanbanColumnService.loadKanbanColumns(boardId); // Charge les colonnes du bon board !
+          this.kanbanColumnService.loadKanbanColumns(boardId);
           this.resetDragState();
           afterDrop?.();
         },
@@ -71,10 +81,16 @@ export class ColumnDragDropService {
       });
   }
 
+  /**
+   * Resets the drag state (after drag ends or is cancelled).
+   */
   onColumnDragEnd() {
     this.resetDragState();
   }
 
+  /**
+   * Clears the current drag and hover state.
+   */
   resetDragState() {
     this.draggedKanbanColumnId.set(null);
     this.dragOverIndex.set(null);

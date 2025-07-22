@@ -25,7 +25,7 @@
     <button
       class="cancel-edit-btn-top"
       (mousedown)="cancelTitleEdit()"
-      title="Annuler l'ajout/édition"
+      title="Cancel add/edit"
     >
       ✖ Cancel
     </button>
@@ -44,11 +44,11 @@
       <button
         class="btn-close-kanbanColumn styled-x-btn"
         (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
-        title="Supprimer la colonne"
-        aria-label="Supprimer cette colonne"
+        title="Delete column"
+        aria-label="Delete this column"
         [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       >
-        <img src="svg/x.svg" alt="Fermer" width="17" height="17" />
+        <img src="svg/x.svg" alt="Close" width="17" height="17" />
       </button>
 
       @if (!isEditingTitle(kanbanColumn)) {
@@ -58,7 +58,7 @@
         tabindex="0"
         (keydown.enter)="startEditTitle(kanbanColumn)"
         (keydown.space)="startEditTitle(kanbanColumn)"
-        title="Renommer cette colonne"
+        title="Rename this column"
       >
         {{ kanbanColumn.name }}
       </span>
@@ -82,10 +82,10 @@
       <button
         class="btn-delete-column styled-trash-btn"
         (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
-        title="Supprimer toutes les tâches de cette colonne"
+        title="Delete all tasks in this column"
         [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       >
-        <img src="/svg/trash.svg" alt="Vider" width="19" height="19" />
+        <img src="/svg/trash.svg" alt="Clear" width="19" height="19" />
       </button>
     </div>
 

@@ -2,7 +2,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #f7f9fc; // Harmonisé avec le header
+  background: #f7f9fc; // Harmonized with header
   border-radius: 12px;
   box-shadow: 0 2px 12px 0 #0001;
   min-width: 260px;
@@ -11,94 +11,11 @@
   box-sizing: border-box;
   padding: 1rem 0 0 0;
 
-  // HEADER style (boutons, titre)
-  .column-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.7rem 1rem;
-    background: #f7f9fc;
-    border-bottom: 1px solid #eee;
-    border-radius: 12px 12px 0 0;
-    min-height: 40px;
-    cursor: grab;
-    user-select: none;
-    transition: background 0.15s;
-    min-width: 0;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .kanbanColumn-title,
-  .kanbanColumn-title-input {
-    flex: 1 1 0%;
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-    font-family: "Poppins", sans-serif;
-    text-align: center;
-    font-weight: 700;
-    font-size: 1.13rem;
-    border-radius: 8px;
-    padding: 0.3rem 1.3rem;
-    width: 100%;
-  }
-
-  .kanbanColumn-title-input {
-    border: 2px solid #222;
-    background: #fff;
-    outline: none;
-    margin: 0 0.1rem;
-    transition: border 0.15s, box-shadow 0.15s;
-    &:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 2px #3b82f633;
-    }
-  }
-
-  // BOUTONS stylés
-  .styled-x-btn,
-  .styled-trash-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #ececec;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 2px 8px 0 #0001;
-    transition: background 0.2s, box-shadow 0.2s;
-    padding: 0;
-  }
-
-  .styled-x-btn {
-    width: 32px;
-    height: 32px;
-    margin-right: 0.4rem;
-    flex-shrink: 0;
-    &:hover {
-      background: #ffd6d6;
-      box-shadow: 0 0 0 3px #f36c6c33;
-    }
-  }
-
-  .styled-trash-btn {
-    width: 36px;
-    height: 36px;
-    margin-left: auto;
-    margin-right: 0;
-    flex-shrink: 0;
-    &:hover {
-      background: #ffd6d6;
-      box-shadow: 0 0 0 3px #f36c6c33;
-    }
-  }
-
   app-task-item {
     margin-bottom: 0.8rem;
   }
 
-  // BOUTON "Add task"
+  // "Add task" button
   .add-btn {
     align-self: center;
     margin-top: 0.7rem;
@@ -130,7 +47,7 @@
   }
 }
 
-/* --- ANIMATION DRAG OVER : conserve le code de la V2 (ne pas toucher !) --- */
+/* --- DRAG OVER ANIMATION --- */
 .task-dropzone {
   transition: min-height 0.3s ease, padding-bottom 0.3s ease;
   border: 2px dashed transparent;

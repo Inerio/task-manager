@@ -1,4 +1,56 @@
-// Generic buttons and button groups
+// === SHARED: Generic styles and round buttons ===
+
+// Round buttons (trash, cross)
+.styled-trash-btn,
+.styled-x-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ececec;
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px 0 #0001;
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  padding: 0;
+}
+.styled-trash-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  max-width: 44px;
+  gap: 0.35em;
+  font-size: 1rem;
+  font-family: "Poppins", Arial, sans-serif;
+  font-weight: 500;
+
+  &:hover {
+    background: #ffd6d6;
+    box-shadow: 0 0 0 3px #f36c6c33;
+  }
+}
+.styled-x-btn {
+  width: 32px;
+  height: 32px;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+  &:hover {
+    background: #ffd6d6;
+    box-shadow: 0 0 0 3px #f36c6c33;
+  }
+}
+
+.delete-all-label {
+  color: #b1001e;
+  margin-left: 0.5em;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  user-select: none;
+  pointer-events: none;
+}
+
+// === Generic buttons ===
 .btn-group {
   display: flex;
   gap: 0.5rem;
@@ -6,44 +58,55 @@
 
   .btn {
     flex: 1;
-    padding: 0.4rem;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    padding: 0.44rem 0.2rem;
+    border-radius: 7px;
+    font-size: 1.04rem;
+    font-family: "Poppins", Arial, sans-serif;
     border: none;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.2s;
   }
   .btn-success {
-    background: #4caf50;
-    color: white;
+    background: #45b959;
+    color: #fff;
     &:hover {
-      background: #45a049;
+      background: #269d3c;
     }
   }
   .btn-secondary {
-    background: #ccc;
-    color: #222;
+    background: #dadada;
+    color: #333;
     &:hover {
       background: #bbb;
     }
   }
 }
 
-// Form fields (input, textarea, etc.)
+// === Form fields ===
 .form-control {
   width: 100%;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  margin-bottom: 0.5rem;
-  background: #f9f9f9;
-  box-sizing: border-box;
-  transition: border 0.2s;
+  font-family: "Poppins", "Roboto", Arial, sans-serif;
+  font-size: 0.99rem;
+  padding: 0.44rem 0.7rem;
+  border-radius: 8px;
+  border: 1.8px solid #bfc2ce;
+  background: #fff;
+  margin-bottom: 0.46rem;
+  outline: none;
+  box-shadow: none;
+  transition: border 0.18s, box-shadow 0.18s;
+  resize: vertical;
 }
-
+.form-control.textarea {
+  min-height: 54px;
+  max-height: 180px;
+}
+.form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px #3b82f633;
+}
 .textarea {
-  min-height: 60px;
-  max-height: 200px;
+  min-height: 54px;
+  max-height: 180px;
   resize: vertical;
 }

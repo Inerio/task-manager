@@ -1,15 +1,3 @@
-<div class="board-actions">
-  <button
-    class="delete-btn styled-trash-btn"
-    (click)="deleteAllTasks()"
-    [disabled]="!!editingTitleId()"
-    title="Delete all tasks"
-  >
-    <img src="/svg/trash.svg" alt="Delete all" width="19" height="19" />
-    <span class="delete-all-label">Delete all tasks</span>
-  </button>
-</div>
-
 <div class="task-columns">
   @for (kanbanColumn of kanbanColumns(); track kanbanColumn.id; let idx =
   $index) {

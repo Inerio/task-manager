@@ -39,5 +39,11 @@ export class BoardService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  // ... add update, getBoardById, etc. as needed
+  /**
+   * Updates the name of a board.
+   */
+  updateBoard(id: number, name: string): Observable<Board> {
+    return this.http.patch<Board>(`${this.apiUrl}/${id}`, { name });
+  }
+  //TODO add getBoardById, etc. as needed
 }

@@ -5,7 +5,9 @@
   <aside class="sidebar">
     <h1>Task Manager</h1>
     <nav class="boards-list">
-      @for (board of boards(); track board.id) {
+      <!-- Board list (includes temp board if adding) -->
+      @for (board of displayedBoards(); track board.id) { @if (board.id !==
+      null) {
       <div
         (click)="selectBoard(board.id)"
         [class.selected]="selectedBoardId() === board.id"
@@ -13,17 +15,85 @@
       >
         {{ board.name }}
       </div>
-      }
-      <button class="add-board-btn" (click)="addBoard()">+ Add Board</button>
+      } @else {
+      <!-- Inline new board input -->
+      <input
+        id="new-board-input"
+        class="board-item board-edit-input"
+        type="text"
+        [value]="editingBoardValue()"
+        (input)="onEditBoardInput($event)"
+        (blur)="saveBoardEdit()"
+        (keydown.enter)="saveBoardEdit()"
+        (keydown.escape)="cancelBoardEdit()"
+        required
+        autofocus
+        placeholder="Board name"
+      />
+      } }
+      <button
+        class="add-board-btn"
+        (click)="addBoard()"
+        [disabled]="editingBoardId() !== null"
+      >
+        + Add Board
+      </button>
     </nav>
   </aside>
 
-  <section class="board-area" *ngIf="selectedBoardId() !== null">
+  @if (selectedBoardId() !== null) {
+  <section class="board-area">
     <header class="board-header">
-      <h2>
-        {{ selectedBoardName }}
-      </h2>
+      <div class="board-title-wrapper">
+        <!-- Editable board title or input -->
+        @if (!editingSelectedBoard()) {
+        <h2
+          class="selected-board-title"
+          tabindex="0"
+          (click)="startSelectedBoardEdit()"
+          (keydown.enter)="startSelectedBoardEdit()"
+          (keydown.space)="startSelectedBoardEdit()"
+          title="Click to edit board title"
+          style="cursor: pointer"
+        >
+          {{ selectedBoardName }}
+          <button
+            class="styled-x-btn"
+            title="Delete board"
+            (click)="deleteSelectedBoard(); $event.stopPropagation()"
+            aria-label="Delete board"
+          >
+            <img src="/svg/x.svg" alt="Delete" width="18" height="18" />
+          </button>
+        </h2>
+        } @else {
+        <input
+          id="edit-selected-board-input"
+          class="selected-board-title-edit"
+          type="text"
+          [value]="editingSelectedBoardValue()"
+          (input)="onEditSelectedBoardInput($event)"
+          (blur)="saveSelectedBoardEdit()"
+          (keydown.enter)="saveSelectedBoardEdit()"
+          (keydown.escape)="cancelSelectedBoardEdit()"
+          maxlength="60"
+          required
+          autofocus
+          placeholder="Board name"
+        />
+        }
+      </div>
+      <!-- Delete all tasks button: always on the right -->
+      <button
+        class="delete-btn styled-trash-btn delete-all-btn"
+        (click)="deleteAllTasks()"
+        title="Delete all tasks"
+      >
+        <img src="/svg/trash.svg" alt="Delete all" width="19" height="19" />
+        <span class="delete-all-label">Delete all tasks</span>
+      </button>
     </header>
     <app-board [boardId]="selectedBoardId()!"></app-board>
   </section>
+  }
 </div>

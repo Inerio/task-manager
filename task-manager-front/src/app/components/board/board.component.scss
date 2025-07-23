@@ -1,9 +1,3 @@
-.board-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1.5rem;
-}
-
 .task-columns {
   display: flex;
   justify-content: flex-start;
@@ -67,8 +61,6 @@
     display: none;
   }
 }
-
-// --- Only for local layout ---
 
 .cancel-edit-btn-top {
   display: block;

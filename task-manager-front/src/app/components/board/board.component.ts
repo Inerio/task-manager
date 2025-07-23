@@ -118,20 +118,6 @@ export class BoardComponent implements OnChanges {
     });
   }
 
-  /* ==== DELETE ALL TASKS ==== */
-  async deleteAllTasks(): Promise<void> {
-    if (this.editingTitleId()) return;
-    const confirmed = await this.confirmDialog.open(
-      "Global deletion",
-      "Are you sure you want to delete all tasks?"
-    );
-    if (!confirmed) return;
-    this.taskService.deleteAllTasks().subscribe({
-      next: () => this.taskService.loadTasks(),
-      error: (err) => console.error("Delete error:", err),
-    });
-  }
-
   /* ==== DELETE COLUMN ==== */
   async deleteKanbanColumn(kanbanColumnId: number, kanbanColumnName: string) {
     if (this.editingTitleId()) return;

@@ -15,6 +15,7 @@ import { TaskService } from "../../services/task.service";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { KanbanColumn } from "../../models/kanban-column.model";
 import { ColumnDragDropService } from "../../services/kanban-column-drag-drop.service";
+import { AlertService } from "../../services/alert.service";
 
 /* ==== BOARD COMPONENT ==== */
 @Component({
@@ -34,6 +35,7 @@ export class BoardComponent implements OnChanges {
   private readonly taskService = inject(TaskService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly columnDnD = inject(ColumnDragDropService);
+  private readonly alert = inject(AlertService);
 
   /* ==== STATE ==== */
   readonly loading = this.kanbanColumnService.loading;
@@ -113,8 +115,10 @@ export class BoardComponent implements OnChanges {
           if (last) this.startEditTitle(last);
         }, 150);
       },
-      error: () =>
-        this.addKanbanColumnError.set("Failed to create kanban column."),
+      error: () => {
+        this.addKanbanColumnError.set("Failed to create kanban column.");
+        this.alert.show("error", "Failed to create kanban column.");
+      },
     });
   }
 
@@ -133,8 +137,7 @@ export class BoardComponent implements OnChanges {
       .subscribe({
         next: () => {},
         error: (err) => {
-          alert("Error while deleting column");
-          console.error(err);
+          this.alert.show("error", "Error while deleting column.");
         },
       });
   }
@@ -147,7 +150,11 @@ export class BoardComponent implements OnChanges {
       `Delete all tasks in “${kanbanColumnName}”?`
     );
     if (!confirmed) return;
-    this.taskService.deleteTasksByKanbanColumnId(kanbanColumnId);
+    try {
+      this.taskService.deleteTasksByKanbanColumnId(kanbanColumnId);
+    } catch (e) {
+      this.alert.show("error", "Error while deleting all tasks in column.");
+    }
   }
 
   /* ==== EDIT COLUMN TITLE ==== */
@@ -184,8 +191,7 @@ export class BoardComponent implements OnChanges {
         this.kanbanColumnService.loadKanbanColumns(boardId);
       },
       error: (err) => {
-        alert("Error while renaming column");
-        console.error(err);
+        this.alert.show("error", "Error while renaming column.");
         this.editingTitleId.set(null);
       },
     });
@@ -206,7 +212,10 @@ export class BoardComponent implements OnChanges {
         .deleteKanbanColumn(currKanbanColumn.id!, boardId)
         .subscribe({
           next: () => this.editingTitleId.set(null),
-          error: () => this.editingTitleId.set(null),
+          error: () => {
+            this.alert.show("error", "Error while cancelling column edition.");
+            this.editingTitleId.set(null);
+          },
         });
     } else {
       this.editingTitleId.set(null);

@@ -162,6 +162,17 @@ public class TaskController {
     }
 
     /**
+     * Delete all tasks in all columns of a given board.
+     * @param boardId ID of the board.
+     * @return HTTP 204 (No Content) on success.
+     */
+    @DeleteMapping("/board/{boardId}")
+    public ResponseEntity<Void> deleteTasksByBoardId(@PathVariable Long boardId) {
+        taskService.deleteTasksByBoardId(boardId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
      * Delete all tasks in the database.
      *
      * @return HTTP 204

@@ -10,12 +10,14 @@ import {
 import { catchError, firstValueFrom, Observable, tap } from "rxjs";
 import { environment } from "../../environments/environment.local";
 import { Task } from "../models/task.model";
+import { AlertService } from "./alert.service"; // <-- Ajout
 
 @Injectable({ providedIn: "root" })
 export class TaskService {
   /* ==== API & STATE SIGNALS ==== */
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrlTasks;
+  private readonly alertService = inject(AlertService); // <-- Ajout
 
   // Holds all tasks loaded from backend (single source of truth)
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
@@ -29,7 +31,9 @@ export class TaskService {
   loadTasks(): void {
     this.http.get<Task[]>(this.apiUrl).subscribe({
       next: (data) => this.tasksSignal.set(data ?? []),
-      error: (err) => console.error("Error loading tasks", err),
+      error: (err) => {
+        this.alertService.show("error", "Error loading tasks.");
+      },
     });
   }
 
@@ -53,7 +57,9 @@ export class TaskService {
   createTask(task: Task): void {
     this.http.post<Task>(this.apiUrl, task).subscribe({
       next: (newTask) => this.tasksSignal.set([...this.tasksSignal(), newTask]),
-      error: (err) => console.error("Error creating task", err),
+      error: (err) => {
+        this.alertService.show("error", "Error creating task.");
+      },
     });
   }
 
@@ -68,7 +74,9 @@ export class TaskService {
         );
         this.tasksSignal.set(tasks);
       },
-      error: (err) => console.error("Error updating task", err),
+      error: (err) => {
+        this.alertService.show("error", "Error updating task.");
+      },
     });
   }
 
@@ -82,7 +90,9 @@ export class TaskService {
       next: () => {
         this.tasksSignal.set(this.tasksSignal().filter((t) => t.id !== id));
       },
-      error: (err) => console.error("Error deleting task", err),
+      error: (err) => {
+        this.alertService.show("error", "Error deleting task.");
+      },
     });
   }
 
@@ -100,20 +110,38 @@ export class TaskService {
             )
           );
         },
-        error: (err) =>
-          console.error("Error deleting tasks by kanbanColumn", err),
+        error: (err) => {
+          this.alertService.show("error", "Error deleting tasks in column.");
+        },
       });
   }
 
   /**
-   * Deletes all tasks (irreversible).
+   * Deletes all tasks for a given board (across all its columns).
+   * @param boardId Board ID
+   * @returns Observable for completion tracking
+   */
+  deleteAllTasksByBoardId(boardId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/board/${boardId}`).pipe(
+      tap(() => {
+        this.loadTasks();
+      }),
+      catchError((err) => {
+        this.alertService.show("error", "Error deleting all tasks for board.");
+        throw err;
+      })
+    );
+  }
+
+  /**
+   * Deletes all tasks.
    * @returns Observable for completion tracking
    */
   deleteAllTasks(): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/all`).pipe(
       tap(() => this.tasksSignal.set([])),
       catchError((err) => {
-        console.error("Error deleting all tasks", err);
+        this.alertService.show("error", "Error deleting all tasks.");
         throw err;
       })
     );
@@ -127,13 +155,17 @@ export class TaskService {
   async uploadAttachment(taskId: number, file: File): Promise<void> {
     const formData = new FormData();
     formData.append("file", file);
-    const updated = await firstValueFrom(
-      this.http.post<Task>(`${this.apiUrl}/${taskId}/attachments`, formData)
-    );
-    if (!updated) return;
-    this.tasksSignal.set(
-      this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
-    );
+    try {
+      const updated = await firstValueFrom(
+        this.http.post<Task>(`${this.apiUrl}/${taskId}/attachments`, formData)
+      );
+      if (!updated) return;
+      this.tasksSignal.set(
+        this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
+      );
+    } catch (err) {
+      this.alertService.show("error", "Error uploading attachment.");
+    }
   }
 
   /**
@@ -145,12 +177,17 @@ export class TaskService {
         `${this.apiUrl}/${taskId}/attachments/${encodeURIComponent(filename)}`,
         { responseType: "blob" }
       )
-      .subscribe((blob) => {
-        const link = document.createElement("a");
-        link.href = window.URL.createObjectURL(blob);
-        link.download = filename;
-        link.click();
-        window.URL.revokeObjectURL(link.href);
+      .subscribe({
+        next: (blob) => {
+          const link = document.createElement("a");
+          link.href = window.URL.createObjectURL(blob);
+          link.download = filename;
+          link.click();
+          window.URL.revokeObjectURL(link.href);
+        },
+        error: () => {
+          this.alertService.show("error", "Error downloading attachment.");
+        },
       });
   }
 
@@ -158,14 +195,18 @@ export class TaskService {
    * Deletes an attachment for a given task.
    */
   async deleteAttachment(taskId: number, filename: string): Promise<void> {
-    const updated = await firstValueFrom(
-      this.http.delete<Task>(
-        `${this.apiUrl}/${taskId}/attachments/${encodeURIComponent(filename)}`
-      )
-    );
-    if (!updated) return;
-    this.tasksSignal.set(
-      this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
-    );
+    try {
+      const updated = await firstValueFrom(
+        this.http.delete<Task>(
+          `${this.apiUrl}/${taskId}/attachments/${encodeURIComponent(filename)}`
+        )
+      );
+      if (!updated) return;
+      this.tasksSignal.set(
+        this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
+      );
+    } catch (err) {
+      this.alertService.show("error", "Error deleting attachment.");
+    }
   }
 }

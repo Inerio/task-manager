@@ -4,7 +4,6 @@ import com.inerio.taskmanager.model.Board;
 import com.inerio.taskmanager.model.KanbanColumn;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Spring Data JPA repository for {@link KanbanColumn} entities.
@@ -18,14 +17,12 @@ import java.util.Optional;
  * </ul>
  */
 public interface KanbanColumnRepository extends JpaRepository<KanbanColumn, Long> {
-
     /**
-     * Finds a KanbanColumn (column) by its unique name.
-     *
-     * @param name the unique column name
-     * @return an {@code Optional} containing the found {@link KanbanColumn}, or empty if not found
+     * Finds all columns for a given board.
+     * @param boardId the board id
+     * @return list of columns
      */
-    Optional<KanbanColumn> findByName(String name);
+    List<KanbanColumn> findByBoardId(Long boardId);
 
     /**
      * Retrieves all KanbanColumns ordered by their persistent position (for stable board rendering).

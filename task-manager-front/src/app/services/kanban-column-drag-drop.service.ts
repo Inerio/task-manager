@@ -1,6 +1,7 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, signal, inject } from "@angular/core";
 import { KanbanColumnService } from "./kanban-column.service";
 import { setColumnDragData, isColumnDragEvent } from "../utils/drag-drop-utils";
+import { AlertService } from "./alert.service";
 
 /* ==== COLUMN DRAG & DROP SERVICE ==== */
 @Injectable({ providedIn: "root" })
@@ -10,7 +11,9 @@ export class ColumnDragDropService {
   // Index currently hovered during drag, or null if none.
   readonly dragOverIndex = signal<number | null>(null);
 
-  constructor(private kanbanColumnService: KanbanColumnService) {}
+  // Modern Angular injection
+  private readonly kanbanColumnService = inject(KanbanColumnService);
+  private readonly alert = inject(AlertService);
 
   /**
    * Called when a column drag starts.
@@ -75,7 +78,7 @@ export class ColumnDragDropService {
           afterDrop?.();
         },
         error: (err) => {
-          console.error("Move error:", err);
+          this.alert.show("error", "Move error: Could not move column.");
           this.resetDragState();
         },
       });

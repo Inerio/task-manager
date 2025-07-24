@@ -183,14 +183,19 @@ export class AppComponent {
   /** Handler for "Delete all tasks" (top-right of board header) */
   async deleteAllTasks() {
     if (this.editingSelectedBoard()) return;
+    const selectedBoard = this.getSelectedBoard();
+    if (!selectedBoard || typeof selectedBoard.id !== "number") return;
+
     const confirmed = await this.confirmDialog.open(
-      "Global deletion",
-      "Are you sure you want to delete all tasks?"
+      "Board deletion",
+      "Are you sure you want to delete all tasks in this board?"
     );
     if (!confirmed) return;
-    this.taskService.deleteAllTasks().subscribe({
+
+    // Call new service method for board-specific deletion
+    this.taskService.deleteAllTasksByBoardId(selectedBoard.id).subscribe({
       next: () => this.taskService.loadTasks(),
-      error: (err) => alert("Error while deleting all tasks."),
+      error: (err) => alert("Error while deleting all tasks for this board."),
     });
   }
 

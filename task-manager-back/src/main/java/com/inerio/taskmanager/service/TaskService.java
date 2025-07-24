@@ -176,6 +176,18 @@ public class TaskService {
     }
 
     /**
+     * Deletes all tasks belonging to all columns of a given board.
+     * @param boardId ID of the board whose tasks should be deleted.
+     */
+    @Transactional
+    public void deleteTasksByBoardId(Long boardId) {
+        List<KanbanColumn> columns = kanbanColumnRepository.findByBoardId(boardId);
+        for (KanbanColumn column : columns) {
+            deleteTasksByKanbanColumnId(column.getId());
+        }
+    }
+
+    /**
      * Deletes all tasks in the database (and all attachments).
      */
     public void deleteAllTasks() {

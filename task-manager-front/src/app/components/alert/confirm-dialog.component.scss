@@ -10,25 +10,48 @@
   align-items: center;
   justify-content: center;
 }
+
 .confirm-dialog {
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 2px 24px #0002;
   padding: 2rem 2.5rem 1.5rem 2.5rem;
   min-width: 320px;
-  max-width: 90vw;
+  max-width: 700px;
+  width: 90vw;
   text-align: center;
   animation: popIn 0.17s cubic-bezier(0.5, 1.2, 0.5, 1.07);
+  overflow: hidden;
 }
+
 .confirm-dialog h3 {
   margin-top: 0;
+  word-break: break-word;
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
 }
+
+.confirm-dialog p {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-line;
+  font-size: 1.1em;
+  max-height: 7em;
+  overflow-y: auto;
+  text-align: center;
+}
+
 .confirm-dialog .btn-group {
   display: flex;
   gap: 1.2rem;
   justify-content: center;
   margin-top: 2.2rem;
 }
+
 @keyframes popIn {
   from {
     transform: scale(0.93);

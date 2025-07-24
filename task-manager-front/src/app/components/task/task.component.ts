@@ -39,6 +39,51 @@ export class TaskComponent implements OnChanges {
   acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
   maxSize = 5 * 1024 * 1024;
 
+  /* ==== TRUNCATE/EXPAND LOGIC ==== */
+  readonly TITLE_TRUNCATE = 32;
+  readonly DESC_TRUNCATE = 120;
+
+  showFullTitle = signal(false);
+  showFullDescription = signal(false);
+
+  /** Displayed (possibly truncated) title */
+  readonly displayedTitle = computed(() => {
+    const title = this.localTask().title ?? "";
+    if (this.showFullTitle() || !title) return title;
+    if (title.length <= this.TITLE_TRUNCATE) return title;
+    return title.slice(0, this.TITLE_TRUNCATE) + "…";
+  });
+
+  /** Displayed (possibly truncated) description */
+  readonly displayedDescription = computed(() => {
+    const desc = this.localTask().description ?? "";
+    if (this.showFullDescription() || !desc) return desc;
+    if (desc.length <= this.DESC_TRUNCATE) return desc;
+    return desc.slice(0, this.DESC_TRUNCATE) + "…";
+  });
+
+  /** Title should be truncatable (shows hand cursor) */
+  readonly canTruncateTitle = computed(() => {
+    const title = this.localTask().title ?? "";
+    return title.length > this.TITLE_TRUNCATE;
+  });
+
+  /** Description should be truncatable */
+  readonly canTruncateDescription = computed(() => {
+    const desc = this.localTask().description ?? "";
+    return desc.length > this.DESC_TRUNCATE;
+  });
+
+  /** Toggle expanded/collapsed view for title */
+  toggleTitleTruncate = () => {
+    if (this.canTruncateTitle()) this.showFullTitle.set(!this.showFullTitle());
+  };
+  /** Toggle expanded/collapsed view for description */
+  toggleDescriptionTruncate = () => {
+    if (this.canTruncateDescription())
+      this.showFullDescription.set(!this.showFullDescription());
+  };
+
   /* ==== LIFECYCLE ==== */
   constructor() {
     // Keeps localTask in sync with input changes
@@ -50,6 +95,9 @@ export class TaskComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["task"] && this.task) {
       this.localTask.set({ ...this.task });
+      // Optionally reset expand state when switching task
+      this.showFullTitle.set(false);
+      this.showFullDescription.set(false);
     }
   }
 

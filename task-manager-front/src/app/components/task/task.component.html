@@ -8,26 +8,75 @@
   (dragstart)="onTaskDragStart($event)"
   (dragend)="onTaskDragEnd()"
 >
-  <!-- Due date badge -->
-  @if (dueBadge()) {
-  <span class="due-badge" [class.late]="dueBadge() === 'Late!'">
-    {{ dueBadge() }}
-  </span>
-  }
-
-  <!-- Completed status checkbox -->
-  <input
-    type="checkbox"
-    class="task-checkbox-icon"
-    [checked]="localTask().completed"
-    (change)="toggleCompleted()"
-  />
-
-  <!-- Read-only view -->
+  <!-- ==== READ-ONLY MODE ==== -->
   @if (!localTask().isEditing) {
   <div class="task-content-readonly">
-    <h4 [innerHTML]="localTask().title | linkify"></h4>
-    <p [innerHTML]="localTask().description | linkify"></p>
+    <!-- If NO due date badge: Title + Checkbox on same row at the very top -->
+    @if (!dueBadge()) {
+    <div class="task-title-row">
+      <!-- Title -->
+      <h4
+        [innerHTML]="displayedTitle() | linkify"
+        [class.truncated]="canTruncateTitle() && !showFullTitle()"
+        (click)="toggleTitleTruncate()"
+        [style.cursor]="canTruncateTitle() ? 'pointer' : 'auto'"
+        [title]="
+          canTruncateTitle()
+            ? showFullTitle()
+              ? 'Hide full title'
+              : 'Show full title'
+            : null
+        "
+      ></h4>
+      <!-- Checkbox aligned with title -->
+      <input
+        type="checkbox"
+        class="task-checkbox-icon-inline"
+        [checked]="localTask().completed"
+        (change)="toggleCompleted()"
+      />
+    </div>
+    }
+    <!-- If badge: badge left, checkbox right, title below badge -->
+    @else {
+    <span class="due-badge" [class.late]="dueBadge() === 'Late!'">
+      {{ dueBadge() }}
+    </span>
+    <input
+      type="checkbox"
+      class="task-checkbox-icon"
+      [checked]="localTask().completed"
+      (change)="toggleCompleted()"
+    />
+    <h4
+      [innerHTML]="displayedTitle() | linkify"
+      [class.truncated]="canTruncateTitle() && !showFullTitle()"
+      (click)="toggleTitleTruncate()"
+      [style.cursor]="canTruncateTitle() ? 'pointer' : 'auto'"
+      [title]="
+        canTruncateTitle()
+          ? showFullTitle()
+            ? 'Hide full title'
+            : 'Show full title'
+          : null
+      "
+    ></h4>
+    }
+
+    <!-- Description (truncated/clickable) -->
+    <p
+      [innerHTML]="displayedDescription() | linkify"
+      [class.truncated]="canTruncateDescription() && !showFullDescription()"
+      (click)="toggleDescriptionTruncate()"
+      [style.cursor]="canTruncateDescription() ? 'pointer' : 'auto'"
+      [title]="
+        canTruncateDescription()
+          ? showFullDescription()
+            ? 'Hide full description'
+            : 'Show full description'
+          : null
+      "
+    ></p>
 
     <app-attachment-zone
       [attachments]="localTask().attachments ?? []"
@@ -49,8 +98,9 @@
   </div>
   }
 
-  <!-- Edit mode -->
+  <!-- ==== EDIT MODE ==== -->
   @else {
+  <!-- Editable task title input -->
   <input
     class="form-control"
     type="text"
@@ -60,6 +110,7 @@
     required
     autocomplete="off"
   />
+  <!-- Editable task description textarea -->
   <textarea
     class="form-control textarea"
     [value]="localTask().description"
@@ -68,6 +119,7 @@
     required
     rows="4"
   ></textarea>
+  <!-- Editable due date input -->
   <input
     class="form-control"
     type="date"
@@ -77,6 +129,7 @@
     autocomplete="off"
   />
 
+  <!-- File attachments zone (edit mode) -->
   <app-attachment-zone
     [attachments]="localTask().attachments ?? []"
     [acceptTypes]="acceptTypes"
@@ -86,6 +139,7 @@
     (fileDownloaded)="onDownloadAttachment($event)"
   ></app-attachment-zone>
 
+  <!-- Action buttons: Save / Cancel -->
   <div class="btn-group">
     <button class="btn btn-success" (click)="saveEdit()" title="Save">
       Save

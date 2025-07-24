@@ -4,14 +4,19 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px 0 #0001;
   margin-bottom: 1rem;
-  padding: 1.9rem 1rem 0.8rem 1rem; // Space for badge + checkbox
+  padding: 1.9rem 1rem 0.8rem 1rem;
   min-width: 0;
   max-width: 100%;
   transition: background-color 0.3s, box-shadow 0.2s;
   font-family: "Poppins", "Roboto", Arial, sans-serif;
 
+  // Lower padding-top ONLY if no badge (so title+checkbox go higher)
+  &:not(.has-badge) {
+    padding-top: 0.7rem;
+  }
+
   &.completed {
-    background-color: #e0ffe0 !important;
+    background-color: #e0ffe0;
     border-left: 4px solid #4caf50;
     transition: background-color 0.18s, border-color 0.18s;
   }
@@ -51,7 +56,6 @@
     position: absolute;
     top: 0.5rem;
     right: 1rem;
-    transform: scale(1.12);
     cursor: pointer;
     accent-color: #4caf50;
     z-index: 2;
@@ -60,6 +64,24 @@
     border-radius: 3px;
     border: 1px solid #ccc;
     padding: 2px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .task-checkbox-icon-inline {
+    margin-left: 0.7rem;
+    align-self: flex-start; // <- ensures top align
+    cursor: pointer;
+    accent-color: #4caf50;
+    z-index: 2;
+    background: white;
+    box-shadow: 0 0 2px #ccc;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    padding: 2px;
+    width: 18px;
+    height: 18px;
+    position: static;
   }
 
   &.editing {
@@ -67,10 +89,41 @@
   }
 
   .task-content-readonly {
+    .task-title-row {
+      display: flex;
+      align-items: flex-start; // align top
+      justify-content: space-between;
+      gap: 0.5rem; // tighter
+      margin-bottom: 0.1rem;
+
+      h4 {
+        font-size: 1.08rem;
+        font-weight: 700;
+        margin: 0;
+        background: none;
+        border: none;
+        padding: 0.1rem 0 0 0; // remove bottom padding
+        color: #232323;
+        word-break: break-word;
+        flex: 1 1 0;
+        min-width: 0;
+        transition: margin-top 0.14s;
+        &.truncated {
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: #1976d2;
+          cursor: pointer;
+          user-select: none;
+        }
+      }
+    }
+
     h4 {
       font-size: 1.08rem;
       font-weight: 700;
-      font-family: "Poppins", "Roboto", Arial, sans-serif;
       margin: 0 0 0.28rem 0;
       background: none;
       border: none;
@@ -78,6 +131,16 @@
       color: #232323;
       word-break: break-word;
       transition: margin-top 0.14s;
+      &.truncated {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: #1976d2;
+        cursor: pointer;
+        user-select: none;
+      }
     }
     p {
       background: #f7f9fc;
@@ -91,8 +154,20 @@
       word-break: break-word;
       overflow-wrap: anywhere;
       white-space: pre-line;
-      font-family: "Poppins", "Roboto", Arial, sans-serif;
       min-height: 24px;
+      &.truncated {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+        color: #1976d2;
+        user-select: none;
+        transition: background 0.14s;
+        &:hover {
+          background: #e6f2ff;
+        }
+      }
     }
   }
 }

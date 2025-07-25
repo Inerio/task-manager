@@ -50,6 +50,7 @@ export class ColumnDragDropService {
   /**
    * Handles drop event for column DnD.
    * Calls API to move column and refreshes local state.
+   * Instantly reorders UI for smooth experience.
    */
   onColumnDrop(boardId: number, event: DragEvent, afterDrop?: () => void) {
     if (!isColumnDragEvent(event)) {
@@ -69,6 +70,14 @@ export class ColumnDragDropService {
       this.resetDragState();
       return;
     }
+
+    // 🔥 Optimistic update: instant UI reorder before backend call
+    const newArr = [...kanbanColumnsRaw];
+    const [draggedColumn] = newArr.splice(currIdx, 1);
+    newArr.splice(targetIdx, 0, draggedColumn);
+    this.kanbanColumnService.reorderKanbanColumns(newArr);
+
+    // 🔁 Sync backend after
     this.kanbanColumnService
       .moveKanbanColumn(boardId, draggedId, targetIdx)
       .subscribe({

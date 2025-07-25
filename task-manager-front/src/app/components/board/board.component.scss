@@ -1,9 +1,29 @@
 .task-columns {
   display: flex;
-  justify-content: flex-start;
   align-items: flex-start;
+  width: 100%;
+  max-width: 1380px;
   padding: 1rem;
-  gap: 2rem;
+
+  &:has(.column-draggable:nth-child(2)):not(
+      :has(.column-draggable:nth-child(3))
+    ),
+  &:has(.column-draggable:nth-child(3)):not(
+      :has(.column-draggable:nth-child(4))
+    ),
+  &:has(.column-draggable:nth-child(4)):not(
+      :has(.column-draggable:nth-child(5))
+    ),
+  &:has(.column-draggable:nth-child(5)):not(
+      :has(.column-draggable:nth-child(6))
+    ) {
+    justify-content: space-between;
+    gap: 2rem;
+  }
+  &:has(.column-draggable:nth-child(6)) {
+    justify-content: flex-start;
+    gap: 2rem;
+  }
 }
 
 .column-draggable {
@@ -13,6 +33,7 @@
   box-shadow: 0 2px 12px 0 #0001;
   min-width: 260px;
   max-width: 260px;
+  width: 260px;
   margin-bottom: 1rem;
   position: relative;
 }

@@ -25,13 +25,4 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
      */
     @EntityGraph(attributePaths = "kanbanColumns")
     List<Board> findAllByOrderByNameAsc();
-
-    /**
-     * Finds a board by its ID, fetching its columns.
-     *
-     * @param id Board ID
-     * @return Optional board with columns
-     */
-    @EntityGraph(attributePaths = "kanbanColumns")
-    Optional<Board> findById(Long id);
 }

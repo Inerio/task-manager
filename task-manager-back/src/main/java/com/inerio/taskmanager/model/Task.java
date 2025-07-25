@@ -35,8 +35,8 @@ public class Task {
     @Column(nullable = false)
     private String title;
 
-    /** Task description (optional, max 500 chars). */
-    @Column(length = 500)
+    /** Task description */
+    @Column
     private String description;
 
     /** Completion status of the task (true if done, false otherwise). */

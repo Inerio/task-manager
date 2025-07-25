@@ -7,8 +7,11 @@ import { environment } from "../../environments/environment.local";
 /* ==== KANBAN COLUMN SERVICE ==== */
 @Injectable({ providedIn: "root" })
 export class KanbanColumnService {
+  // Internal signal for kanban columns (mutable only in service)
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
+  // Public computed signal for readonly access outside service
   readonly kanbanColumns = computed(() => this._kanbanColumns());
+
   private readonly _loading = signal(false);
   readonly loading = computed(() => this._loading());
 
@@ -86,5 +89,12 @@ export class KanbanColumnService {
       kanbanColumnId,
       targetPosition: targetIndex + 1,
     });
+  }
+
+  /**
+   * Optimistically reorder columns locally for instant UI feedback.
+   */
+  reorderKanbanColumns(newOrder: KanbanColumn[]): void {
+    this._kanbanColumns.set(newOrder);
   }
 }

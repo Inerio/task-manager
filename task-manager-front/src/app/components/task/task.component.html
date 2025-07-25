@@ -80,6 +80,7 @@
 
     <app-attachment-zone
       [attachments]="localTask().attachments ?? []"
+      [taskId]="localTask().id!"
       [acceptTypes]="acceptTypes"
       [maxSize]="maxSize"
       (filesUploaded)="onUploadFiles($event)"
@@ -132,6 +133,7 @@
   <!-- File attachments zone (edit mode) -->
   <app-attachment-zone
     [attachments]="localTask().attachments ?? []"
+    [taskId]="localTask().id!"
     [acceptTypes]="acceptTypes"
     [maxSize]="maxSize"
     (filesUploaded)="onUploadFiles($event)"

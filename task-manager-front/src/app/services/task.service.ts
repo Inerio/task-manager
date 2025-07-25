@@ -7,17 +7,17 @@ import {
   Signal,
   WritableSignal,
 } from "@angular/core";
-import { catchError, firstValueFrom, Observable, tap } from "rxjs";
+import { catchError, Observable, tap } from "rxjs";
 import { environment } from "../../environments/environment.local";
 import { Task } from "../models/task.model";
-import { AlertService } from "./alert.service"; // <-- Ajout
+import { AlertService } from "./alert.service";
 
 @Injectable({ providedIn: "root" })
 export class TaskService {
   /* ==== API & STATE SIGNALS ==== */
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrlTasks;
-  private readonly alertService = inject(AlertService); // <-- Ajout
+  private readonly alertService = inject(AlertService);
 
   // Holds all tasks loaded from backend (single source of truth)
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
@@ -25,9 +25,7 @@ export class TaskService {
 
   /* ==== TASKS: READ / FETCH ==== */
 
-  /**
-   * Loads all tasks from the backend and updates the signal.
-   */
+  /** Loads all tasks from the backend and updates the signal. */
   loadTasks(): void {
     this.http.get<Task[]>(this.apiUrl).subscribe({
       next: (data) => this.tasksSignal.set(data ?? []),
@@ -37,10 +35,7 @@ export class TaskService {
     });
   }
 
-  /**
-   * Returns a reactive signal with tasks for a given kanbanColumn.
-   * @param kanbanColumnId Column id
-   */
+  /** Returns a reactive signal with tasks for a given kanbanColumn. */
   getTasksByKanbanColumnId(kanbanColumnId: number): Signal<Task[]> {
     return computed(() =>
       this.tasksSignal().filter(
@@ -51,9 +46,7 @@ export class TaskService {
 
   /* ==== TASKS: CREATE & UPDATE ==== */
 
-  /**
-   * Creates a new task and adds it to the state.
-   */
+  /** Creates a new task and adds it to the state. */
   createTask(task: Task): void {
     this.http.post<Task>(this.apiUrl, task).subscribe({
       next: (newTask) => this.tasksSignal.set([...this.tasksSignal(), newTask]),
@@ -63,9 +56,7 @@ export class TaskService {
     });
   }
 
-  /**
-   * Updates an existing task by id.
-   */
+  /** Updates an existing task by id. */
   updateTask(id: number, updatedTask: Task): void {
     this.http.put<Task>(`${this.apiUrl}/${id}`, updatedTask).subscribe({
       next: (updated) => {
@@ -80,11 +71,16 @@ export class TaskService {
     });
   }
 
+  /** Directly update the state with a Task returned from API (used for attachment upload/delete) */
+  updateTaskFromApi(updated: Task): void {
+    this.tasksSignal.set(
+      this.tasksSignal().map((t) => (t.id === updated.id ? updated : t))
+    );
+  }
+
   /* ==== TASKS: DELETE ==== */
 
-  /**
-   * Deletes a single task by id.
-   */
+  /** Deletes a single task by id. */
   deleteTask(id: number): void {
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       next: () => {
@@ -96,9 +92,7 @@ export class TaskService {
     });
   }
 
-  /**
-   * Deletes all tasks for a specific kanbanColumn (by column id).
-   */
+  /** Deletes all tasks for a specific kanbanColumn (by column id). */
   deleteTasksByKanbanColumnId(kanbanColumnId: number): void {
     this.http
       .delete<void>(`${this.apiUrl}/kanbanColumn/${kanbanColumnId}`)
@@ -116,11 +110,7 @@ export class TaskService {
       });
   }
 
-  /**
-   * Deletes all tasks for a given board (across all its columns).
-   * @param boardId Board ID
-   * @returns Observable for completion tracking
-   */
+  /** Deletes all tasks for a given board (across all its columns). */
   deleteAllTasksByBoardId(boardId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/board/${boardId}`).pipe(
       tap(() => {
@@ -133,10 +123,7 @@ export class TaskService {
     );
   }
 
-  /**
-   * Deletes all tasks.
-   * @returns Observable for completion tracking
-   */
+  /** Deletes all tasks. */
   deleteAllTasks(): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/all`).pipe(
       tap(() => this.tasksSignal.set([])),
@@ -145,68 +132,5 @@ export class TaskService {
         throw err;
       })
     );
-  }
-
-  /* ==== ATTACHMENTS: UPLOAD / DOWNLOAD / DELETE ==== */
-
-  /**
-   * Uploads a file attachment for a given task.
-   */
-  async uploadAttachment(taskId: number, file: File): Promise<void> {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const updated = await firstValueFrom(
-        this.http.post<Task>(`${this.apiUrl}/${taskId}/attachments`, formData)
-      );
-      if (!updated) return;
-      this.tasksSignal.set(
-        this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
-      );
-    } catch (err) {
-      this.alertService.show("error", "Error uploading attachment.");
-    }
-  }
-
-  /**
-   * Downloads an attachment for a given task.
-   */
-  downloadAttachment(taskId: number, filename: string): void {
-    this.http
-      .get(
-        `${this.apiUrl}/${taskId}/attachments/${encodeURIComponent(filename)}`,
-        { responseType: "blob" }
-      )
-      .subscribe({
-        next: (blob) => {
-          const link = document.createElement("a");
-          link.href = window.URL.createObjectURL(blob);
-          link.download = filename;
-          link.click();
-          window.URL.revokeObjectURL(link.href);
-        },
-        error: () => {
-          this.alertService.show("error", "Error downloading attachment.");
-        },
-      });
-  }
-
-  /**
-   * Deletes an attachment for a given task.
-   */
-  async deleteAttachment(taskId: number, filename: string): Promise<void> {
-    try {
-      const updated = await firstValueFrom(
-        this.http.delete<Task>(
-          `${this.apiUrl}/${taskId}/attachments/${encodeURIComponent(filename)}`
-        )
-      );
-      if (!updated) return;
-      this.tasksSignal.set(
-        this.tasksSignal().map((t) => (t.id === taskId ? updated : t))
-      );
-    } catch (err) {
-      this.alertService.show("error", "Error deleting attachment.");
-    }
   }
 }

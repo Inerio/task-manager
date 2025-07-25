@@ -2,14 +2,15 @@ import {
   Component,
   ElementRef,
   EventEmitter,
-  inject,
   Input,
   Output,
-  signal,
   ViewChild,
+  inject,
+  signal,
 } from "@angular/core";
 import { AlertService } from "../../services/alert.service";
 import { isFileDragEvent } from "../../utils/drag-drop-utils";
+import { AttachmentService } from "../../services/attachment.service";
 
 /* ==== ATTACHMENT ZONE COMPONENT ==== */
 @Component({
@@ -19,20 +20,28 @@ import { isFileDragEvent } from "../../utils/drag-drop-utils";
   templateUrl: "./attachment-zone.component.html",
 })
 export class AttachmentZoneComponent {
-  /* ==== STATE & INPUTS ==== */
+  /* ==== INPUTS ==== */
   @Input({ required: true }) attachments!: string[];
+  @Input({ required: true }) taskId!: number;
   @Input() acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
   @Input() maxSize = 5 * 1024 * 1024;
+
+  /* ==== STATE ==== */
   isDragging = signal(false);
+  previewUrl = signal<string | null>(null);
+  previewFilename = signal<string | null>(null);
+  previewTop = signal(0);
+  previewLeft = signal(0);
+
   @ViewChild("fileInput") fileInput!: ElementRef<HTMLInputElement>;
-  private alertService = inject(AlertService);
+  private readonly attachmentService = inject(AttachmentService);
+  private readonly alertService = inject(AlertService);
 
   /* ==== OUTPUT EVENTS ==== */
   @Output() filesUploaded = new EventEmitter<File[]>();
   @Output() fileDeleted = new EventEmitter<string>();
   @Output() fileDownloaded = new EventEmitter<string>();
 
-  /* ==== UTILS ==== */
   trackByFilename(index: number, filename: string): string {
     return filename;
   }
@@ -41,17 +50,36 @@ export class AttachmentZoneComponent {
     this.fileInput?.nativeElement.click();
   }
 
-  /* ==== DRAG & DROP HANDLERS ==== */
+  isImage(filename: string): boolean {
+    return !!filename.match(/\.(png|jpe?g|gif|webp|bmp|svg)$/i);
+  }
+
+  buildAttachmentUrl(filename: string): string {
+    return this.attachmentService.buildAttachmentUrl(this.taskId, filename);
+  }
+
+  /* ==== PREVIEW ON HOVER ==== */
+  showPreview(filename: string, event: MouseEvent) {
+    if (!this.isImage(filename)) return;
+    this.previewFilename.set(filename);
+    this.previewUrl.set(this.buildAttachmentUrl(filename));
+    this.previewTop.set(event.clientY + 14);
+    this.previewLeft.set(event.clientX + 18);
+  }
+  hidePreview() {
+    this.previewUrl.set(null);
+    this.previewFilename.set(null);
+  }
+
+  /* ==== DRAG & DROP ==== */
   onDragOver(event: DragEvent) {
     if (!isFileDragEvent(event)) return;
     event.preventDefault();
     this.isDragging.set(true);
   }
-
   onDragLeave() {
     this.isDragging.set(false);
   }
-
   onFileDrop(event: DragEvent) {
     if (!isFileDragEvent(event)) return;
     event.preventDefault();
@@ -71,7 +99,7 @@ export class AttachmentZoneComponent {
     this.isDragging.set(false);
   }
 
-  /* ==== FILE INPUT HANDLER ==== */
+  /* ==== FILE INPUT ==== */
   onFileSelect(event: Event) {
     const files = (event.target as HTMLInputElement).files;
     if (files?.length) {
@@ -88,11 +116,10 @@ export class AttachmentZoneComponent {
     }
   }
 
-  /* ==== FILE ACTIONS ==== */
+  /* ==== FILE ACTIONS: Only emit to parent, logic in AttachmentService ==== */
   onDeleteAttachment(filename: string) {
     this.fileDeleted.emit(filename);
   }
-
   onDownloadAttachment(filename: string) {
     this.fileDownloaded.emit(filename);
   }

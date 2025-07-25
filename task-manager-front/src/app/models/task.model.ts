@@ -12,7 +12,7 @@ export interface Task {
   completed: boolean;
   kanbanColumnId: number;
   dueDate?: string | null;
-  isEditing?: boolean; // Used only in UI for edit state
+  isEditing?: boolean;
   attachments?: string[];
 }
 

@@ -13,6 +13,7 @@ import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
 import { TaskService } from "../../services/task.service";
+import { AttachmentService } from "../../services/attachment.service";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
 import { AlertService } from "../../services/alert.service";
 import { TaskDragDropService } from "../../services/task-drag-drop.service";
@@ -30,6 +31,7 @@ export class TaskComponent implements OnChanges {
 
   /* ==== SERVICES ==== */
   private readonly taskService = inject(TaskService);
+  private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
   private readonly dragDropService = inject(TaskDragDropService);
 
@@ -167,27 +169,36 @@ export class TaskComponent implements OnChanges {
         continue;
       }
       try {
-        await this.taskService.uploadAttachment(taskId, file);
-        await this.refreshTask(taskId);
+        const updated = await this.attachmentService.uploadAttachment(
+          taskId,
+          file
+        );
+        if (updated) {
+          this.taskService.updateTaskFromApi(updated);
+          this.localTask.set({ ...updated }); // always local update!
+        }
       } catch {
         this.alertService.show("error", "File upload error");
       }
     }
   }
-  onDeleteAttachment(filename: string) {
-    this.taskService
-      .deleteAttachment(this.localTask().id!, filename)
-      .catch(() => this.alertService.show("error", "File deletion error"));
+  async onDeleteAttachment(filename: string) {
+    const taskId = this.localTask().id!;
+    try {
+      const updated = await this.attachmentService.deleteAttachment(
+        taskId,
+        filename
+      );
+      if (updated) {
+        this.taskService.updateTaskFromApi(updated);
+        this.localTask.set({ ...updated });
+      }
+    } catch {
+      this.alertService.show("error", "File deletion error");
+    }
   }
   onDownloadAttachment(filename: string) {
-    this.taskService.downloadAttachment(this.localTask().id!, filename);
-  }
-  async refreshTask(taskId: number) {
-    const tasks = this.taskService.tasks();
-    const fresh = tasks.find((t) => t.id === taskId);
-    if (fresh) {
-      this.localTask.set({ ...fresh });
-    }
+    this.attachmentService.downloadAttachment(this.localTask().id!, filename);
   }
 
   /* ==== DUE BADGE (computed) ==== */

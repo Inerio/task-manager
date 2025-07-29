@@ -1,12 +1,10 @@
-@if (state().visible) {
+@if (visible()) {
 <div class="confirm-dialog-backdrop">
   <div class="confirm-dialog">
     <h3>{{ state().title }}</h3>
     <p>{{ state().message }}</p>
     <div class="btn-group">
-      <!-- Confirm button -->
       <button class="btn btn-success" (click)="confirm()">Yes</button>
-      <!-- Cancel button -->
       <button class="btn btn-secondary" (click)="cancel()">No</button>
     </div>
   </div>

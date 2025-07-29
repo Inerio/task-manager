@@ -1,6 +1,7 @@
-import { Component, inject } from "@angular/core";
+import { Component, inject, computed } from "@angular/core";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
+/* ==== CONFIRM DIALOG COMPONENT ==== */
 @Component({
   selector: "app-confirm-dialog",
   standalone: true,
@@ -8,9 +9,16 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   styleUrls: ["./confirm-dialog.component.scss"],
 })
 export class ConfirmDialogComponent {
-  confirmDialog = inject(ConfirmDialogService);
-  state = this.confirmDialog.state;
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
-  confirm = () => this.confirmDialog.confirm();
-  cancel = () => this.confirmDialog.cancel();
+  readonly state = this.confirmDialog.state;
+  readonly visible = computed(() => this.state().visible);
+
+  confirm(): void {
+    this.confirmDialog.confirm();
+  }
+
+  cancel(): void {
+    this.confirmDialog.cancel();
+  }
 }

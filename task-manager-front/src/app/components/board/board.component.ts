@@ -26,7 +26,7 @@ import { AlertService } from "../../services/alert.service";
   imports: [CommonModule, KanbanColumnComponent],
 })
 export class BoardComponent implements OnChanges {
-  /* ==== INPUTS ==== */
+  /* ==== INPUT ==== */
   private readonly _boardId = signal<number | null>(null);
   @Input({ required: true }) boardId!: number;
 
@@ -48,25 +48,24 @@ export class BoardComponent implements OnChanges {
   readonly draggedKanbanColumnId = this.columnDnD.draggedKanbanColumnId;
   readonly dragOverIndex = this.columnDnD.dragOverIndex;
 
-  /* ==== KANBAN COLUMNS ORDER (with preview) ==== */
   readonly kanbanColumns = computed(() => {
-    const kanbanColumnsRaw = this.kanbanColumnService.kanbanColumns();
+    const raw = this.kanbanColumnService.kanbanColumns();
     const draggedId = this.draggedKanbanColumnId();
     const overIdx = this.dragOverIndex();
-    if (draggedId == null || overIdx == null) return kanbanColumnsRaw;
-    const currIdx = kanbanColumnsRaw.findIndex((l) => l.id === draggedId);
-    if (currIdx === -1 || currIdx === overIdx) return kanbanColumnsRaw;
-    const newArr = kanbanColumnsRaw.slice();
-    const [dragged] = newArr.splice(currIdx, 1);
-    newArr.splice(overIdx, 0, dragged);
-    return newArr;
+    if (draggedId == null || overIdx == null) return raw;
+    const currIdx = raw.findIndex((c) => c.id === draggedId);
+    if (currIdx === -1 || currIdx === overIdx) return raw;
+    const copy = raw.slice();
+    const [dragged] = copy.splice(currIdx, 1);
+    copy.splice(overIdx, 0, dragged);
+    return copy;
   });
 
   constructor() {
     effect(() => {
-      const boardId = this._boardId();
-      if (boardId) {
-        this.kanbanColumnService.loadKanbanColumns(boardId);
+      const id = this._boardId();
+      if (id != null) {
+        this.kanbanColumnService.loadKanbanColumns(id);
         this.taskService.loadTasks();
       }
     });
@@ -78,119 +77,114 @@ export class BoardComponent implements OnChanges {
     }
   }
 
-  /* ==== DRAG & DROP COLUMNS ==== */
-  onColumnDragStart(kanbanColumnId: number, idx: number, event: DragEvent) {
+  /* ==== DRAG & DROP ==== */
+  onColumnDragStart(id: number, idx: number, e: DragEvent) {
     if (this.editingTitleId()) return;
-    this.columnDnD.onColumnDragStart(kanbanColumnId, idx, event);
+    this.columnDnD.onColumnDragStart(id, idx, e);
   }
-  onColumnDragEnter(idx: number, event: DragEvent) {
+
+  onColumnDragEnter(idx: number, e: DragEvent) {
     if (this.editingTitleId()) return;
-    this.columnDnD.onColumnDragEnter(idx, event);
+    this.columnDnD.onColumnDragEnter(idx, e);
   }
-  onColumnDragOver(idx: number, event: DragEvent) {
+
+  onColumnDragOver(idx: number, e: DragEvent) {
     if (this.editingTitleId()) return;
-    this.columnDnD.onColumnDragOver(idx, event);
+    this.columnDnD.onColumnDragOver(idx, e);
   }
-  onColumnDrop(event: DragEvent) {
+
+  onColumnDrop(e: DragEvent) {
     if (this.editingTitleId()) return;
-    const boardId = this._boardId();
-    if (boardId) this.columnDnD.onColumnDrop(boardId, event);
+    const id = this._boardId();
+    if (id != null) this.columnDnD.onColumnDrop(id, e);
   }
+
   onColumnDragEnd() {
     if (this.editingTitleId()) return;
     this.columnDnD.onColumnDragEnd();
   }
 
-  /* ==== ADD COLUMN ==== */
+  /* ==== ADD ==== */
   addKanbanColumnAndEdit(): void {
-    if (this.kanbanColumns().length >= this.MAX_KANBANCOLUMNS) return;
-    if (this.editingTitleId()) return;
-    const boardId = this._boardId();
-    if (!boardId) return;
-    this.kanbanColumnService.createKanbanColumn("", boardId).subscribe({
+    const id = this._boardId();
+    if (
+      !id ||
+      this.kanbanColumns().length >= this.MAX_KANBANCOLUMNS ||
+      this.editingTitleId()
+    )
+      return;
+    this.kanbanColumnService.createKanbanColumn("", id).subscribe({
       next: () => {
-        this.kanbanColumnService.loadKanbanColumns(boardId);
+        this.kanbanColumnService.loadKanbanColumns(id);
         setTimeout(() => {
-          const last = this.kanbanColumnService.kanbanColumns().slice(-1)[0];
+          const last = this.kanbanColumnService.kanbanColumns().at(-1);
           if (last) this.startEditTitle(last);
         }, 150);
       },
       error: () => {
-        this.addKanbanColumnError.set("Failed to create kanban column.");
         this.alert.show("error", "Failed to create kanban column.");
+        this.addKanbanColumnError.set("Failed to create kanban column.");
       },
     });
   }
 
-  /* ==== DELETE COLUMN ==== */
-  async deleteKanbanColumn(kanbanColumnId: number, kanbanColumnName: string) {
+  /* ==== DELETE ==== */
+  async deleteKanbanColumn(id: number, name: string) {
     if (this.editingTitleId()) return;
     const boardId = this._boardId();
     if (!boardId) return;
     const confirmed = await this.confirmDialog.open(
       "Delete column",
-      `Delete column “${kanbanColumnName}” and all its tasks?`
+      `Delete column “${name}” and all its tasks?`
     );
     if (!confirmed) return;
-    this.kanbanColumnService
-      .deleteKanbanColumn(kanbanColumnId, boardId)
-      .subscribe({
-        next: () => {},
-        error: (err) => {
-          this.alert.show("error", "Error while deleting column.");
-        },
-      });
+    this.kanbanColumnService.deleteKanbanColumn(id, boardId).subscribe({
+      error: () => this.alert.show("error", "Error while deleting column."),
+    });
   }
 
-  /* ==== DELETE ALL TASKS IN COLUMN ==== */
-  async deleteAllInColumn(kanbanColumnId: number, kanbanColumnName: string) {
+  async deleteAllInColumn(id: number, name: string) {
     if (this.editingTitleId()) return;
     const confirmed = await this.confirmDialog.open(
       "Delete tasks",
-      `Delete all tasks in “${kanbanColumnName}”?`
+      `Delete all tasks in “${name}”?`
     );
     if (!confirmed) return;
     try {
-      this.taskService.deleteTasksByKanbanColumnId(kanbanColumnId);
-    } catch (e) {
+      this.taskService.deleteTasksByKanbanColumnId(id);
+    } catch {
       this.alert.show("error", "Error while deleting all tasks in column.");
     }
   }
 
-  /* ==== EDIT COLUMN TITLE ==== */
-  startEditTitle(kanbanColumn: KanbanColumn) {
+  /* ==== EDIT ==== */
+  startEditTitle(column: KanbanColumn) {
     if (this.editingTitleId()) return;
-    this.editingTitleId.set(kanbanColumn.id!);
-    this.editingTitleValue.set(kanbanColumn.name);
+    this.editingTitleId.set(column.id!);
+    this.editingTitleValue.set(column.name);
     setTimeout(() => {
-      const input = document.getElementById(
-        `edit-kanbanColumn-title-${kanbanColumn.id}`
-      ) as HTMLInputElement | null;
-      if (input) input.focus();
-    }, 0);
+      const el = document.getElementById(
+        `edit-kanbanColumn-title-${column.id}`
+      ) as HTMLInputElement;
+      el?.focus();
+    });
   }
 
-  saveTitleEdit(kanbanColumn: KanbanColumn) {
+  saveTitleEdit(column: KanbanColumn) {
     const newName = this.editingTitleValue().trim();
-    if (!newName) return;
-    if (newName === kanbanColumn.name) {
+    if (!newName || newName === column.name) {
       this.editingTitleId.set(null);
       return;
     }
     const boardId = this._boardId();
     if (!boardId) return;
-    const updated: KanbanColumn = {
-      ...kanbanColumn,
-      name: newName,
-      position: kanbanColumn.position,
-      boardId: boardId,
-    };
+    const updated: KanbanColumn = { ...column, name: newName, boardId };
     this.kanbanColumnService.updateKanbanColumn(updated).subscribe({
       next: () => {
         this.editingTitleId.set(null);
         this.kanbanColumnService.loadKanbanColumns(boardId);
       },
-      error: (err) => {
+      error: () => {
         this.alert.show("error", "Error while renaming column.");
         this.editingTitleId.set(null);
       },
@@ -199,17 +193,13 @@ export class BoardComponent implements OnChanges {
 
   cancelTitleEdit() {
     const id = this.editingTitleId();
-    const currKanbanColumn = this.kanbanColumnService
+    const column = this.kanbanColumnService
       .kanbanColumns()
-      .find((l) => l.id === id);
+      .find((c) => c.id === id);
     const boardId = this._boardId();
-    if (
-      currKanbanColumn &&
-      (!currKanbanColumn.name || currKanbanColumn.name.trim() === "") &&
-      boardId
-    ) {
+    if (column && !column.name?.trim() && boardId) {
       this.kanbanColumnService
-        .deleteKanbanColumn(currKanbanColumn.id!, boardId)
+        .deleteKanbanColumn(column.id!, boardId)
         .subscribe({
           next: () => this.editingTitleId.set(null),
           error: () => {
@@ -223,11 +213,11 @@ export class BoardComponent implements OnChanges {
   }
 
   onEditTitleInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.editingTitleValue.set(input.value);
+    const value = (event.target as HTMLInputElement).value;
+    this.editingTitleValue.set(value);
   }
 
-  isEditingTitle(kanbanColumn: KanbanColumn) {
-    return this.editingTitleId() === kanbanColumn.id;
+  isEditingTitle(column: KanbanColumn) {
+    return this.editingTitleId() === column.id;
   }
 }

@@ -1,5 +1,4 @@
 <div class="task-kanbanColumn">
-  <!-- Drag & drop area for tasks -->
   <div
     class="task-dropzone"
     [class.drag-over]="isDragOver()"
@@ -7,22 +6,19 @@
     (dragleave)="onTaskDragLeave()"
     (drop)="onTaskDrop($event)"
   >
-    <!-- List all tasks in this column -->
     @for (task of filteredTasks(); track trackById($index, task)) {
-    <app-task-item [task]="task"></app-task-item>
+    <app-task-item [task]="task" />
     }
 
-    <!-- Button to show the add-task form -->
     <button (click)="toggleForm()" class="add-btn">+ Add task</button>
 
-    <!-- Add-task form, shown only if showForm() -->
     @if (showForm()) {
     <div class="add-task-form">
       <input
         class="form-control"
         type="text"
         [value]="newTask().title"
-        (input)="updateNewTaskTitle($event)"
+        (input)="updateNewTaskField('title', $any($event.target).value)"
         placeholder="Task title"
         required
         autocomplete="off"
@@ -30,7 +26,7 @@
       <textarea
         class="form-control textarea"
         [value]="newTask().description"
-        (input)="updateNewTaskDescription($event)"
+        (input)="updateNewTaskField('description', $any($event.target).value)"
         placeholder="Description"
         required
         rows="4"
@@ -39,7 +35,7 @@
         class="form-control"
         type="date"
         [value]="newTask().dueDate ?? ''"
-        (input)="updateNewTaskDueDate($event)"
+        (input)="updateNewTaskField('dueDate', $any($event.target).value)"
         placeholder="Due date (optional)"
         autocomplete="off"
       />

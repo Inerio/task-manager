@@ -15,6 +15,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { KanbanColumnService } from "../../services/kanban-column.service";
 import { TaskDragDropService } from "../../services/task-drag-drop.service";
 
+/* ==== KANBAN COLUMN COMPONENT ==== */
 @Component({
   selector: "app-kanban-column",
   standalone: true,
@@ -33,12 +34,20 @@ export class KanbanColumnComponent {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dragDropService = inject(TaskDragDropService);
 
-  /* ==== TASK CREATION ==== */
-  showForm = signal(false);
-  newTask = signal<Partial<Task>>(this.getEmptyTask());
+  /* ==== STATE ==== */
+  readonly showForm = signal(false);
+  readonly isDragOver = signal(false);
+  readonly newTask = signal<Partial<Task>>(this.getEmptyTask());
 
+  readonly filteredTasks: Signal<Task[]> = computed(() =>
+    this.taskService
+      .tasks()
+      .filter((task) => task.kanbanColumnId === this.kanbanColumnId)
+  );
+
+  /* ==== TASK CREATION ==== */
   toggleForm(): void {
-    this.showForm.update((current) => !current);
+    this.showForm.update((v) => !v);
     if (!this.showForm()) this.resetForm();
   }
 
@@ -70,22 +79,11 @@ export class KanbanColumnComponent {
     };
   }
 
-  updateNewTaskTitle(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.newTask.set({ ...this.newTask(), title: target.value });
+  updateNewTaskField(field: keyof Task, value: string | null): void {
+    this.newTask.set({ ...this.newTask(), [field]: value ?? "" });
   }
 
-  updateNewTaskDescription(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.newTask.set({ ...this.newTask(), description: target.value });
-  }
-
-  updateNewTaskDueDate(event: Event): void {
-    const value = (event.target as HTMLInputElement).value || null;
-    this.newTask.set({ ...this.newTask(), dueDate: value });
-  }
-
-  /* ==== DELETE ALL TASKS ==== */
+  /* ==== DELETE ==== */
   async deleteAllInColumn(): Promise<void> {
     const confirmed = await this.confirmDialog.open(
       "Delete all tasks",
@@ -95,16 +93,7 @@ export class KanbanColumnComponent {
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
-  /* ==== TASK FILTERING ==== */
-  readonly filteredTasks: Signal<Task[]> = computed(() =>
-    this.taskService
-      .tasks()
-      .filter((task) => task.kanbanColumnId === this.kanbanColumnId)
-  );
-
-  /* ==== DRAG & DROP TASKS ==== */
-  isDragOver = signal(false);
-
+  /* ==== DRAG & DROP ==== */
   onTaskDragOver(event: DragEvent): void {
     this.dragDropService.handleKanbanColumnDragOver(
       event,

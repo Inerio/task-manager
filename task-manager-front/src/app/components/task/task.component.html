@@ -11,10 +11,8 @@
   <!-- ==== READ-ONLY MODE ==== -->
   @if (!localTask().isEditing) {
   <div class="task-content-readonly">
-    <!-- If NO due date badge: Title + Checkbox on same row at the very top -->
     @if (!dueBadge()) {
     <div class="task-title-row">
-      <!-- Title -->
       <h4
         [innerHTML]="displayedTitle() | linkify"
         [class.truncated]="canTruncateTitle() && !showFullTitle()"
@@ -28,7 +26,6 @@
             : null
         "
       ></h4>
-      <!-- Checkbox aligned with title -->
       <input
         type="checkbox"
         class="task-checkbox-icon-inline"
@@ -36,9 +33,7 @@
         (change)="toggleCompleted()"
       />
     </div>
-    }
-    <!-- If badge: badge left, checkbox right, title below badge -->
-    @else {
+    } @else {
     <span class="due-badge" [class.late]="dueBadge() === 'Late!'">
       {{ dueBadge() }}
     </span>
@@ -63,7 +58,6 @@
     ></h4>
     }
 
-    <!-- Description (truncated/clickable) -->
     <p
       [innerHTML]="displayedDescription() | linkify"
       [class.truncated]="canTruncateDescription() && !showFullDescription()"
@@ -105,8 +99,7 @@
   <input
     class="form-control"
     type="text"
-    [value]="localTask().title"
-    (input)="updateTitleFromEvent($event)"
+    [(ngModel)]="localTask().title"
     placeholder="Task title"
     required
     autocomplete="off"
@@ -114,8 +107,7 @@
   <!-- Editable task description textarea -->
   <textarea
     class="form-control textarea"
-    [value]="localTask().description"
-    (input)="updateDescriptionFromEvent($event)"
+    [(ngModel)]="localTask().description"
     placeholder="Description"
     required
     rows="4"
@@ -124,13 +116,11 @@
   <input
     class="form-control"
     type="date"
-    [value]="localTask().dueDate ?? ''"
-    (input)="updateDueDateFromEvent($event)"
+    [(ngModel)]="localTask().dueDate"
     placeholder="Due date (optional)"
     autocomplete="off"
   />
 
-  <!-- File attachments zone (edit mode) -->
   <app-attachment-zone
     [attachments]="localTask().attachments ?? []"
     [taskId]="localTask().id!"
@@ -141,7 +131,6 @@
     (fileDownloaded)="onDownloadAttachment($event)"
   ></app-attachment-zone>
 
-  <!-- Action buttons: Save / Cancel -->
   <div class="btn-group">
     <button class="btn btn-success" (click)="saveEdit()" title="Save">
       Save

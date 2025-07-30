@@ -2,6 +2,7 @@ package com.inerio.taskmanager.service;
 
 import com.inerio.taskmanager.dto.TaskDto;
 import com.inerio.taskmanager.dto.TaskMapperDto;
+import com.inerio.taskmanager.dto.TaskReorderDto;
 import com.inerio.taskmanager.exception.TaskNotFoundException;
 import com.inerio.taskmanager.model.Task;
 import com.inerio.taskmanager.model.KanbanColumn;
@@ -16,6 +17,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -203,14 +205,23 @@ public class TaskService {
     // ==============================
 
     /**
-     * Moves a task to a new column and/or a new position.
+     * Moves a task to a new column and/or a new position, without shifting other tasks in either column.
      * <p>
-     * Ensures all positions in each column remain unique and continuous.
+     * This method is intentionally minimal: it simply updates the task's column reference and assigns it the provided position.
+     * <b>Important:</b> The actual reordering and normalization of all positions in the target column is
+     * expected to be handled by a subsequent call to {@link #reorderTasks(List)}. This avoids double logic
+     * and keeps position consistency delegated to a single endpoint.
      * </p>
      *
-     * @param taskId         ID of the task to move.
-     * @param targetKanbanColumnId   ID of the target column.
-     * @param targetPosition Zero-based position in the target column.
+     * <ul>
+     *   <li>Does <b>not</b> shift any other task positions.</li>
+     *   <li>Should always be followed by a call to <b>/reorder</b> (frontend responsibility).</li>
+     *   <li>Leads to consistent, predictable state on both client and server.</li>
+     * </ul>
+     *
+     * @param taskId ID of the task to move.
+     * @param targetKanbanColumnId ID of the target Kanban column.
+     * @param targetPosition Zero-based index in the target column (for information only; will be normalized by reorder).
      * @throws TaskNotFoundException if the task does not exist.
      * @throws RuntimeException if the target column does not exist.
      */
@@ -218,59 +229,38 @@ public class TaskService {
     public void moveTask(Long taskId, Long targetKanbanColumnId, int targetPosition) {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
-        KanbanColumn oldKanbanColumn = task.getKanbanColumn();
-        int oldPosition = task.getPosition();
-
-        KanbanColumn newKanbanColumn = kanbanColumnRepository.findById(targetKanbanColumnId)
+        KanbanColumn targetColumn = kanbanColumnRepository.findById(targetKanbanColumnId)
             .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + targetKanbanColumnId));
 
-        if (oldKanbanColumn.getId().equals(newKanbanColumn.getId())) {
-            // Move within same column
-            if (targetPosition == oldPosition) return; // nothing to do
-
-            List<Task> tasks = taskRepository.findByKanbanColumnOrderByPositionAsc(oldKanbanColumn);
-            if (targetPosition < oldPosition) {
-                // Moving up: shift down all between [targetPosition, oldPosition-1]
-                for (Task t : tasks) {
-                    int p = t.getPosition();
-                    if (p >= targetPosition && p < oldPosition) {
-                        t.setPosition(p + 1);
-                    }
-                }
-            } else {
-                // Moving down: shift up all between [oldPosition+1, targetPosition]
-                for (Task t : tasks) {
-                    int p = t.getPosition();
-                    if (p > oldPosition && p <= targetPosition) {
-                        t.setPosition(p - 1);
-                    }
-                }
-            }
-            task.setPosition(targetPosition);
-            taskRepository.saveAll(tasks);
-            taskRepository.save(task);
-        } else {
-            // Move to different column
-            // Shift positions up in old column
-            List<Task> oldTasks = taskRepository.findByKanbanColumnAndPositionGreaterThanOrderByPositionAsc(oldKanbanColumn, oldPosition);
-            for (Task t : oldTasks) {
-                t.setPosition(t.getPosition() - 1);
-            }
-            taskRepository.saveAll(oldTasks);
-
-            // Shift positions down in new column starting from targetPosition
-            List<Task> newTasks = taskRepository.findByKanbanColumnAndPositionGreaterThanEqualOrderByPositionAsc(newKanbanColumn, targetPosition);
-            for (Task t : newTasks) {
-                t.setPosition(t.getPosition() + 1);
-            }
-            taskRepository.saveAll(newTasks);
-
-            // Move task itself
-            task.setKanbanColumn(newKanbanColumn);
-            task.setPosition(targetPosition);
-            taskRepository.save(task);
-        }
+        // Directly set the new column (position will be set by reorderTasks).
+        task.setKanbanColumn(targetColumn);
+        // Optionally, set the position to targetPosition, but this will be overwritten by reorderTasks
+        task.setPosition(targetPosition);
+        taskRepository.save(task);
     }
+
+    
+    /**
+     * Reorders multiple tasks by updating their positions based on the provided list.
+     * <p>
+     * Expects a list of TaskReorderDto where each entry defines a task ID and its new position.
+     * The method does not check for column consistency, assuming all tasks belong to the same column.
+     * </p>
+     *
+     * @param reorderedTasks List of task reordering instructions (task ID + new position).
+     * @throws TaskNotFoundException if any of the provided task IDs do not exist.
+     */
+    public void reorderTasks(List<TaskReorderDto> reorderedTasks) {
+        List<Task> tasksToUpdate = new ArrayList<>();
+        for (TaskReorderDto dto : reorderedTasks) {
+            Task task = taskRepository.findById(dto.getId())
+                .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + dto.getId()));
+            task.setPosition(dto.getPosition());
+            tasksToUpdate.add(task);
+        }
+        taskRepository.saveAll(tasksToUpdate);
+    }
+
 
     // ==============================
     //   ATTACHMENT MANAGEMENT

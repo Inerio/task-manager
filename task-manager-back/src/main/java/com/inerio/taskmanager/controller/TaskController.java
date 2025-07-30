@@ -1,6 +1,7 @@
 package com.inerio.taskmanager.controller;
 
 import com.inerio.taskmanager.dto.TaskMoveDto;
+import com.inerio.taskmanager.dto.TaskReorderDto;
 import com.inerio.taskmanager.dto.TaskDto;
 import com.inerio.taskmanager.dto.TaskMapperDto;
 import com.inerio.taskmanager.model.KanbanColumn;
@@ -46,6 +47,59 @@ public class TaskController {
         this.kanbanColumnService = kanbanColumnService;
     }
 
+    // ==================== DRAG & DROP: MOVE & REORDER TASK ====================
+
+    /**
+     * Reorders tasks within a single column based on the provided list.
+     *
+     * Expected body (JSON):
+     * [
+     *   { "id": 101, "position": 0 },
+     *   { "id": 102, "position": 1 }
+     * ]
+     *
+     * @param reorderedTasks List of task ID and new position
+     * @return HTTP 200 on success
+     */
+    @PutMapping("/reorder")
+    public ResponseEntity<Void> reorderTasks(@RequestBody List<TaskReorderDto> reorderedTasks) {
+        taskService.reorderTasks(reorderedTasks);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Moves a task to a target column and position.
+     * <p>
+     * <b>Note:</b> This endpoint only updates the task's column and a temporary position.
+     * Actual position normalization and ordering is expected to be handled by a
+     * subsequent call to <b>/reorder</b>.
+     * </p>
+     * <pre>
+     * Example body:
+     * {
+     *   "taskId": 123,
+     *   "targetKanbanColumnId": 45,
+     *   "targetPosition": 2
+     * }
+     * </pre>
+     * @param moveRequest TaskMoveDto containing move parameters
+     * @return HTTP 200 on success, 400 on error
+     */
+    @PostMapping("/move")
+    public ResponseEntity<?> moveTask(@RequestBody TaskMoveDto moveRequest) {
+        try {
+            taskService.moveTask(
+                moveRequest.getTaskId(),
+                moveRequest.getTargetKanbanColumnId(),
+                moveRequest.getTargetPosition()
+            );
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            log.warn("Task move failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     // ======================= TASK CRUD ENDPOINTS =======================
 
     /**
@@ -61,20 +115,6 @@ public class TaskController {
                 .collect(Collectors.toList());
         if (tasks.isEmpty()) return ResponseEntity.noContent().build();
         return ResponseEntity.ok(tasks);
-    }
-
-    /**
-     * Get a single task by its ID.
-     *
-     * @param id Task ID
-     * @return TaskDto if found, HTTP 404 otherwise.
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<TaskDto> getTaskById(@PathVariable Long id) {
-        return taskService.getTaskById(id)
-                .map(TaskMapperDto::toDto)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
     }
 
     /**
@@ -135,6 +175,20 @@ public class TaskController {
     }
 
     /**
+     * Get a single task by its ID.
+     *
+     * @param id Task ID
+     * @return TaskDto if found, HTTP 404 otherwise.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<TaskDto> getTaskById(@PathVariable Long id) {
+        return taskService.getTaskById(id)
+                .map(TaskMapperDto::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
      * Delete a task by ID.
      *
      * @param id Task ID
@@ -181,30 +235,6 @@ public class TaskController {
     public ResponseEntity<Void> deleteAllTasks() {
         taskService.deleteAllTasks();
         return ResponseEntity.noContent().build();
-    }
-
-    // ==================== DRAG & DROP: MOVE & REORDER TASK ====================
-
-    /**
-     * Move a task to a target column and position (with reorder).  
-     * Body: { "taskId": ..., "targetKanbanColumnId": ..., "targetPosition": ... }
-     *
-     * @param moveRequest TaskMoveDto containing move parameters
-     * @return HTTP 200 on success, 400 on error
-     */
-    @PostMapping("/move")
-    public ResponseEntity<?> moveTask(@RequestBody TaskMoveDto moveRequest) {
-        try {
-            taskService.moveTask(
-                moveRequest.getTaskId(),
-                moveRequest.getTargetKanbanColumnId(),
-                moveRequest.getTargetPosition()
-            );
-            return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            log.warn("Task move failed: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
 
     // ======================= ATTACHMENT ENDPOINTS =======================

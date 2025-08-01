@@ -197,3 +197,10 @@
   max-height: 160px;
   resize: vertical;
 }
+.task-card.drag-over-card {
+  background: #e3f2fd;
+  box-shadow: 0 0 0 3px #42a5f5cc, 0 2px 8px 0 #0001;
+  transition: background 0.18s, box-shadow 0.18s;
+  z-index: 2;
+  transform: scale(1.03) translateY(-2px);
+}

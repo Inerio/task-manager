@@ -10,12 +10,10 @@ import {
 import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
 import { TaskService } from "../../services/task.service";
-import { TaskComponent } from "../task/task.component";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
-import { KanbanColumnService } from "../../services/kanban-column.service";
 import { TaskDragDropService } from "../../services/task-drag-drop.service";
+import { TaskComponent } from "../task/task.component";
 
-/* ==== KANBAN COLUMN COMPONENT ==== */
 @Component({
   selector: "app-kanban-column",
   standalone: true,
@@ -24,28 +22,24 @@ import { TaskDragDropService } from "../../services/task-drag-drop.service";
   styleUrls: ["./kanban-column.component.scss"],
 })
 export class KanbanColumnComponent {
-  /* ==== INPUTS ==== */
   @Input({ required: true }) title!: string;
   @Input({ required: true }) kanbanColumnId!: number;
 
-  /* ==== SERVICES ==== */
   private readonly taskService = inject(TaskService);
-  private readonly kanbanColumnService = inject(KanbanColumnService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dragDropService = inject(TaskDragDropService);
 
-  /* ==== STATE ==== */
   readonly showForm = signal(false);
-  readonly isDragOver = signal(false);
   readonly newTask = signal<Partial<Task>>(this.getEmptyTask());
+  readonly dragOverIndex = signal<number | null>(null);
 
   readonly filteredTasks: Signal<Task[]> = computed(() =>
     this.taskService
       .tasks()
       .filter((task) => task.kanbanColumnId === this.kanbanColumnId)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   );
 
-  /* ==== TASK CREATION ==== */
   toggleForm(): void {
     this.showForm.update((v) => !v);
     if (!this.showForm()) this.resetForm();
@@ -71,19 +65,13 @@ export class KanbanColumnComponent {
   }
 
   private getEmptyTask(): Partial<Task> {
-    return {
-      title: "",
-      description: "",
-      completed: false,
-      dueDate: null,
-    };
+    return { title: "", description: "", completed: false, dueDate: null };
   }
 
   updateNewTaskField(field: keyof Task, value: string | null): void {
     this.newTask.set({ ...this.newTask(), [field]: value ?? "" });
   }
 
-  /* ==== DELETE ==== */
   async deleteAllInColumn(): Promise<void> {
     const confirmed = await this.confirmDialog.open(
       "Delete all tasks",
@@ -93,32 +81,34 @@ export class KanbanColumnComponent {
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
-  /* ==== DRAG & DROP ==== */
-  onTaskDragOver(event: DragEvent): void {
-    this.dragDropService.handleKanbanColumnDragOver(
+  // === Drag & Drop handlers ===
+  onTaskDragOver(event: DragEvent, targetIndex: number): void {
+    event.preventDefault(); // Critique : sinon drop jamais appelé
+    this.dragDropService.handleTaskDropzoneDragOver(
       event,
       this.kanbanColumnId,
-      (v) => this.isDragOver.set(v)
+      targetIndex,
+      (idx) => this.dragOverIndex.set(idx)
     );
   }
 
   onTaskDragLeave(): void {
-    this.dragDropService.handleKanbanColumnDragLeave((v) =>
-      this.isDragOver.set(v)
-    );
+    this.dragOverIndex.set(null);
   }
 
-  onTaskDrop(event: DragEvent): void {
-    this.dragDropService.handleKanbanColumnDrop(
+  async onTaskDrop(event: DragEvent, targetIndex: number): Promise<void> {
+    await this.dragDropService.handleTaskDropzoneDrop({
       event,
-      this.kanbanColumnId,
-      (v) => this.isDragOver.set(v),
-      () => this.taskService.tasks(),
-      (id, task) => this.taskService.updateTask(id, task)
-    );
+      targetKanbanColumnId: this.kanbanColumnId,
+      targetIndex,
+      getAllTasks: () => this.taskService.tasks(),
+      getColumnTasks: () => this.filteredTasks(),
+      reorderTasks: (tasks) => this.taskService.reorderTasks(tasks),
+      updateTask: (id, task) => this.taskService.updateTask(id, task), // Maintenant retourne une Promise
+    });
+    this.dragOverIndex.set(null);
   }
 
-  /* ==== TRACKING ==== */
   trackById(index: number, task: Task): number | undefined {
     return task.id;
   }

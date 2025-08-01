@@ -14,6 +14,7 @@ export interface Task {
   dueDate?: string | null;
   isEditing?: boolean;
   attachments?: string[];
+  position?: number;
 }
 
 /**

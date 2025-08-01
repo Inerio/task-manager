@@ -49,16 +49,23 @@
 
 /* --- DRAG OVER ANIMATION --- */
 .task-dropzone {
-  transition: min-height 0.3s ease, padding-bottom 0.3s ease;
-  border: 2px dashed transparent;
+  transition: min-height 0.3s, background 0.3s, border-color 0.3s;
+  border: 2px dashed #e0e7ef;
   border-radius: 8px;
-}
+  min-height: 44px;
+  background: #f9fbff;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b1b9d2;
+  font-size: 1.01rem;
 
-.task-dropzone.drag-over {
-  min-height: 150px;
-  padding-bottom: 150px;
-  border-color: #0d6efd;
-  background-color: rgba(13, 110, 253, 0.1);
-  box-shadow: 0 0 15px rgba(13, 110, 253, 0.4);
-  transition: padding-bottom 0.3s ease;
+  &.drag-over {
+    min-height: 72px;
+    border-color: #1976d2;
+    background: #e3f2fd;
+    box-shadow: 0 0 0 3px #90caf9;
+    color: #1976d2;
+  }
 }

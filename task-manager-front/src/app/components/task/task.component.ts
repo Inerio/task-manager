@@ -32,6 +32,9 @@ export class TaskComponent implements OnChanges {
   private readonly alertService = inject(AlertService);
   private readonly dragDropService = inject(TaskDragDropService);
 
+  private dragOver = signal(false);
+  isDragOver = () => this.dragOver();
+
   readonly localTask: WritableSignal<Task> = signal({} as Task);
   dragging = signal(false);
   acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
@@ -84,13 +87,56 @@ export class TaskComponent implements OnChanges {
   }
 
   onTaskDragStart(event: DragEvent): void {
-    this.dragDropService.startTaskDrag(event, this.localTask(), (v) =>
-      this.dragging.set(v)
+    this.dragDropService.startTaskDrag(
+      event,
+      this.localTask(),
+      (value: boolean) => {
+        this.dragging.set(value);
+      }
     );
   }
 
   onTaskDragEnd(): void {
-    this.dragDropService.endTaskDrag((v) => this.dragging.set(v));
+    this.dragDropService.endTaskDrag((value: boolean) => {
+      this.dragging.set(value);
+    });
+  }
+
+  onTaskDragOver(event: DragEvent) {
+    event.preventDefault();
+    if (
+      !this.localTask().isEditing &&
+      event.dataTransfer &&
+      event.dataTransfer.getData("type") === "task"
+    ) {
+      this.dragOver.set(true);
+    }
+  }
+
+  onTaskDragLeave() {
+    this.dragOver.set(false);
+  }
+
+  async onTaskDrop(event: DragEvent) {
+    if (this.localTask().isEditing) return;
+    if (!event.dataTransfer || event.dataTransfer.getData("type") !== "task")
+      return;
+    event.preventDefault();
+    this.dragOver.set(false);
+
+    await this.dragDropService.handleTaskDropzoneDrop({
+      event,
+      targetKanbanColumnId: this.localTask().kanbanColumnId!,
+      targetIndex: this.localTask().position ?? 0,
+      getAllTasks: () => this.taskService.tasks(),
+      getColumnTasks: () =>
+        this.taskService
+          .tasks()
+          .filter((t) => t.kanbanColumnId === this.localTask().kanbanColumnId)
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+      reorderTasks: (tasks) => this.taskService.reorderTasks(tasks),
+      updateTask: (id, task) => this.taskService.updateTask(id, task), // Promise
+    });
   }
 
   toggleCompleted(): void {

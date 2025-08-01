@@ -1,5 +1,10 @@
 /* ==== DRAG & DROP UTILS — TASKS ==== */
 
+export interface TaskDragData {
+  taskId: number;
+  kanbanColumnId: number;
+}
+
 export function setTaskDragData(
   event: DragEvent,
   taskId: number,
@@ -10,9 +15,7 @@ export function setTaskDragData(
   event.dataTransfer?.setData("kanbanColumn-id", String(kanbanColumnId));
 }
 
-export function getTaskDragData(
-  event: DragEvent
-): { taskId: number; kanbanColumnId: number } | null {
+export function getTaskDragData(event: DragEvent): TaskDragData | null {
   if (!event.dataTransfer) return null;
   if (event.dataTransfer.getData("type") !== "task") return null;
   const taskIdRaw = event.dataTransfer.getData("task-id");
@@ -54,10 +57,6 @@ export function isColumnDragEvent(event: DragEvent): boolean {
 }
 
 /* ==== DRAG & DROP UTILS — FILES ==== */
-
-/**
- * Returns true if the DragEvent contains files.
- */
 export function isFileDragEvent(event: DragEvent): boolean {
   return !!event.dataTransfer && event.dataTransfer.types.includes("Files");
 }

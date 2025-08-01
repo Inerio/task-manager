@@ -2,7 +2,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #f7f9fc; // Harmonized with header
+  background: #f7f9fc;
   border-radius: 12px;
   box-shadow: 0 2px 12px 0 #0001;
   min-width: 260px;
@@ -15,7 +15,6 @@
     margin-bottom: 0.8rem;
   }
 
-  // "Add task" button
   .add-btn {
     align-self: center;
     margin-top: 0.7rem;

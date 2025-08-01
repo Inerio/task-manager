@@ -1,4 +1,4 @@
-# Task Manager
+# Tasukeru
 
 Application de gestion de tâches développée en **Angular** (frontend) et **Spring Boot** (backend), avec persistance dans une base de données **PostgreSQL**.
 

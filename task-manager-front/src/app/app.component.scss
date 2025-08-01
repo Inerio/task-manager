@@ -6,6 +6,21 @@ body {
 .main-layout {
   display: flex;
   min-height: 100vh;
+  position: relative;
+
+  // Watermark on the right, covers all area except the sidebar, larger size
+  &::after {
+    content: "";
+    position: fixed;
+    left: 230px; // Exact width of the sidebar
+    top: 0;
+    width: calc(100vw - 230px);
+    height: 100vh;
+    background: url("/png/tasukeru-bg.png") center center no-repeat;
+    background-size: 130% auto; // Enlarged watermark
+    z-index: 0;
+    pointer-events: none;
+  }
 }
 
 .sidebar {
@@ -106,6 +121,8 @@ body {
   padding: 2.5rem 3.5rem 2rem 3.5rem;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 /* ===== BOARD HEADER ===== */
@@ -250,5 +267,46 @@ body {
   &:focus {
     border-color: #1651a3;
     box-shadow: 0 0 0 2px #1976d266;
+  }
+}
+
+// Ensure all content stays above the watermark
+.board-area,
+.board-header,
+.boards-list,
+.board-item {
+  position: relative;
+  z-index: 1;
+}
+
+.tasukeru-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin-bottom: 2.2rem;
+  margin-left: 0.05em;
+  line-height: 1.03;
+
+  .tasukeru-main {
+    font-size: 2.35rem;
+    font-weight: 900;
+    color: #1976d2;
+    letter-spacing: -1px;
+    margin-bottom: 0.07em;
+    line-height: 1.1;
+  }
+
+  .tasukeru-sub {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #555;
+    opacity: 0.8;
+    letter-spacing: 0;
+    margin-top: -0.27em;
+    margin-left: 0.06em;
+    line-height: 1.07;
   }
 }

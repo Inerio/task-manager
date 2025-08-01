@@ -9,7 +9,6 @@
   max-width: 100%;
   transition: background-color 0.3s, box-shadow 0.2s;
 
-  // Lower padding-top ONLY if no badge (so title+checkbox go higher)
   &:not(.has-badge) {
     padding-top: 0.7rem;
   }
@@ -28,10 +27,20 @@
     cursor: grabbing;
   }
 
-  .due-badge {
+  /* Due badge and due date row (aligned left, fixed top) */
+  .due-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
     position: absolute;
     top: 0.5rem;
     left: 0.5rem;
+    z-index: 11;
+    padding-right: 2.6rem; // Prevent overlap with checkbox
+  }
+
+  .due-badge {
+    position: static; // Row container manages positioning
     background: #f7f9fc;
     color: #1a283d;
     font-size: 0.73rem;
@@ -39,7 +48,6 @@
     padding: 0.09em 0.6em;
     border-radius: 10px;
     box-shadow: 0 0 2px #bbb;
-    z-index: 10;
     pointer-events: none;
     line-height: 1.5;
     border: 1px solid #e2e6f3;
@@ -51,13 +59,25 @@
     }
   }
 
+  .due-date {
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: #757b88;
+    background: none;
+    margin-left: 0.18em;
+    user-select: text;
+    letter-spacing: 0.01em;
+    padding: 0 0.15em;
+    font-family: inherit;
+  }
+
   .task-checkbox-icon {
     position: absolute;
     top: 0.5rem;
     right: 1rem;
     cursor: pointer;
     accent-color: #4caf50;
-    z-index: 2;
+    z-index: 12;
     background: white;
     box-shadow: 0 0 2px #ccc;
     border-radius: 3px;
@@ -170,33 +190,64 @@
     }
   }
 }
+
+/* Button group styles */
 .btn-group .btn {
   padding: 0.12rem 0.2rem !important;
   font-size: 0.97rem !important;
   min-height: 24px !important;
 }
-.task-card.editing .form-control,
-.task-card.editing .form-control.textarea {
+
+/* ==== EDIT MODE: textarea, emoji position ==== */
+.task-card.editing .desc-row-edit {
+  position: relative;
+}
+
+.task-card.editing .desc-row-edit .form-control.textarea {
   background: #f7f9fc;
   border-radius: 8px;
   border: 1.3px solid #bfc2ce;
   font-size: 1rem;
-  padding: 0.35rem 0.7rem;
+  padding: 0.35rem 2.5em 0.85em 0.7em; // right+bottom padding for emoji icon
   box-shadow: none;
   margin-bottom: 0.65rem;
   outline: none;
-  transition: border 0.18s, box-shadow 0.18s;
+  min-height: 54px;
+  height: 180px;
+  max-height: 360px;
+  resize: vertical;
+}
+
+/* Emoji icon bottom-right of textarea */
+.emoji-trigger-bottom {
+  position: absolute;
+  right: 0.65em;
+  bottom: 1em;
+  z-index: 20;
+  font-size: 1.36em;
+  cursor: pointer;
+  user-select: none;
+  padding: 0;
+  background: none;
+  border: none;
+  transition: filter 0.1s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  &:hover {
+    filter: brightness(1.18);
+  }
+  img {
+    display: block;
+    pointer-events: none;
+  }
 }
 
 .task-card.editing .form-control:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px #3b82f633;
 }
-.task-card.editing .form-control.textarea {
-  min-height: 54px;
-  max-height: 160px;
-  resize: vertical;
-}
+
 .task-card.drag-over-card {
   background: #e3f2fd;
   box-shadow: 0 0 0 3px #42a5f5cc, 0 2px 8px 0 #0001;

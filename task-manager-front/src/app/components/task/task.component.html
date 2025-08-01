@@ -38,9 +38,14 @@
       />
     </div>
     } @else {
-    <span class="due-badge" [class.late]="dueBadge() === 'Late!'">
-      {{ dueBadge() }}
-    </span>
+    <div class="due-row">
+      <span class="due-badge" [class.late]="dueBadge() === 'Late!'">
+        {{ dueBadge() }}
+      </span>
+      @if (localTask().dueDate) {
+      <span class="due-date">{{ localTask().dueDate }}</span>
+      }
+    </div>
     <input
       type="checkbox"
       class="task-checkbox-icon"
@@ -99,7 +104,6 @@
 
   <!-- ==== EDIT MODE ==== -->
   @else {
-  <!-- Editable task title input -->
   <input
     class="form-control"
     type="text"
@@ -108,15 +112,46 @@
     required
     autocomplete="off"
   />
-  <!-- Editable task description textarea -->
-  <textarea
-    class="form-control textarea"
-    [(ngModel)]="localTask().description"
-    placeholder="Description"
-    required
-    rows="4"
-  ></textarea>
-  <!-- Editable due date input -->
+  <div class="desc-row-edit" #emojiPickerContainer>
+    <textarea
+      #descTextarea
+      class="form-control textarea"
+      [(ngModel)]="localTask().description"
+      placeholder="Description"
+      required
+      rows="4"
+    ></textarea>
+    <span
+      class="emoji-trigger-bottom"
+      (click)="toggleEmojiPicker()"
+      title="Insert emoji"
+    >
+      <img
+        src="/svg/smile-plus.svg"
+        alt="Add emoji"
+        width="18"
+        height="18"
+        draggable="false"
+      />
+    </span>
+  </div>
+  @if (showEmojiPicker()) {
+  <emoji-picker
+    #emojiPicker
+    theme="light"
+    (emoji-click)="addEmojiToDescription($event)"
+    class="emoji-picker-dropdown"
+    style="
+      position: absolute;
+      left: 0;
+      top: 6.1rem;
+      z-index: 99;
+      width: calc(100% - 2px);
+      min-width: 260px;
+      max-height: 370px;
+    "
+  ></emoji-picker>
+  }
   <input
     class="form-control"
     type="date"

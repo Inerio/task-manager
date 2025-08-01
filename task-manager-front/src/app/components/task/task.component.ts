@@ -1,5 +1,6 @@
 import {
   Component,
+  CUSTOM_ELEMENTS_SCHEMA,
   Input,
   OnChanges,
   SimpleChanges,
@@ -7,6 +8,11 @@ import {
   computed,
   inject,
   signal,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  AfterViewChecked,
+  Renderer2,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
@@ -23,28 +29,43 @@ import { TaskDragDropService } from "../../services/task-drag-drop.service";
   imports: [FormsModule, LinkifyPipe, AttachmentZoneComponent],
   templateUrl: "./task.component.html",
   styleUrls: ["./task.component.scss"],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export class TaskComponent implements OnChanges {
-  @Input({ required: true }) task!: Task;
+export class TaskComponent
+  implements OnChanges, AfterViewInit, AfterViewChecked
+{
+  /** ==== Emoji Picker (with refs) ==== */
+  @ViewChild("emojiPicker", { static: false }) emojiPickerRef?: ElementRef;
+  @ViewChild("emojiPickerContainer", { static: false })
+  emojiPickerContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild("descTextarea") descTextarea?: ElementRef<HTMLTextAreaElement>;
+  showEmojiPicker = signal(false);
 
+  /** ==== State & Service Injections ==== */
+  @Input({ required: true }) task!: Task;
   private readonly taskService = inject(TaskService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
   private readonly dragDropService = inject(TaskDragDropService);
+  private readonly renderer = inject(Renderer2);
 
+  private wasEditing = false;
   private dragOver = signal(false);
   isDragOver = () => this.dragOver();
-
   readonly localTask: WritableSignal<Task> = signal({} as Task);
   dragging = signal(false);
+
+  /** ==== Attachment settings ==== */
   acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
   maxSize = 5 * 1024 * 1024;
 
+  /** ==== Truncation limits ==== */
   readonly TITLE_TRUNCATE = 32;
   readonly DESC_TRUNCATE = 120;
   showFullTitle = signal(false);
   showFullDescription = signal(false);
 
+  /** ==== Computed for display ==== */
   readonly displayedTitle = computed(() => {
     const title = this.localTask().title ?? "";
     if (this.showFullTitle() || !title) return title;
@@ -74,6 +95,7 @@ export class TaskComponent implements OnChanges {
     this.canTruncateDescription() &&
     this.showFullDescription.set(!this.showFullDescription());
 
+  /** ==== Angular Lifecycle ==== */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["task"] && this.task) {
       this.localTask.set({ ...this.task });
@@ -82,26 +104,94 @@ export class TaskComponent implements OnChanges {
     }
   }
 
-  patchLocalTask(patch: Partial<Task>): void {
-    this.localTask.set({ ...this.localTask(), ...patch });
+  ngAfterViewInit(): void {
+    // Close emoji picker when clicking outside, including shadow DOM
+    this.renderer.listen("document", "mousedown", (event: MouseEvent) => {
+      if (!this.showEmojiPicker()) return;
+
+      // Click inside custom emoji picker container
+      const inContainer = this.emojiPickerContainer?.nativeElement.contains(
+        event.target as Node
+      );
+
+      // Click inside <emoji-picker> or its shadow DOM
+      let inPicker = false;
+      if (this.emojiPickerRef?.nativeElement) {
+        const picker = this.emojiPickerRef.nativeElement as HTMLElement;
+        if (picker.contains(event.target as Node)) inPicker = true;
+        else if (
+          picker.shadowRoot &&
+          picker.shadowRoot.contains(event.target as Node)
+        )
+          inPicker = true;
+      }
+
+      if (!inContainer && !inPicker) {
+        this.showEmojiPicker.set(false);
+      }
+    });
   }
 
+  ngAfterViewChecked(): void {
+    // Restyle the emoji picker shadow DOM for light theming & custom scrollbars
+    if (this.showEmojiPicker() && this.emojiPickerRef?.nativeElement) {
+      const picker = this.emojiPickerRef.nativeElement;
+      if (picker.shadowRoot) {
+        picker.shadowRoot.host.style.transform = "scale(0.715)";
+        picker.shadowRoot.host.style.transformOrigin = "top left";
+        picker.shadowRoot.host.style.width = "140%";
+        picker.shadowRoot.host.style.minWidth = "0";
+        picker.shadowRoot.host.style.setProperty("--background", "#fff");
+        picker.shadowRoot.host.style.setProperty(
+          "--category-button-active-background",
+          "#e3f2fd"
+        );
+        picker.shadowRoot.host.style.setProperty(
+          "--search-background",
+          "#f7f9fc"
+        );
+        picker.shadowRoot.host.style.setProperty("--border-radius", "16px");
+        picker.shadowRoot.host.style.setProperty("--color", "#232323");
+
+        // Custom scrollbar for the shadow DOM (add only once)
+        if (!picker.shadowRoot.getElementById("custom-scrollbar-style")) {
+          const style = document.createElement("style");
+          style.id = "custom-scrollbar-style";
+          style.textContent = `
+            ::-webkit-scrollbar { width: 9px; background: #f7f9fc; border-radius: 12px; }
+            ::-webkit-scrollbar-thumb { background: #d3d8e2; border-radius: 12px; }
+            ::-webkit-scrollbar-thumb:hover { background: #b2b8c7; }
+          `;
+          picker.shadowRoot.appendChild(style);
+        }
+      }
+    }
+  }
+
+  /** ==== Emoji Picker ==== */
+  toggleEmojiPicker(): void {
+    this.showEmojiPicker.set(!this.showEmojiPicker());
+  }
+  addEmojiToDescription(event: any): void {
+    const emoji = event.detail.unicode;
+    const current = this.localTask().description || "";
+    this.patchLocalTask({ description: current + emoji });
+    this.showEmojiPicker.set(false);
+  }
+
+  /** ==== Drag & Drop ==== */
   onTaskDragStart(event: DragEvent): void {
     this.dragDropService.startTaskDrag(
       event,
       this.localTask(),
-      (value: boolean) => {
-        this.dragging.set(value);
-      }
+      (value: boolean) => this.dragging.set(value)
     );
   }
-
   onTaskDragEnd(): void {
-    this.dragDropService.endTaskDrag((value: boolean) => {
-      this.dragging.set(value);
-    });
+    this.dragDropService.endTaskDrag((value: boolean) =>
+      this.dragging.set(value)
+    );
   }
-
   onTaskDragOver(event: DragEvent) {
     event.preventDefault();
     if (
@@ -112,18 +202,15 @@ export class TaskComponent implements OnChanges {
       this.dragOver.set(true);
     }
   }
-
   onTaskDragLeave() {
     this.dragOver.set(false);
   }
-
   async onTaskDrop(event: DragEvent) {
     if (this.localTask().isEditing) return;
     if (!event.dataTransfer || event.dataTransfer.getData("type") !== "task")
       return;
     event.preventDefault();
     this.dragOver.set(false);
-
     await this.dragDropService.handleTaskDropzoneDrop({
       event,
       targetKanbanColumnId: this.localTask().kanbanColumnId!,
@@ -135,10 +222,11 @@ export class TaskComponent implements OnChanges {
           .filter((t) => t.kanbanColumnId === this.localTask().kanbanColumnId)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
       reorderTasks: (tasks) => this.taskService.reorderTasks(tasks),
-      updateTask: (id, task) => this.taskService.updateTask(id, task), // Promise
+      updateTask: (id, task) => this.taskService.updateTask(id, task),
     });
   }
 
+  /** ==== CRUD ==== */
   toggleCompleted(): void {
     const updated = {
       ...this.localTask(),
@@ -147,42 +235,41 @@ export class TaskComponent implements OnChanges {
     this.localTask.set(updated);
     this.taskService.updateTask(updated.id!, updated);
   }
-
   startEdit(): void {
     this.patchLocalTask({ isEditing: true });
   }
-
   saveEdit(): void {
     const current = this.localTask();
     if (!current.title.trim()) return;
     this.patchLocalTask({ isEditing: false });
     this.taskService.updateTask(current.id!, this.localTask());
   }
-
   cancelEdit(): void {
     this.localTask.set({ ...this.task, isEditing: false });
   }
-
   deleteTask(): void {
     const id = this.localTask().id;
     if (id) this.taskService.deleteTask(id);
   }
 
+  /** ==== Form value patching ==== */
   updateTitleFromEvent(event: Event): void {
     this.patchLocalTask({ title: (event.target as HTMLInputElement).value });
   }
-
   updateDescriptionFromEvent(event: Event): void {
     this.patchLocalTask({
       description: (event.target as HTMLTextAreaElement).value,
     });
   }
-
   updateDueDateFromEvent(event: Event): void {
     const value = (event.target as HTMLInputElement).value || null;
     this.patchLocalTask({ dueDate: value });
   }
+  patchLocalTask(patch: Partial<Task>): void {
+    this.localTask.set({ ...this.localTask(), ...patch });
+  }
 
+  /** ==== Attachments ==== */
   async onUploadFiles(files: File[]) {
     const taskId = this.localTask().id!;
     for (const file of files) {
@@ -211,7 +298,6 @@ export class TaskComponent implements OnChanges {
       }
     }
   }
-
   async onDeleteAttachment(filename: string) {
     const taskId = this.localTask().id!;
     try {
@@ -227,11 +313,11 @@ export class TaskComponent implements OnChanges {
       this.alertService.show("error", "File deletion error");
     }
   }
-
   onDownloadAttachment(filename: string) {
     this.attachmentService.downloadAttachment(this.localTask().id!, filename);
   }
 
+  /** ==== Due date badge logic ==== */
   dueBadge = computed(() => {
     const due = this.localTask().dueDate;
     if (!due) return null;

@@ -1,6 +1,6 @@
 <div class="task-kanbanColumn">
   <div class="task-dropzone-column">
-    <!-- DROPZONE visible uniquement si la colonne est vide -->
+    <!-- Dropzone visible only if column is empty -->
     @if (filteredTasks().length === 0) {
     <div
       class="task-dropzone"
@@ -8,22 +8,21 @@
       (dragover)="onTaskDragOver($event, 0)"
       (dragleave)="onTaskDragLeave()"
       (drop)="onTaskDrop($event, 0)"
-      style="
-        min-height: 60px;
-        margin: 1.2rem 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      "
     >
-      <span style="color: #b1b9d2; font-size: 1.01rem"> Drop a task here </span>
+      <span>Drop a task here</span>
     </div>
-    } @for (task of filteredTasks(); track trackById($index, task); let idx =
-    $index) {
-    <app-task-item [task]="task" />
     }
+
+    <!-- Task list -->
+    @for (task of filteredTasks(); track trackById($index, task); let idx =
+    $index) {
+    <app-task-item [task]="task"></app-task-item>
+    }
+
+    <!-- Add Task Button -->
     <button (click)="toggleForm()" class="add-btn">+ Add task</button>
 
+    <!-- Add Task Form (visible if showForm) -->
     @if (showForm()) {
     <div class="add-task-form">
       <input

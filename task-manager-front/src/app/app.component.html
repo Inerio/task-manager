@@ -3,7 +3,10 @@
 
 <div class="main-layout">
   <aside class="sidebar">
-    <h1>Task Manager</h1>
+    <h1 class="tasukeru-title">
+      <span class="tasukeru-main">Tasukeru</span>
+      <span class="tasukeru-sub">Boards</span>
+    </h1>
     <nav class="boards-list">
       <!-- Board list (includes temp board if adding) -->
       @for (board of displayedBoards(); track board.id) { @if (board.id !==

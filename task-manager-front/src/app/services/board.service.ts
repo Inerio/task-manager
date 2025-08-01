@@ -45,5 +45,4 @@ export class BoardService {
   updateBoard(id: number, name: string): Observable<Board> {
     return this.http.put<Board>(`${this.apiUrl}/${id}`, { name });
   }
-  //TODO add getBoardById, etc. as needed
 }

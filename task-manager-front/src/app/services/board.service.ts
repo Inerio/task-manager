@@ -43,7 +43,7 @@ export class BoardService {
    * Updates the name of a board.
    */
   updateBoard(id: number, name: string): Observable<Board> {
-    return this.http.patch<Board>(`${this.apiUrl}/${id}`, { name });
+    return this.http.put<Board>(`${this.apiUrl}/${id}`, { name });
   }
   //TODO add getBoardById, etc. as needed
 }

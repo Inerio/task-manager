@@ -145,7 +145,6 @@ export class TaskService {
    * Updates local state for immediate effect, then synchronizes with backend.
    */
   reorderTasks(tasks: Task[]): void {
-    // Prepare local state with only reordered tasks affected
     const updatedIds = new Set(tasks.map((t) => t.id));
     const nextState = [
       ...this.tasksSignal().filter((t) => !updatedIds.has(t.id)),
@@ -158,13 +157,12 @@ export class TaskService {
 
     this.tasksSignal.set(nextState);
 
-    // Synchronize new order with backend
     const reorderDto = tasks.map((t) => ({
       id: t.id,
       position: t.position,
     }));
+
     this.http.put<void>(`${this.apiUrl}/reorder`, reorderDto).subscribe({
-      next: () => this.loadTasks(),
       error: () => this.alertService.show("error", "Error reordering tasks."),
     });
   }

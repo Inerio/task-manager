@@ -192,3 +192,32 @@
   background: transparent;
   cursor: not-allowed;
 }
+
+.edit-title-placeholder {
+  color: #b1b9d2;
+  font-size: 1rem;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.13em;
+  cursor: pointer;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+
+  .edit-icon {
+    width: 1.1em;
+    height: 1.1em;
+    margin-left: 0.18em;
+    vertical-align: middle;
+    filter: grayscale(1) brightness(1.2);
+    opacity: 0.75;
+  }
+}
+
+.kanbanColumn-title:hover .edit-title-placeholder {
+  color: #1976d2;
+  .edit-icon {
+    opacity: 1;
+    filter: none;
+  }
+}

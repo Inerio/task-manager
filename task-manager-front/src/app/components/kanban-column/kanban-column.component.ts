@@ -83,7 +83,7 @@ export class KanbanColumnComponent {
 
   // === Drag & Drop handlers ===
   onTaskDragOver(event: DragEvent, targetIndex: number): void {
-    event.preventDefault(); // Critique : sinon drop jamais appelé
+    event.preventDefault();
     this.dragDropService.handleTaskDropzoneDragOver(
       event,
       this.kanbanColumnId,

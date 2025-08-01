@@ -172,7 +172,7 @@ export class BoardComponent implements OnChanges {
 
   saveTitleEdit(column: KanbanColumn) {
     const newName = this.editingTitleValue().trim();
-    if (!newName || newName === column.name) {
+    if (newName === column.name) {
       this.editingTitleId.set(null);
       return;
     }

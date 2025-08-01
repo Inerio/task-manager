@@ -48,7 +48,14 @@
         (keydown.space)="startEditTitle(kanbanColumn)"
         title="Rename this column"
       >
+        @if (!kanbanColumn.name.trim()) {
+        <span class="edit-title-placeholder">
+          edit
+          <img src="svg/pencil.svg" alt="Edit" class="edit-icon" />
+        </span>
+        } @else {
         {{ kanbanColumn.name }}
+        }
       </span>
       } @else {
       <input
@@ -89,9 +96,7 @@
   } @if (kanbanColumns().length < MAX_KANBANCOLUMNS) {
   <button
     class="add-kanbanColumn-fab-inline"
-    [disabled]="
-      !!editingTitleId() || kanbanColumns().length >= MAX_KANBANCOLUMNS
-    "
+    [disabled]="kanbanColumns().length >= MAX_KANBANCOLUMNS"
     (click)="addKanbanColumnAndEdit()"
     title="Add column"
   >

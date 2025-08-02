@@ -12,12 +12,12 @@ body {
   &::after {
     content: "";
     position: fixed;
-    left: 230px; // Exact width of the sidebar
+    left: 230px;
     top: 0;
     width: calc(100vw - 230px);
     height: 100vh;
-    background: url("/png/tasukeru-bg.png") center center no-repeat;
-    background-size: 130% auto; // Enlarged watermark
+    background: url("/svg/tasukeru-bg.svg") center center no-repeat;
+    background-size: 110% auto;
     z-index: 0;
     pointer-events: none;
   }

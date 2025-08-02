@@ -125,7 +125,7 @@ export class KanbanColumnComponent {
     this.dragOverIndex.set(null);
   }
 
-  /** TrackBy function for ngFor/@for */
+  /** TrackBy function for @for */
   trackById(index: number, task: Task): number | undefined {
     return task.id;
   }

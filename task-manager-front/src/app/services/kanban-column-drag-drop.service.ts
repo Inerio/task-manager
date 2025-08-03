@@ -71,13 +71,13 @@ export class ColumnDragDropService {
       return;
     }
 
-    // 🔥 Optimistic update: instant UI reorder before backend call
+    // Optimistic update: instant UI reorder before backend call
     const newArr = [...kanbanColumnsRaw];
     const [draggedColumn] = newArr.splice(currIdx, 1);
     newArr.splice(targetIdx, 0, draggedColumn);
     this.kanbanColumnService.reorderKanbanColumns(newArr);
 
-    // 🔁 Sync backend after
+    // Sync backend after
     this.kanbanColumnService
       .moveKanbanColumn(boardId, draggedId, targetIdx)
       .subscribe({

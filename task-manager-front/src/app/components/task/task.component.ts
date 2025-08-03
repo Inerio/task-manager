@@ -192,13 +192,9 @@ export class TaskComponent
       this.dragging.set(value)
     );
   }
-  onTaskDragOver(event: DragEvent) {
+  onTaskDragOver(event: DragEvent): void {
     event.preventDefault();
-    if (
-      !this.localTask().isEditing &&
-      event.dataTransfer &&
-      event.dataTransfer.getData("type") === "task"
-    ) {
+    if (!this.localTask().isEditing) {
       this.dragOver.set(true);
     }
   }

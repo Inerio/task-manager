@@ -37,6 +37,7 @@ export class KanbanColumnComponent {
   readonly showForm = signal(false);
   readonly newTask = signal<Partial<Task>>(this.getEmptyTask());
   readonly dragOverIndex = signal<number | null>(null);
+  readonly dropzoneDragOver = signal(false); // << Dropzone animation state
 
   /** Computed list of tasks belonging to this column, sorted by position */
   readonly filteredTasks: Signal<Task[]> = computed(() =>
@@ -94,13 +95,43 @@ export class KanbanColumnComponent {
 
   // === DRAG & DROP ===
 
+  /** Handle drag over for the empty column dropzone */
+  onDropzoneDragOver(event: DragEvent): void {
+    event.preventDefault();
+    // Only react if a task is being dragged (never column or file)
+    if (
+      event.dataTransfer?.types.includes("Files") ||
+      event.dataTransfer?.getData("type") !== "task"
+    ) {
+      this.dropzoneDragOver.set(false);
+      return;
+    }
+    if (!this.dropzoneDragOver()) this.dropzoneDragOver.set(true);
+  }
+
+  /** Reset dropzone drag-over state on leave */
+  onDropzoneDragLeave(): void {
+    if (this.dropzoneDragOver()) this.dropzoneDragOver.set(false);
+  }
+
+  /** Handle drop on the empty dropzone (always index 0) */
+  async onDropzoneDrop(event: DragEvent): Promise<void> {
+    if (
+      event.dataTransfer?.types.includes("Files") ||
+      event.dataTransfer?.getData("type") !== "task"
+    )
+      return;
+    event.preventDefault();
+    this.dropzoneDragOver.set(false);
+    await this.onTaskDrop(event, 0);
+  }
+
   /**
-   * Handle drag over a dropzone inside the column
-   * @param event DragEvent
-   * @param targetIndex Index of the drop target
+   * Handle drag over a task (not the dropzone)
    */
   onTaskDragOver(event: DragEvent, targetIndex: number): void {
     event.preventDefault();
+    // Only for task drag
     if (
       event.dataTransfer?.types.includes("Files") ||
       event.dataTransfer?.getData("type") !== "task"
@@ -109,7 +140,7 @@ export class KanbanColumnComponent {
     this.dragOverIndex.set(targetIndex);
   }
 
-  /** Reset drag-over visual state on leave */
+  /** Reset drag-over visual state on leave (for tasks) */
   onTaskDragLeave(): void {
     this.dragOverIndex.set(null);
   }
@@ -126,6 +157,7 @@ export class KanbanColumnComponent {
     )
       return;
     event.preventDefault();
+    this.dropzoneDragOver.set(false); // always reset
     const dragData = getTaskDragData(event);
     if (!dragData) return;
     const { taskId, kanbanColumnId: fromColumnId } = dragData;

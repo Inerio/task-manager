@@ -4,10 +4,10 @@
     @if (filteredTasks().length === 0) {
     <div
       class="task-dropzone"
-      [class.drag-over]="dragOverIndex() === 0"
-      (dragover)="onTaskDragOver($event, 0)"
-      (dragleave)="onTaskDragLeave()"
-      (drop)="onTaskDrop($event, 0)"
+      [class.drag-over]="dropzoneDragOver()"
+      (dragover)="onDropzoneDragOver($event)"
+      (dragleave)="onDropzoneDragLeave()"
+      (drop)="onDropzoneDrop($event)"
     >
       <span>Drop a task here</span>
     </div>

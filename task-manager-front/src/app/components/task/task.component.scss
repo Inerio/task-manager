@@ -249,9 +249,11 @@
 }
 
 .task-card.drag-over-card {
-  background: #ffed63 !important; // Jaune pétant
-  border: 3px solid #ff9900 !important;
-  box-shadow: 0 0 18px 3px #fcd303, 0 2px 8px 0 #0001 !important;
-  transform: scale(1.07) !important;
+  background: #f4faff;
+  border: 2.5px solid #1976d2;
+  box-shadow: 0 4px 20px 0 #1976d21a, 0 1.5px 10px 0 #0001;
+  transform: scale(1.035) !important;
   z-index: 999;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s,
+    transform 0.15s;
 }

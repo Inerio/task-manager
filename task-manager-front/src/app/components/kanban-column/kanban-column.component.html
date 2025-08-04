@@ -1,6 +1,6 @@
 <div class="task-kanbanColumn">
   <div class="task-dropzone-column">
-    <!-- Dropzone visible only if column is empty -->
+    <!-- Empty column dropzone -->
     @if (filteredTasks().length === 0) {
     <div
       class="task-dropzone"
@@ -13,16 +13,19 @@
     </div>
     }
 
-    <!-- Task list -->
+    <!-- Task list rendering -->
     @for (task of filteredTasks(); track trackById($index, task); let idx =
     $index) {
-    <app-task-item [task]="task"></app-task-item>
+    <app-task-item
+      [task]="task"
+      (taskDropped)="onTaskItemDrop($event, idx)"
+    ></app-task-item>
     }
 
     <!-- Add Task Button -->
     <button (click)="toggleForm()" class="add-btn">+ Add task</button>
 
-    <!-- Add Task Form (visible if showForm) -->
+    <!-- Task add form -->
     @if (showForm()) {
     <div class="add-task-form">
       <input

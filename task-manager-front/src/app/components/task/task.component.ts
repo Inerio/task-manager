@@ -13,6 +13,8 @@ import {
   AfterViewInit,
   AfterViewChecked,
   Renderer2,
+  EventEmitter,
+  Output,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
@@ -21,7 +23,8 @@ import { TaskService } from "../../services/task.service";
 import { AttachmentService } from "../../services/attachment.service";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
 import { AlertService } from "../../services/alert.service";
-import { TaskDragDropService } from "../../services/task-drag-drop.service";
+import { DragDropGlobalService } from "../../services/drag-drop-global.service";
+import { setTaskDragData } from "../../utils/drag-drop-utils";
 
 @Component({
   selector: "app-task-item",
@@ -34,38 +37,40 @@ import { TaskDragDropService } from "../../services/task-drag-drop.service";
 export class TaskComponent
   implements OnChanges, AfterViewInit, AfterViewChecked
 {
-  /** ==== Emoji Picker (with refs) ==== */
+  /** ==== EMOJI PICKER (References) ==== */
   @ViewChild("emojiPicker", { static: false }) emojiPickerRef?: ElementRef;
   @ViewChild("emojiPickerContainer", { static: false })
   emojiPickerContainer?: ElementRef<HTMLDivElement>;
   @ViewChild("descTextarea") descTextarea?: ElementRef<HTMLTextAreaElement>;
   showEmojiPicker = signal(false);
 
-  /** ==== State & Service Injections ==== */
+  /** Emits a drop event to the parent column when this task receives a drop */
+  @Output() taskDropped = new EventEmitter<DragEvent>();
+
+  /** ==== STATE AND INJECTION ==== */
   @Input({ required: true }) task!: Task;
   private readonly taskService = inject(TaskService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
-  private readonly dragDropService = inject(TaskDragDropService);
+  private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly renderer = inject(Renderer2);
 
-  private wasEditing = false;
   private dragOver = signal(false);
   isDragOver = () => this.dragOver();
   readonly localTask: WritableSignal<Task> = signal({} as Task);
   dragging = signal(false);
 
-  /** ==== Attachment settings ==== */
+  /** Attachment configuration */
   acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
   maxSize = 5 * 1024 * 1024;
 
-  /** ==== Truncation limits ==== */
+  /** Title/Description truncation for display */
   readonly TITLE_TRUNCATE = 32;
   readonly DESC_TRUNCATE = 120;
   showFullTitle = signal(false);
   showFullDescription = signal(false);
 
-  /** ==== Computed for display ==== */
+  /** Computed: get truncated or full text for display */
   readonly displayedTitle = computed(() => {
     const title = this.localTask().title ?? "";
     if (this.showFullTitle() || !title) return title;
@@ -73,7 +78,6 @@ export class TaskComponent
       ? title
       : title.slice(0, this.TITLE_TRUNCATE) + "…";
   });
-
   readonly displayedDescription = computed(() => {
     const desc = this.localTask().description ?? "";
     if (this.showFullDescription() || !desc) return desc;
@@ -81,7 +85,6 @@ export class TaskComponent
       ? desc
       : desc.slice(0, this.DESC_TRUNCATE) + "…";
   });
-
   readonly canTruncateTitle = computed(
     () => (this.localTask().title ?? "").length > this.TITLE_TRUNCATE
   );
@@ -95,7 +98,7 @@ export class TaskComponent
     this.canTruncateDescription() &&
     this.showFullDescription.set(!this.showFullDescription());
 
-  /** ==== Angular Lifecycle ==== */
+  /** ==== LIFECYCLE ==== */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["task"] && this.task) {
       this.localTask.set({ ...this.task });
@@ -105,16 +108,12 @@ export class TaskComponent
   }
 
   ngAfterViewInit(): void {
-    // Close emoji picker when clicking outside, including shadow DOM
+    // Close emoji picker if user clicks outside (also handles shadow DOM)
     this.renderer.listen("document", "mousedown", (event: MouseEvent) => {
       if (!this.showEmojiPicker()) return;
-
-      // Click inside custom emoji picker container
       const inContainer = this.emojiPickerContainer?.nativeElement.contains(
         event.target as Node
       );
-
-      // Click inside <emoji-picker> or its shadow DOM
       let inPicker = false;
       if (this.emojiPickerRef?.nativeElement) {
         const picker = this.emojiPickerRef.nativeElement as HTMLElement;
@@ -125,15 +124,12 @@ export class TaskComponent
         )
           inPicker = true;
       }
-
-      if (!inContainer && !inPicker) {
-        this.showEmojiPicker.set(false);
-      }
+      if (!inContainer && !inPicker) this.showEmojiPicker.set(false);
     });
   }
 
   ngAfterViewChecked(): void {
-    // Restyle the emoji picker shadow DOM for light theming & custom scrollbars
+    // Restyle emoji picker shadow DOM for custom theming (light)
     if (this.showEmojiPicker() && this.emojiPickerRef?.nativeElement) {
       const picker = this.emojiPickerRef.nativeElement;
       if (picker.shadowRoot) {
@@ -152,8 +148,7 @@ export class TaskComponent
         );
         picker.shadowRoot.host.style.setProperty("--border-radius", "16px");
         picker.shadowRoot.host.style.setProperty("--color", "#232323");
-
-        // Custom scrollbar for the shadow DOM (add only once)
+        // Inject custom scrollbar styling only once
         if (!picker.shadowRoot.getElementById("custom-scrollbar-style")) {
           const style = document.createElement("style");
           style.id = "custom-scrollbar-style";
@@ -168,7 +163,7 @@ export class TaskComponent
     }
   }
 
-  /** ==== Emoji Picker ==== */
+  /** ==== EMOJI PICKER ==== */
   toggleEmojiPicker(): void {
     this.showEmojiPicker.set(!this.showEmojiPicker());
   }
@@ -179,47 +174,66 @@ export class TaskComponent
     this.showEmojiPicker.set(false);
   }
 
-  /** ==== Drag & Drop ==== */
+  /** ==== DRAG & DROP ==== */
   onTaskDragStart(event: DragEvent): void {
-    this.dragDropService.startTaskDrag(
+    if (this.localTask().isEditing) {
+      event.preventDefault();
+      return;
+    }
+    this.dragging.set(true);
+    setTaskDragData(
       event,
-      this.localTask(),
-      (value: boolean) => this.dragging.set(value)
+      this.localTask().id!,
+      this.localTask().kanbanColumnId!
     );
+    this.dragDropGlobal.startTaskDrag(
+      this.localTask().id!,
+      this.localTask().kanbanColumnId!
+    );
+
+    // Custom drag image (shows task title on drag)
+    const dragImage = document.createElement("div");
+    dragImage.textContent = this.localTask().title;
+    dragImage.style.cssText = `
+      position: absolute;
+      top: -1000px;
+      padding: 0.5rem 1rem;
+      background: white;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 1rem;
+    `;
+    document.body.appendChild(dragImage);
+    event.dataTransfer?.setDragImage(dragImage, 10, 10);
+    setTimeout(() => {
+      document.body.removeChild(dragImage);
+    }, 0);
   }
+
   onTaskDragEnd(): void {
-    this.dragDropService.endTaskDrag((value: boolean) =>
-      this.dragging.set(value)
-    );
+    this.dragging.set(false);
+    this.dragDropGlobal.endDrag();
   }
+
   onTaskDragOver(event: DragEvent): void {
     event.preventDefault();
-    if (!this.localTask().isEditing) {
-      this.dragOver.set(true);
-    }
+    if (!this.localTask().isEditing) this.dragOver.set(true);
   }
+
   onTaskDragLeave() {
     this.dragOver.set(false);
   }
+
   async onTaskDrop(event: DragEvent) {
     if (this.localTask().isEditing) return;
     if (!event.dataTransfer || event.dataTransfer.getData("type") !== "task")
       return;
     event.preventDefault();
     this.dragOver.set(false);
-    await this.dragDropService.handleTaskDropzoneDrop({
-      event,
-      targetKanbanColumnId: this.localTask().kanbanColumnId!,
-      targetIndex: this.localTask().position ?? 0,
-      getAllTasks: () => this.taskService.tasks(),
-      getColumnTasks: () =>
-        this.taskService
-          .tasks()
-          .filter((t) => t.kanbanColumnId === this.localTask().kanbanColumnId)
-          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
-      reorderTasks: (tasks) => this.taskService.reorderTasks(tasks),
-      updateTask: (id, task) => this.taskService.updateTask(id, task),
-    });
+    // Delegate the drop event to the parent column
+    this.taskDropped.emit(event);
   }
 
   /** ==== CRUD ==== */
@@ -248,7 +262,7 @@ export class TaskComponent
     if (id) this.taskService.deleteTask(id);
   }
 
-  /** ==== Form value patching ==== */
+  /** ==== Helpers for binding ==== */
   updateTitleFromEvent(event: Event): void {
     this.patchLocalTask({ title: (event.target as HTMLInputElement).value });
   }
@@ -265,7 +279,7 @@ export class TaskComponent
     this.localTask.set({ ...this.localTask(), ...patch });
   }
 
-  /** ==== Attachments ==== */
+  /** ==== ATTACHMENTS ==== */
   async onUploadFiles(files: File[]) {
     const taskId = this.localTask().id!;
     for (const file of files) {
@@ -313,7 +327,7 @@ export class TaskComponent
     this.attachmentService.downloadAttachment(this.localTask().id!, filename);
   }
 
-  /** ==== Due date badge logic ==== */
+  /** ==== DUE DATE BADGE (computed label) ==== */
   dueBadge = computed(() => {
     const due = this.localTask().dueDate;
     if (!due) return null;

@@ -11,11 +11,12 @@ import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
 import { TaskService } from "../../services/task.service";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
-import { TaskDragDropService } from "../../services/task-drag-drop.service";
+import { DragDropGlobalService } from "../../services/drag-drop-global.service";
 import { TaskComponent } from "../task/task.component";
+import { getTaskDragData } from "../../utils/drag-drop-utils";
 
 /**
- * KanbanColumnComponent: A single kanban column with tasks, drag & drop, and task creation.
+ * KanbanColumnComponent: Displays a single kanban column with task list, add form, and drag & drop for tasks.
  */
 @Component({
   selector: "app-kanban-column",
@@ -25,22 +26,19 @@ import { TaskComponent } from "../task/task.component";
   styleUrls: ["./kanban-column.component.scss"],
 })
 export class KanbanColumnComponent {
-  /** Column title */
   @Input({ required: true }) title!: string;
-  /** Kanban column ID */
   @Input({ required: true }) kanbanColumnId!: number;
 
-  /** Services */
   private readonly taskService = inject(TaskService);
   private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly dragDropService = inject(TaskDragDropService);
+  private readonly dragDropGlobal = inject(DragDropGlobalService);
 
-  /** Form and drag state */
+  /** Show/hide the add-task form */
   readonly showForm = signal(false);
   readonly newTask = signal<Partial<Task>>(this.getEmptyTask());
   readonly dragOverIndex = signal<number | null>(null);
 
-  /** All tasks in this column, ordered by position */
+  /** Computed list of tasks belonging to this column, sorted by position */
   readonly filteredTasks: Signal<Task[]> = computed(() =>
     this.taskService
       .tasks()
@@ -48,13 +46,13 @@ export class KanbanColumnComponent {
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   );
 
-  /** Toggle the add-task form */
+  /** Show/hide the add form, reset fields if closed */
   toggleForm(): void {
     this.showForm.update((v) => !v);
     if (!this.showForm()) this.resetForm();
   }
 
-  /** Add a new task to the column */
+  /** Add a new task to this column */
   addTask(): void {
     const { title, description, dueDate } = this.newTask();
     if (!title || !description) return;
@@ -70,22 +68,21 @@ export class KanbanColumnComponent {
     this.showForm.set(false);
   }
 
-  /** Reset the add-task form */
+  /** Resets the add form fields */
   private resetForm(): void {
     this.newTask.set(this.getEmptyTask());
   }
 
-  /** Provide an empty new task structure */
   private getEmptyTask(): Partial<Task> {
     return { title: "", description: "", completed: false, dueDate: null };
   }
 
-  /** Update a single field in the new task (safe for null value) */
+  /** Handles form field update (for 2-way binding) */
   updateNewTaskField(field: keyof Task, value: string | null): void {
     this.newTask.set({ ...this.newTask(), [field]: value ?? "" });
   }
 
-  /** Delete all tasks in this column, after confirmation */
+  /** Delete all tasks in this column after confirmation */
   async deleteAllInColumn(): Promise<void> {
     const confirmed = await this.confirmDialog.open(
       "Delete all tasks",
@@ -95,37 +92,97 @@ export class KanbanColumnComponent {
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
-  /** DRAG & DROP: handle drag over dropzone */
+  // === DRAG & DROP ===
+
+  /**
+   * Handle drag over a dropzone inside the column
+   * @param event DragEvent
+   * @param targetIndex Index of the drop target
+   */
   onTaskDragOver(event: DragEvent, targetIndex: number): void {
     event.preventDefault();
-    this.dragDropService.handleTaskDropzoneDragOver(
-      event,
-      this.kanbanColumnId,
-      targetIndex,
-      (idx) => this.dragOverIndex.set(idx)
-    );
+    if (
+      event.dataTransfer?.types.includes("Files") ||
+      event.dataTransfer?.getData("type") !== "task"
+    )
+      return;
+    this.dragOverIndex.set(targetIndex);
   }
 
-  /** DRAG & DROP: handle leaving a dropzone */
+  /** Reset drag-over visual state on leave */
   onTaskDragLeave(): void {
     this.dragOverIndex.set(null);
   }
 
-  /** DRAG & DROP: handle dropping a task */
+  /**
+   * Handle drop event: reorders tasks in this column, or moves from another column.
+   * @param event DragEvent
+   * @param targetIndex Drop index in the list
+   */
   async onTaskDrop(event: DragEvent, targetIndex: number): Promise<void> {
-    await this.dragDropService.handleTaskDropzoneDrop({
-      event,
-      targetKanbanColumnId: this.kanbanColumnId,
-      targetIndex,
-      getAllTasks: () => this.taskService.tasks(),
-      getColumnTasks: () => this.filteredTasks(),
-      reorderTasks: (tasks) => this.taskService.reorderTasks(tasks),
-      updateTask: (id, task) => this.taskService.updateTask(id, task),
-    });
+    if (
+      event.dataTransfer?.types.includes("Files") ||
+      event.dataTransfer?.getData("type") !== "task"
+    )
+      return;
+    event.preventDefault();
+    const dragData = getTaskDragData(event);
+    if (!dragData) return;
+    const { taskId, kanbanColumnId: fromColumnId } = dragData;
+    if (taskId == null || fromColumnId == null) return;
+
+    // Find the dragged task
+    const allTasks = this.taskService.tasks();
+    const draggedTask = allTasks.find((t) => t.id === taskId);
+    if (!draggedTask) return;
+
+    // === Move within the same column ===
+    if (fromColumnId === this.kanbanColumnId) {
+      const columnTasks = [...this.filteredTasks()];
+      const fromIdx = columnTasks.findIndex((t) => t.id === taskId);
+      if (fromIdx === -1) return;
+      columnTasks.splice(fromIdx, 1);
+      columnTasks.splice(targetIndex, 0, draggedTask);
+      // Update positions and sync with backend
+      const reordered = columnTasks.map((t, idx) => ({ ...t, position: idx }));
+      this.taskService.reorderTasks(reordered);
+      this.dragOverIndex.set(null);
+      return;
+    }
+
+    // === Move to another column ===
+    const sourceTasks = allTasks.filter(
+      (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
+    );
+    const targetTasks = [...this.filteredTasks()];
+    const newTask = { ...draggedTask, kanbanColumnId: this.kanbanColumnId };
+    targetTasks.splice(targetIndex, 0, newTask);
+
+    // Reindex both columns and sync backend
+    const reorderedSource = sourceTasks.map((t, idx) => ({
+      ...t,
+      position: idx,
+    }));
+    const reorderedTarget = targetTasks.map((t, idx) => ({
+      ...t,
+      position: idx,
+    }));
+
+    await this.taskService.updateTask(newTask.id!, newTask);
+    this.taskService.reorderTasks(reorderedSource);
+    this.taskService.reorderTasks(reorderedTarget);
     this.dragOverIndex.set(null);
   }
 
-  /** TrackBy function for @for */
+  /**
+   * Receives task drop event from child task component.
+   * Forwards to the main drop handler.
+   */
+  async onTaskItemDrop(event: DragEvent, targetIndex: number): Promise<void> {
+    await this.onTaskDrop(event, targetIndex);
+  }
+
+  /** TrackBy function for task rendering */
   trackById(index: number, task: Task): number | undefined {
     return task.id;
   }

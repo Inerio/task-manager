@@ -14,10 +14,16 @@ import { KanbanColumnService } from "../../services/kanban-column.service";
 import { TaskService } from "../../services/task.service";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { KanbanColumn } from "../../models/kanban-column.model";
-import { ColumnDragDropService } from "../../services/kanban-column-drag-drop.service";
+import { DragDropGlobalService } from "../../services/drag-drop-global.service";
 import { AlertService } from "../../services/alert.service";
+import {
+  setColumnDragData,
+  isColumnDragEvent,
+} from "../../utils/drag-drop-utils";
 
-/* ==== BOARD COMPONENT ==== */
+/**
+ * BoardComponent: Top-level Kanban board with columns (drag/drop/order/edit).
+ */
 @Component({
   selector: "app-board",
   standalone: true,
@@ -26,18 +32,16 @@ import { AlertService } from "../../services/alert.service";
   imports: [CommonModule, KanbanColumnComponent],
 })
 export class BoardComponent implements OnChanges {
-  /* ==== INPUT ==== */
+  // === INPUT & STATE ===
   private readonly _boardId = signal<number | null>(null);
   @Input({ required: true }) boardId!: number;
 
-  /* ==== SERVICES ==== */
   private readonly kanbanColumnService = inject(KanbanColumnService);
   private readonly taskService = inject(TaskService);
   private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly columnDnD = inject(ColumnDragDropService);
+  private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly alert = inject(AlertService);
 
-  /* ==== STATE ==== */
   readonly loading = this.kanbanColumnService.loading;
   addKanbanColumnError = signal<string | null>(null);
   readonly MAX_KANBANCOLUMNS = 5;
@@ -45,9 +49,15 @@ export class BoardComponent implements OnChanges {
   editingTitleId = signal<number | null>(null);
   editingTitleValue = signal("");
 
-  readonly draggedKanbanColumnId = this.columnDnD.draggedKanbanColumnId;
-  readonly dragOverIndex = this.columnDnD.dragOverIndex;
+  // Column drag state for reordering
+  readonly draggedKanbanColumnId = computed(
+    () => this.dragDropGlobal.currentColumnDrag()?.columnId ?? null
+  );
+  readonly dragOverIndex = signal<number | null>(null);
 
+  /**
+   * Computes the visible Kanban columns, reordering if dragging is active.
+   */
   readonly kanbanColumns = computed(() => {
     const raw = this.kanbanColumnService.kanbanColumns();
     const draggedId = this.draggedKanbanColumnId();
@@ -62,6 +72,7 @@ export class BoardComponent implements OnChanges {
   });
 
   constructor() {
+    // Auto-load columns and tasks on board id change
     effect(() => {
       const id = this._boardId();
       if (id != null) {
@@ -77,34 +88,94 @@ export class BoardComponent implements OnChanges {
     }
   }
 
-  /* ==== DRAG & DROP ==== */
+  // ==== DRAG & DROP (columns) ====
+
+  /**
+   * Start dragging a column. Triggers on dragstart of column container.
+   */
   onColumnDragStart(id: number, idx: number, e: DragEvent) {
     if (this.editingTitleId()) return;
-    this.columnDnD.onColumnDragStart(id, idx, e);
+    setColumnDragData(e, id);
+    this.dragDropGlobal.startColumnDrag(id);
+    this.dragOverIndex.set(idx);
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
   }
 
+  /**
+   * Triggered on dragenter for columns. Updates visual position for drop preview.
+   */
   onColumnDragEnter(idx: number, e: DragEvent) {
+    e.preventDefault();
     if (this.editingTitleId()) return;
-    this.columnDnD.onColumnDragEnter(idx, e);
+    if (this.dragDropGlobal.isColumnDrag()) {
+      this.dragOverIndex.set(idx);
+    }
   }
 
   onColumnDragOver(idx: number, e: DragEvent) {
+    e.preventDefault();
     if (this.editingTitleId()) return;
-    this.columnDnD.onColumnDragOver(idx, e);
+    if (this.dragDropGlobal.isColumnDrag()) {
+      this.dragOverIndex.set(idx);
+    }
   }
 
+  /**
+   * Drop a column: updates order locally and syncs with backend.
+   */
   onColumnDrop(e: DragEvent) {
     if (this.editingTitleId()) return;
-    const id = this._boardId();
-    if (id != null) this.columnDnD.onColumnDrop(id, e);
+    if (!isColumnDragEvent(e)) {
+      this.resetDragState();
+      return;
+    }
+    e.preventDefault();
+    const draggedId = this.draggedKanbanColumnId();
+    const targetIdx = this.dragOverIndex();
+    const boardId = this._boardId();
+    if (draggedId == null || targetIdx == null || boardId == null) {
+      this.resetDragState();
+      return;
+    }
+    const kanbanColumnsRaw = this.kanbanColumnService.kanbanColumns();
+    const currIdx = kanbanColumnsRaw.findIndex((l) => l.id === draggedId);
+    if (currIdx === -1 || currIdx === targetIdx) {
+      this.resetDragState();
+      return;
+    }
+    // Optimistically reorder in UI
+    const newArr = [...kanbanColumnsRaw];
+    const [draggedColumn] = newArr.splice(currIdx, 1);
+    newArr.splice(targetIdx, 0, draggedColumn);
+    this.kanbanColumnService.reorderKanbanColumns(newArr);
+
+    // Sync backend after
+    this.kanbanColumnService
+      .moveKanbanColumn(boardId, draggedId, targetIdx)
+      .subscribe({
+        next: () => {
+          this.kanbanColumnService.loadKanbanColumns(boardId);
+          this.resetDragState();
+        },
+        error: () => {
+          this.alert.show("error", "Move error: Could not move column.");
+          this.resetDragState();
+        },
+      });
   }
 
   onColumnDragEnd() {
-    if (this.editingTitleId()) return;
-    this.columnDnD.onColumnDragEnd();
+    this.resetDragState();
   }
 
-  /* ==== ADD ==== */
+  resetDragState() {
+    this.dragDropGlobal.endDrag();
+    this.dragOverIndex.set(null);
+  }
+
+  // ==== COLUMN ADD/DELETE/EDIT ====
+
+  /** Add new Kanban column, then auto-start edit mode for its name */
   addKanbanColumnAndEdit(): void {
     const id = this._boardId();
     if (
@@ -128,7 +199,7 @@ export class BoardComponent implements OnChanges {
     });
   }
 
-  /* ==== DELETE ==== */
+  /** Delete a whole Kanban column after confirmation */
   async deleteKanbanColumn(id: number, name: string) {
     if (this.editingTitleId()) return;
     const boardId = this._boardId();
@@ -143,6 +214,7 @@ export class BoardComponent implements OnChanges {
     });
   }
 
+  /** Delete all tasks in a column (only, not the column itself) */
   async deleteAllInColumn(id: number, name: string) {
     if (this.editingTitleId()) return;
     const confirmed = await this.confirmDialog.open(
@@ -157,7 +229,7 @@ export class BoardComponent implements OnChanges {
     }
   }
 
-  /* ==== EDIT ==== */
+  /** Start editing a column name (focus the input for rename) */
   startEditTitle(column: KanbanColumn) {
     if (this.editingTitleId()) return;
     this.editingTitleId.set(column.id!);
@@ -170,6 +242,7 @@ export class BoardComponent implements OnChanges {
     });
   }
 
+  /** Save column rename and sync with backend */
   saveTitleEdit(column: KanbanColumn) {
     const newName = this.editingTitleValue().trim();
     if (newName === column.name) {
@@ -191,6 +264,7 @@ export class BoardComponent implements OnChanges {
     });
   }
 
+  /** Cancel title edit, if column was new and unnamed, auto-delete it */
   cancelTitleEdit() {
     const id = this.editingTitleId();
     const column = this.kanbanColumnService
@@ -212,11 +286,13 @@ export class BoardComponent implements OnChanges {
     }
   }
 
+  /** Update local edit value from input change */
   onEditTitleInput(event: Event) {
     const value = (event.target as HTMLInputElement).value;
     this.editingTitleValue.set(value);
   }
 
+  /** Helper: is this column currently being edited? */
   isEditingTitle(column: KanbanColumn) {
     return this.editingTitleId() === column.id;
   }

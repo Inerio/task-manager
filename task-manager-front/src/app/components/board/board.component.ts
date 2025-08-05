@@ -263,26 +263,9 @@ export class BoardComponent implements OnChanges {
     });
   }
 
-  /** Cancel title edit, delete column if it is new and still unnamed */
+  /** Cancel title edit: simply exit edit mode, do not delete column even if unnamed */
   cancelTitleEdit(): void {
-    const id = this.editingTitleId();
-    const column = this.kanbanColumnService
-      .kanbanColumns()
-      .find((c) => c.id === id);
-    const boardId = this._boardId();
-    if (column && !column.name?.trim() && boardId) {
-      this.kanbanColumnService
-        .deleteKanbanColumn(column.id!, boardId)
-        .subscribe({
-          next: () => this.editingTitleId.set(null),
-          error: () => {
-            this.alert.show("error", "Error while cancelling column edition.");
-            this.editingTitleId.set(null);
-          },
-        });
-    } else {
-      this.editingTitleId.set(null);
-    }
+    this.editingTitleId.set(null);
   }
 
   /** Handle input for inline edit of column name */

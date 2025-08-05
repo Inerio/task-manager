@@ -186,7 +186,6 @@ export class TaskComponent
       "";
     const current = this.localTask().description || "";
     this.patchLocalTask({ description: current + emoji });
-    this.showEmojiPicker.set(false);
   }
 
   // --- Drag & drop handlers (only for task card) ---
@@ -207,10 +206,43 @@ export class TaskComponent
       this.localTask().kanbanColumnId!
     );
 
-    // Custom drag image for better UX (removes after single event loop)
-    const dragImage = document.createElement("div");
-    dragImage.textContent = this.localTask().title;
-    dragImage.style.cssText = `
+    // --- Full card drag image ---
+    const card = (event.target as HTMLElement).closest(".task-card");
+    if (card && card instanceof HTMLElement) {
+      // Clone the node (deep = true)
+      const clone = card.cloneNode(true) as HTMLElement;
+      // Remove dynamic classes that should not appear (dragging/highlight/drag-over)
+      clone.classList.remove("dragging", "drag-over-card");
+      const btns = clone.querySelectorAll('button, input[type="checkbox"]');
+      btns.forEach((el) => {
+        (el as HTMLElement).setAttribute("disabled", "true");
+        (el as HTMLElement).style.pointerEvents = "none";
+        (el as HTMLElement).style.opacity = "0.6";
+      });
+      // Set fixed size for drag image (matches card size)
+      clone.style.width = `${(card as HTMLElement).offsetWidth}px`;
+      clone.style.height = `${(card as HTMLElement).offsetHeight}px`;
+      clone.style.position = "absolute";
+      clone.style.top = "-9999px";
+      clone.style.left = "-9999px";
+      clone.style.zIndex = "99999";
+      clone.style.boxShadow = "0 4px 14px 2px #1976d23d";
+      document.body.appendChild(clone);
+
+      // Set as drag image (center mouse pointer)
+      event.dataTransfer?.setDragImage(
+        clone,
+        clone.offsetWidth / 2,
+        clone.offsetHeight / 2
+      );
+      setTimeout(() => {
+        document.body.removeChild(clone);
+      }, 0);
+    } else {
+      // Fallback (should never happen): use basic drag image
+      const dragImage = document.createElement("div");
+      dragImage.textContent = this.localTask().title;
+      dragImage.style.cssText = `
       position: absolute;
       top: -1000px;
       padding: 0.5rem 1rem;
@@ -221,11 +253,12 @@ export class TaskComponent
       font-weight: bold;
       font-size: 1rem;
     `;
-    document.body.appendChild(dragImage);
-    event.dataTransfer?.setDragImage(dragImage, 10, 10);
-    setTimeout(() => {
-      document.body.removeChild(dragImage);
-    }, 0);
+      document.body.appendChild(dragImage);
+      event.dataTransfer?.setDragImage(dragImage, 10, 10);
+      setTimeout(() => {
+        document.body.removeChild(dragImage);
+      }, 0);
+    }
   }
 
   onTaskDragEnd(): void {

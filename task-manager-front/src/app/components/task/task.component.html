@@ -113,7 +113,7 @@
     required
     autocomplete="off"
   />
-  <div class="desc-row-edit" #emojiPickerContainer>
+  <div class="desc-row-edit" #emojiPickerContainer style="position: relative">
     <textarea
       #descTextarea
       class="form-control textarea"
@@ -135,30 +135,30 @@
         draggable="false"
       />
     </span>
+    @if (showEmojiPicker()) {
+    <!--
+      NOTE: 'emoji-picker' is a Web Component (not a native Angular component).
+      This component uses CUSTOM_ELEMENTS_SCHEMA to support it.
+      No warning or error will appear at runtime or in build.
+      See: https://angular.io/guide/elements#using-custom-elements-in-angular
+    -->
+    <emoji-picker
+      #emojiPicker
+      theme="light"
+      (emoji-click)="addEmojiToDescription($event)"
+      class="emoji-picker-dropdown"
+      style="
+        position: absolute;
+        left: 0;
+        top: 91%;
+        z-index: 99;
+        width: 100%;
+        min-width: 260px;
+        max-height: 370px;
+      "
+    ></emoji-picker>
+    }
   </div>
-  @if (showEmojiPicker()) {
-  <!-- 
-  NOTE: 'emoji-picker' is a Web Component (not a native Angular component).
-  This component uses CUSTOM_ELEMENTS_SCHEMA to support it.
-  No warning or error will appear at runtime or in build.
-  See: https://angular.io/guide/elements#using-custom-elements-in-angular
--->
-  <emoji-picker
-    #emojiPicker
-    theme="light"
-    (emoji-click)="addEmojiToDescription($event)"
-    class="emoji-picker-dropdown"
-    style="
-      position: absolute;
-      left: 0;
-      top: 6.1rem;
-      z-index: 99;
-      width: calc(100% - 2px);
-      min-width: 260px;
-      max-height: 370px;
-    "
-  ></emoji-picker>
-  }
   <input
     class="form-control"
     type="date"

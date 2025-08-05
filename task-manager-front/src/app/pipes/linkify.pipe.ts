@@ -1,8 +1,9 @@
 import { Pipe, PipeTransform } from "@angular/core";
+import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
 
-/* ==== LINKIFY PIPE ==== */
+/* ==== LINKIFY PIPE (SAFE) ==== */
 
-/** Regex for detecting URLs */
+/** Matches URLs starting by http(s):// (simple demo, not exhaustive) */
 const urlRegex = /(https?:\/\/[^\s]+)/g;
 
 @Pipe({
@@ -10,18 +11,24 @@ const urlRegex = /(https?:\/\/[^\s]+)/g;
   standalone: true,
 })
 export class LinkifyPipe implements PipeTransform {
+  constructor(private sanitizer: DomSanitizer) {}
+
   /**
-   * Transforms a plain text string by replacing URLs with clickable anchor tags.
-   * @param text The input string to process.
-   * @returns The HTML string with anchor tags for detected URLs.
+   * Transforms plain text by replacing URLs with clickable anchor tags,
+   * sanitizing the output for safe innerHTML.
+   * Also converts line breaks to <br>.
+   * @param text The input string.
+   * @returns SafeHtml string with links and line breaks.
    */
-  transform(text: string | null | undefined): string {
+  transform(text: string | null | undefined): SafeHtml {
     if (!text) return "";
-    // Replace URLs with clickable links (HTML)
-    return text.replace(
+    let html = text.replace(
       urlRegex,
       (url) =>
         `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
     );
+    html = html.replace(/\n/g, "<br>");
+    // Always sanitize HTML to prevent XSS
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 }

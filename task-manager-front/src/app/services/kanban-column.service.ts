@@ -4,12 +4,10 @@ import { KanbanColumn } from "../models/kanban-column.model";
 import { Observable } from "rxjs";
 import { environment } from "../../environments/environment.local";
 
-/* ==== KANBAN COLUMN SERVICE ==== */
+/** Service for managing kanban columns, with signals and optimistic UI updates. */
 @Injectable({ providedIn: "root" })
 export class KanbanColumnService {
-  // Internal signal for kanban columns (mutable only in service)
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
-  // Public computed signal for readonly access outside service
   readonly kanbanColumns = computed(() => this._kanbanColumns());
 
   private readonly _loading = signal(false);
@@ -17,9 +15,7 @@ export class KanbanColumnService {
 
   constructor(private http: HttpClient) {}
 
-  /**
-   * Loads all columns for the given board.
-   */
+  /** Loads all columns for the given board. */
   loadKanbanColumns(boardId: number): void {
     if (!boardId) {
       this._kanbanColumns.set([]);
@@ -34,18 +30,13 @@ export class KanbanColumnService {
     });
   }
 
-  /**
-   * Creates a new column in the specified board.
-   */
+  /** Creates a new column in a board. */
   createKanbanColumn(name: string, boardId: number): Observable<KanbanColumn> {
     const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns`;
     return this.http.post<KanbanColumn>(url, { name });
   }
 
-  /**
-   * Updates an existing column.
-   * @throws Error if id or boardId is missing.
-   */
+  /** Updates a column. Throws if id/boardId is missing. */
   updateKanbanColumn(kanbanColumn: KanbanColumn): Observable<KanbanColumn> {
     if (!kanbanColumn.id) throw new Error("KanbanColumn ID required");
     if (!kanbanColumn.boardId) throw new Error("KanbanColumn boardId required");
@@ -53,9 +44,7 @@ export class KanbanColumnService {
     return this.http.put<KanbanColumn>(url, kanbanColumn);
   }
 
-  /**
-   * Deletes a column from the board and updates the local signal for instant UI feedback.
-   */
+  /** Deletes a column, updates signal locally for instant feedback. */
   deleteKanbanColumn(
     kanbanColumnId: number,
     boardId: number
@@ -76,8 +65,10 @@ export class KanbanColumnService {
   }
 
   /**
-   * Moves a column to a new index (1-based) in the board.
-   * The backend expects targetPosition = targetIndex + 1
+   * Moves a column to a new index (1-based for backend).
+   * @param boardId Board identifier.
+   * @param kanbanColumnId Column identifier.
+   * @param targetIndex Zero-based target index (backend expects +1).
    */
   moveKanbanColumn(
     boardId: number,
@@ -91,9 +82,7 @@ export class KanbanColumnService {
     });
   }
 
-  /**
-   * Optimistically reorder columns locally for instant UI feedback.
-   */
+  /** Optimistically sets column order in signal for instant UI feedback. */
   reorderKanbanColumns(newOrder: KanbanColumn[]): void {
     this._kanbanColumns.set(newOrder);
   }

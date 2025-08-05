@@ -7,12 +7,16 @@ import {
   ViewChild,
   inject,
   signal,
+  Signal,
 } from "@angular/core";
 import { AlertService } from "../../services/alert.service";
 import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { AttachmentService } from "../../services/attachment.service";
 
-/* ==== ATTACHMENT ZONE COMPONENT ==== */
+/**
+ * AttachmentZoneComponent: drag & drop, preview, upload and manage task attachments.
+ * Minimal logic: parent handles upload/delete actions, this component manages UI and events only.
+ */
 @Component({
   selector: "app-attachment-zone",
   standalone: true,
@@ -20,67 +24,68 @@ import { AttachmentService } from "../../services/attachment.service";
   templateUrl: "./attachment-zone.component.html",
 })
 export class AttachmentZoneComponent {
-  /* ==== INPUTS ==== */
+  // ==== INPUTS ====
   @Input({ required: true }) attachments!: string[];
   @Input({ required: true }) taskId!: number;
   @Input() acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
   @Input() maxSize = 5 * 1024 * 1024;
 
-  /* ==== STATE ==== */
-  isDragging = signal(false);
-  previewUrl = signal<string | null>(null);
-  previewFilename = signal<string | null>(null);
-  previewTop = signal(0);
-  previewLeft = signal(0);
+  // ==== STATE SIGNALS ====
+  readonly isDragging = signal(false);
+  readonly previewUrl = signal<string | null>(null);
+  readonly previewFilename = signal<string | null>(null);
+  readonly previewTop = signal(0);
+  readonly previewLeft = signal(0);
 
   @ViewChild("fileInput") fileInput!: ElementRef<HTMLInputElement>;
   private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
 
-  /* ==== OUTPUT EVENTS ==== */
+  // ==== OUTPUTS ====
   @Output() filesUploaded = new EventEmitter<File[]>();
   @Output() fileDeleted = new EventEmitter<string>();
   @Output() fileDownloaded = new EventEmitter<string>();
 
+  // ==== UTILS (VIEW / RENDERING) ====
   trackByFilename(index: number, filename: string): string {
     return filename;
   }
 
-  triggerFileSelect() {
+  triggerFileSelect(): void {
     this.fileInput?.nativeElement.click();
   }
 
   isImage(filename: string): boolean {
-    return !!filename.match(/\.(png|jpe?g|gif|webp|bmp|svg)$/i);
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
   }
 
   buildAttachmentUrl(filename: string): string {
     return this.attachmentService.buildAttachmentUrl(this.taskId, filename);
   }
 
-  /* ==== PREVIEW ON HOVER ==== */
-  showPreview(filename: string, event: MouseEvent) {
+  // ==== PREVIEW ON HOVER ====
+  showPreview(filename: string, event: MouseEvent): void {
     if (!this.isImage(filename)) return;
     this.previewFilename.set(filename);
     this.previewUrl.set(this.buildAttachmentUrl(filename));
     this.previewTop.set(event.clientY + 14);
     this.previewLeft.set(event.clientX + 18);
   }
-  hidePreview() {
+  hidePreview(): void {
     this.previewUrl.set(null);
     this.previewFilename.set(null);
   }
 
-  /* ==== DRAG & DROP ==== */
-  onDragOver(event: DragEvent) {
+  // ==== DRAG & DROP ====
+  onDragOver(event: DragEvent): void {
     if (!isFileDragEvent(event)) return;
     event.preventDefault();
     this.isDragging.set(true);
   }
-  onDragLeave() {
+  onDragLeave(): void {
     this.isDragging.set(false);
   }
-  onFileDrop(event: DragEvent) {
+  onFileDrop(event: DragEvent): void {
     if (!isFileDragEvent(event)) return;
     event.preventDefault();
     const files = event.dataTransfer?.files;
@@ -99,8 +104,8 @@ export class AttachmentZoneComponent {
     this.isDragging.set(false);
   }
 
-  /* ==== FILE INPUT ==== */
-  onFileSelect(event: Event) {
+  // ==== FILE INPUT ====
+  onFileSelect(event: Event): void {
     const files = (event.target as HTMLInputElement).files;
     if (files?.length) {
       const newFiles = Array.from(files).filter(
@@ -116,11 +121,11 @@ export class AttachmentZoneComponent {
     }
   }
 
-  /* ==== FILE ACTIONS: Only emit to parent, logic in AttachmentService ==== */
-  onDeleteAttachment(filename: string) {
+  // ==== FILE ACTIONS (emit to parent only) ====
+  onDeleteAttachment(filename: string): void {
     this.fileDeleted.emit(filename);
   }
-  onDownloadAttachment(filename: string) {
+  onDownloadAttachment(filename: string): void {
     this.fileDownloaded.emit(filename);
   }
 }

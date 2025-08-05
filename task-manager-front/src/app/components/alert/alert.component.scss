@@ -1,17 +1,32 @@
-.alert-box {
+.alert-stack {
   position: fixed;
   z-index: 9999;
   left: 50%;
-  top: 20px;
+  top: 24px;
   transform: translateX(-50%);
-  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  pointer-events: none; // so clicks pass through except close btn
+}
+
+.alert-box {
+  min-width: 220px;
   max-width: 80vw;
-  padding: 1rem 2rem;
+  padding: 1rem 2.2rem 1rem 1.5rem;
   border-radius: 8px;
   font-size: 1.06rem;
   box-shadow: 0 4px 32px #0002;
   opacity: 0.97;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, transform 0.15s;
+  pointer-events: auto; // allow close btn to be clickable
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
 
   &.success {
     background: #e8f5e9;
@@ -27,5 +42,24 @@
     background: #e3f2fd;
     color: #1976d2;
     border: 1px solid #1976d2;
+  }
+}
+
+.alert-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.36rem;
+  color: #888;
+  cursor: pointer;
+  padding: 0 0.2em;
+  margin-left: 0.25em;
+  border-radius: 4px;
+  transition: background 0.12s, color 0.12s;
+  pointer-events: auto;
+  &:hover,
+  &:focus {
+    background: #eee;
+    color: #333;
+    outline: none;
   }
 }

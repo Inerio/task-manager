@@ -1,5 +1,27 @@
-@if (alert()) {
-<div class="alert-box" [ngClass]="alert()?.type">
-  {{ alert()?.message }}
+<!--
+  Alert Stack: Shows all alerts as "toasts", stacked from top.
+  Each alert has its own close button and auto-dismiss.
+-->
+<div class="alert-stack">
+  <!-- For each alert, render a toast box -->
+  @for (alert of alerts(); track alert.id) {
+  <div
+    class="alert-box"
+    [ngClass]="alert.type"
+    role="alert"
+    tabindex="0"
+    aria-live="polite"
+  >
+    <span>{{ alert.message }}</span>
+    <button
+      class="alert-close-btn"
+      (click)="dismiss(alert.id)"
+      aria-label="Close"
+      title="Close"
+      tabindex="0"
+    >
+      &times;
+    </button>
+  </div>
+  }
 </div>
-}

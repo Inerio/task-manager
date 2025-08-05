@@ -1,11 +1,10 @@
-import { Component, computed, inject, signal } from "@angular/core";
+import { Component, computed, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { AlertService } from "../../services/alert.service";
 
-/* ==== ALERT COMPONENT ==== */
 /**
- * Displays global alerts from the AlertService.
- * Reactive to alert state changes.
+ * Displays a stack of alerts (toast notifications), one per active alert.
+ * (This component is still called AlertComponent for compatibility)
  */
 @Component({
   selector: "app-alert",
@@ -15,8 +14,12 @@ import { AlertService } from "../../services/alert.service";
   styleUrls: ["./alert.component.scss"],
 })
 export class AlertComponent {
-  private alertService = inject(AlertService);
+  private readonly alertService = inject(AlertService);
 
-  /** Reactive computed alert (null or {type, message}) */
-  alert = computed(() => this.alertService.alert());
+  /** All current alerts (reactive signal) */
+  readonly alerts = computed(() => this.alertService.alerts());
+
+  dismiss(id: number) {
+    this.alertService.dismiss(id);
+  }
 }

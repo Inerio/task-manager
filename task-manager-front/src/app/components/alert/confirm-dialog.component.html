@@ -1,6 +1,10 @@
+<!-- 
+  Confirm Dialog Modal (modern Angular v17+ block control flow)
+  Modal is visible only if 'visible' is true.
+-->
 @if (visible()) {
 <div class="confirm-dialog-backdrop">
-  <div class="confirm-dialog">
+  <div class="confirm-dialog" role="dialog" aria-modal="true" tabindex="0">
     <h3>{{ state().title }}</h3>
     <p>{{ state().message }}</p>
     <div class="btn-group">

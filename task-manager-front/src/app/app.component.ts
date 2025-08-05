@@ -25,23 +25,24 @@ interface TempBoard {
   ],
 })
 export class AppComponent {
+  // ==== State and injected services ====
   private readonly boardService = inject(BoardService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly taskService = inject(TaskService);
+
   readonly boards = this.boardService.boards;
-  selectedBoardId = signal<number | null>(null);
+  readonly selectedBoardId = signal<number | null>(null);
 
-  /** Temporary editing state for new board creation */
-  editingBoardId = signal<number | null>(null);
-  editingBoardValue = signal<string>("");
+  /** Inline add board state */
+  readonly editingBoardId = signal<number | null>(null);
+  readonly editingBoardValue = signal<string>("");
 
-  /** Edit mode for the selected board's title (main area) */
-  editingSelectedBoard = signal<boolean>(false);
-  editingSelectedBoardValue = signal<string>("");
+  /** Edit mode for selected board title (main area) */
+  readonly editingSelectedBoard = signal<boolean>(false);
+  readonly editingSelectedBoardValue = signal<string>("");
 
-  /** Temporary board list for displaying a new board being created */
+  /** Displayed boards (computed: boards + temp new board if editing) */
   readonly displayedBoards = computed(() => {
-    // If a board is being created, append it (id === null)
     if (this.editingBoardId() === null) return this.boards();
     return [
       ...this.boards(),
@@ -51,8 +52,7 @@ export class AppComponent {
 
   constructor() {
     this.boardService.loadBoards();
-
-    // Automatically select the first board after loading, if any
+    // Automatically select the first board on load if none selected
     computed(() => {
       const firstId = this.boards()[0]?.id;
       if (typeof firstId === "number" && this.selectedBoardId() === null) {
@@ -61,21 +61,21 @@ export class AppComponent {
     });
   }
 
-  selectBoard(id: number | null | undefined) {
+  // ==== Sidebar: Board selection and add ====
+
+  selectBoard(id: number | null | undefined): void {
     if (typeof id === "number" && this.selectedBoardId() !== id) {
       this.selectedBoardId.set(id);
-      this.cancelBoardEdit(); // Cancel any add-board in progress if switching
-      this.cancelSelectedBoardEdit(); // Cancel edit mode if switching
+      this.cancelBoardEdit();
+      this.cancelSelectedBoardEdit();
     }
   }
 
-  /** Start inline board creation (adds a temp board to the list) */
-  addBoard() {
+  addBoard(): void {
     if (this.editingBoardId() === null) {
-      this.editingBoardId.set(-1); // Use -1 to indicate a temp "edit" state
+      this.editingBoardId.set(-1); // -1 indicates editing state
       this.editingBoardValue.set("");
       setTimeout(() => {
-        // Focus on the input (timeout for DOM rendering)
         const el = document.getElementById(
           "new-board-input"
         ) as HTMLInputElement | null;
@@ -84,14 +84,11 @@ export class AppComponent {
     }
   }
 
-  /** When editing board name input changes */
-  onEditBoardInput(event: Event) {
-    const val = (event.target as HTMLInputElement).value;
-    this.editingBoardValue.set(val);
+  onEditBoardInput(event: Event): void {
+    this.editingBoardValue.set((event.target as HTMLInputElement).value);
   }
 
-  /** Save the new board to API and update the list */
-  saveBoardEdit() {
+  saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
     if (!name) {
       this.cancelBoardEdit();
@@ -111,14 +108,14 @@ export class AppComponent {
     });
   }
 
-  /** Cancel board creation (removes the temp board input) */
-  cancelBoardEdit() {
+  cancelBoardEdit(): void {
     this.editingBoardId.set(null);
     this.editingBoardValue.set("");
   }
 
-  /** === BOARD TITLE MAIN AREA EDITION === */
-  startSelectedBoardEdit() {
+  // ==== Board title main area: Edit, Save, Cancel ====
+
+  startSelectedBoardEdit(): void {
     const board = this.getSelectedBoard();
     if (board) {
       this.editingSelectedBoard.set(true);
@@ -132,12 +129,13 @@ export class AppComponent {
     }
   }
 
-  onEditSelectedBoardInput(event: Event) {
-    const val = (event.target as HTMLInputElement).value;
-    this.editingSelectedBoardValue.set(val);
+  onEditSelectedBoardInput(event: Event): void {
+    this.editingSelectedBoardValue.set(
+      (event.target as HTMLInputElement).value
+    );
   }
 
-  saveSelectedBoardEdit() {
+  saveSelectedBoardEdit(): void {
     const board = this.getSelectedBoard();
     const newName = this.editingSelectedBoardValue().trim();
     if (!board || !newName || newName === board.name) {
@@ -145,24 +143,22 @@ export class AppComponent {
       return;
     }
     this.boardService.updateBoard(board.id!, newName).subscribe({
-      next: () => {
-        this.boardService.loadBoards();
-      },
+      next: () => this.boardService.loadBoards(),
       complete: () => this.cancelSelectedBoardEdit(),
       error: () => this.cancelSelectedBoardEdit(),
     });
   }
 
-  cancelSelectedBoardEdit() {
+  cancelSelectedBoardEdit(): void {
     this.editingSelectedBoard.set(false);
     this.editingSelectedBoardValue.set("");
   }
 
-  /** Delete the currently selected board with confirm dialog */
-  async deleteSelectedBoard() {
+  // ==== Board deletion and global task deletion (with confirm dialogs) ====
+
+  async deleteSelectedBoard(): Promise<void> {
     const board = this.getSelectedBoard();
     if (!board || typeof board.id !== "number") return;
-    // Use ConfirmDialog
     const confirmed = await this.confirmDialog.open(
       "Delete board",
       `Delete board "${board.name}"? This action cannot be undone.`
@@ -180,8 +176,7 @@ export class AppComponent {
     });
   }
 
-  /** Handler for "Delete all tasks" (top-right of board header) */
-  async deleteAllTasks() {
+  async deleteAllTasks(): Promise<void> {
     if (this.editingSelectedBoard()) return;
     const selectedBoard = this.getSelectedBoard();
     if (!selectedBoard || typeof selectedBoard.id !== "number") return;
@@ -192,20 +187,19 @@ export class AppComponent {
     );
     if (!confirmed) return;
 
-    // Call new service method for board-specific deletion
     this.taskService.deleteAllTasksByBoardId(selectedBoard.id).subscribe({
       next: () => this.taskService.loadTasks(),
-      error: (err) => alert("Error while deleting all tasks for this board."),
+      error: () => alert("Error while deleting all tasks for this board."),
     });
   }
 
-  /** Returns the currently selected board object */
+  // ==== Utility getters ====
+
   getSelectedBoard() {
     return this.boards().find((b) => b.id === this.selectedBoardId());
   }
 
   get selectedBoardName(): string {
-    const board = this.getSelectedBoard();
-    return board?.name ?? "No board selected";
+    return this.getSelectedBoard()?.name ?? "No board selected";
   }
 }

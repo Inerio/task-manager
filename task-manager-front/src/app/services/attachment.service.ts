@@ -7,6 +7,7 @@ import { AlertService } from "./alert.service";
 
 /**
  * Handles file attachments for tasks: upload, download, delete, preview.
+ * All side effects and errors are handled here for clarity.
  */
 @Injectable({ providedIn: "root" })
 export class AttachmentService {
@@ -33,7 +34,7 @@ export class AttachmentService {
         )
       );
       return updated;
-    } catch (err) {
+    } catch {
       this.alertService.show("error", "Error uploading attachment.");
       return null;
     }
@@ -67,7 +68,7 @@ export class AttachmentService {
         this.http.delete<Task>(this.buildAttachmentUrl(taskId, filename))
       );
       return updated;
-    } catch (err) {
+    } catch {
       this.alertService.show("error", "Error deleting attachment.");
       return null;
     }

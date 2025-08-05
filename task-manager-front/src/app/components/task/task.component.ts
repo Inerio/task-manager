@@ -1,20 +1,20 @@
 import {
   Component,
-  CUSTOM_ELEMENTS_SCHEMA,
   Input,
-  OnChanges,
-  SimpleChanges,
+  Output,
+  EventEmitter,
+  ViewChild,
+  ElementRef,
   WritableSignal,
   computed,
   inject,
   signal,
-  ElementRef,
-  ViewChild,
+  OnChanges,
+  SimpleChanges,
   AfterViewInit,
   AfterViewChecked,
   Renderer2,
-  EventEmitter,
-  Output,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Task } from "../../models/task.model";
@@ -26,6 +26,10 @@ import { AlertService } from "../../services/alert.service";
 import { DragDropGlobalService } from "../../services/drag-drop-global.service";
 import { setTaskDragData } from "../../utils/drag-drop-utils";
 
+/**
+ * TaskComponent: Displays and edits a single task card (modern Angular signal-based).
+ * Supports drag & drop, attachment management, and emoji picker (as a custom element).
+ */
 @Component({
   selector: "app-task-item",
   standalone: true,
@@ -37,44 +41,43 @@ import { setTaskDragData } from "../../utils/drag-drop-utils";
 export class TaskComponent
   implements OnChanges, AfterViewInit, AfterViewChecked
 {
-  // ===== EMOJI PICKER (references for shadow DOM click detection) =====
+  // === Inputs & Outputs ===
+  @Input({ required: true }) task!: Task;
+  @Output() taskDropped = new EventEmitter<DragEvent>();
+
+  // === Emoji Picker / View refs ===
   @ViewChild("emojiPicker", { static: false }) emojiPickerRef?: ElementRef;
   @ViewChild("emojiPickerContainer", { static: false })
   emojiPickerContainer?: ElementRef<HTMLDivElement>;
   @ViewChild("descTextarea") descTextarea?: ElementRef<HTMLTextAreaElement>;
   showEmojiPicker = signal(false);
 
-  // ===== Drag & Drop event emitter (for parent column to handle reorder) =====
-  @Output() taskDropped = new EventEmitter<DragEvent>();
-
-  // ===== STATE & INJECTIONS =====
-  @Input({ required: true }) task!: Task;
+  // === Services & State ===
   private readonly taskService = inject(TaskService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly renderer = inject(Renderer2);
 
-  // ===== DRAG-OVER STATE =====
+  readonly localTask: WritableSignal<Task> = signal({} as Task);
+
+  // --- Drag/drop state ---
+  private dragEnterCount = 0;
   private dragOver = signal(false);
   isDragOver = () => this.dragOver();
-  readonly localTask: WritableSignal<Task> = signal({} as Task);
   dragging = signal(false);
 
-  // ===== ATTACHMENT CONFIG =====
-  acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
-  maxSize = 5 * 1024 * 1024;
+  // --- Attachment settings ---
+  readonly acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
+  readonly maxSize = 5 * 1024 * 1024;
 
-  // ===== DISPLAY TRUNCATION LIMITS =====
+  // --- Truncation config & state ---
   readonly TITLE_TRUNCATE = 32;
   readonly DESC_TRUNCATE = 120;
   showFullTitle = signal(false);
   showFullDescription = signal(false);
 
-  // ===== COUNTER =====
-  private dragEnterCount = 0;
-
-  // ===== COMPUTED: Truncated or full text for display =====
+  // --- Display computed (signal-based, reactive) ---
   readonly displayedTitle = computed(() => {
     const title = this.localTask().title ?? "";
     if (this.showFullTitle() || !title) return title;
@@ -82,6 +85,7 @@ export class TaskComponent
       ? title
       : title.slice(0, this.TITLE_TRUNCATE) + "…";
   });
+
   readonly displayedDescription = computed(() => {
     const desc = this.localTask().description ?? "";
     if (this.showFullDescription() || !desc) return desc;
@@ -89,19 +93,22 @@ export class TaskComponent
       ? desc
       : desc.slice(0, this.DESC_TRUNCATE) + "…";
   });
+
   readonly canTruncateTitle = computed(
     () => (this.localTask().title ?? "").length > this.TITLE_TRUNCATE
   );
   readonly canTruncateDescription = computed(
     () => (this.localTask().description ?? "").length > this.DESC_TRUNCATE
   );
+
   toggleTitleTruncate = () =>
     this.canTruncateTitle() && this.showFullTitle.set(!this.showFullTitle());
   toggleDescriptionTruncate = () =>
     this.canTruncateDescription() &&
     this.showFullDescription.set(!this.showFullDescription());
 
-  // ===== LIFECYCLE =====
+  // --- Lifecycle ---
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["task"] && this.task) {
       this.localTask.set({ ...this.task });
@@ -111,7 +118,7 @@ export class TaskComponent
   }
 
   ngAfterViewInit(): void {
-    // Listen for outside click to close emoji picker (also shadow DOM)
+    // Shadow DOM outside click detection for emoji picker
     this.renderer.listen("document", "mousedown", (event: MouseEvent) => {
       if (!this.showEmojiPicker()) return;
       const inContainer = this.emojiPickerContainer?.nativeElement.contains(
@@ -132,7 +139,7 @@ export class TaskComponent
   }
 
   ngAfterViewChecked(): void {
-    // Custom style for emoji picker shadow DOM
+    // Custom style injection for emoji picker shadow DOM
     if (this.showEmojiPicker() && this.emojiPickerRef?.nativeElement) {
       const picker = this.emojiPickerRef.nativeElement;
       if (picker.shadowRoot) {
@@ -165,18 +172,25 @@ export class TaskComponent
     }
   }
 
-  // ===== EMOJI PICKER LOGIC =====
+  // --- Emoji picker logic ---
   toggleEmojiPicker(): void {
     this.showEmojiPicker.set(!this.showEmojiPicker());
   }
   addEmojiToDescription(event: any): void {
-    const emoji = event.detail.unicode;
+    // Accept both emoji-picker-element and Angular emoji pickers
+    const emoji =
+      event.detail?.unicode ??
+      event.emoji?.native ??
+      event.emoji?.emoji ??
+      event.detail ??
+      "";
     const current = this.localTask().description || "";
     this.patchLocalTask({ description: current + emoji });
     this.showEmojiPicker.set(false);
   }
 
-  // ===== DRAG & DROP HANDLERS (Task only!) =====
+  // --- Drag & drop handlers (only for task card) ---
+
   onTaskDragStart(event: DragEvent): void {
     if (this.localTask().isEditing) {
       event.preventDefault();
@@ -193,7 +207,7 @@ export class TaskComponent
       this.localTask().kanbanColumnId!
     );
 
-    // Custom drag image for better UX
+    // Custom drag image for better UX (removes after single event loop)
     const dragImage = document.createElement("div");
     dragImage.textContent = this.localTask().title;
     dragImage.style.cssText = `
@@ -220,15 +234,14 @@ export class TaskComponent
   }
 
   /**
-   * DRAG OVER: Prevent default, but do not touch state (avoid flicker)
+   * Drag over: prevent default, but state handled by enter/leave only.
    */
   onTaskDragOver(event: DragEvent): void {
     event.preventDefault();
-    // No set() here, handled by enter/leave!
   }
 
   /**
-   * DRAG ENTER: Increments counter for stable highlight
+   * Drag enter: stable highlight with internal counter.
    */
   onTaskDragEnter(event: DragEvent): void {
     if (!this.localTask().isEditing && this.dragDropGlobal.isTaskDrag()) {
@@ -238,7 +251,7 @@ export class TaskComponent
   }
 
   /**
-   * DRAG LEAVE: Decrements counter; disables highlight only if fully left
+   * Drag leave: counter for robust highlight (avoids flicker on nested nodes).
    */
   onTaskDragLeave(event: DragEvent): void {
     if (!this.localTask().isEditing && this.dragDropGlobal.isTaskDrag()) {
@@ -250,7 +263,7 @@ export class TaskComponent
   }
 
   /**
-   * DROP: Always reset counter and highlight
+   * Drop: always reset counter and highlight; emit event for parent to handle.
    */
   async onTaskDrop(event: DragEvent) {
     if (this.localTask().isEditing) return;
@@ -262,7 +275,7 @@ export class TaskComponent
     this.taskDropped.emit(event);
   }
 
-  // ===== CRUD & EDITING =====
+  // --- CRUD & editing ---
   toggleCompleted(): void {
     const updated = {
       ...this.localTask(),
@@ -288,7 +301,23 @@ export class TaskComponent
     if (id) this.taskService.deleteTask(id);
   }
 
-  // ===== HELPERS FOR INPUT BINDINGS =====
+  /**
+   * Handles clicks on the description <p> (which uses [innerHTML]).
+   * - If user clicks a link (<a>), let the browser handle navigation.
+   * - Only toggles truncated/full view if description is truncatable and click was NOT on a link.
+   */
+  onDescriptionClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (target.closest("a")) {
+      // Let the link open natively (browser handles the click)
+      return;
+    }
+    if (this.canTruncateDescription()) {
+      this.toggleDescriptionTruncate();
+    }
+  }
+
+  // --- Two-way helpers for forms (if not using ngModel in edit mode) ---
   updateTitleFromEvent(event: Event): void {
     this.patchLocalTask({ title: (event.target as HTMLInputElement).value });
   }
@@ -305,7 +334,7 @@ export class TaskComponent
     this.localTask.set({ ...this.localTask(), ...patch });
   }
 
-  // ===== ATTACHMENT LOGIC =====
+  // --- Attachments (async, strict, safe) ---
   async onUploadFiles(files: File[]) {
     const taskId = this.localTask().id!;
     for (const file of files) {
@@ -353,7 +382,7 @@ export class TaskComponent
     this.attachmentService.downloadAttachment(this.localTask().id!, filename);
   }
 
-  // ===== DUE DATE BADGE (computed label for UI) =====
+  // --- Due date badge (computed label for UI) ---
   dueBadge = computed(() => {
     const due = this.localTask().dueDate;
     if (!due) return null;

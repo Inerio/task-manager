@@ -71,7 +71,7 @@
     <p
       [innerHTML]="displayedDescription() | linkify"
       [class.truncated]="canTruncateDescription() && !showFullDescription()"
-      (click)="toggleDescriptionTruncate()"
+      (click)="onDescriptionClick($event)"
       [style.cursor]="canTruncateDescription() ? 'pointer' : 'auto'"
       [title]="
         canTruncateDescription()
@@ -137,6 +137,12 @@
     </span>
   </div>
   @if (showEmojiPicker()) {
+  <!-- 
+  NOTE: 'emoji-picker' is a Web Component (not a native Angular component).
+  This component uses CUSTOM_ELEMENTS_SCHEMA to support it.
+  No warning or error will appear at runtime or in build.
+  See: https://angular.io/guide/elements#using-custom-elements-in-angular
+-->
   <emoji-picker
     #emojiPicker
     theme="light"

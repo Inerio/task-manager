@@ -16,7 +16,7 @@ import { AlertService } from "./alert.service";
 @Injectable({ providedIn: "root" })
 export class TaskService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = environment.apiUrlTasks;
+  private readonly apiUrl = environment.apiUrl + "/tasks";
   private readonly alertService = inject(AlertService);
 
   /** Reactive signal: All tasks loaded from backend (single source of truth). */

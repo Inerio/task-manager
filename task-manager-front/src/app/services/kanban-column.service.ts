@@ -22,7 +22,7 @@ export class KanbanColumnService {
       return;
     }
     this._loading.set(true);
-    const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns`;
+    const url = `${environment.apiUrl + "/boards"}/${boardId}/kanbanColumns`;
     this.http.get<KanbanColumn[]>(url).subscribe({
       next: (data) => this._kanbanColumns.set(data ?? []),
       error: () => this._kanbanColumns.set([]),
@@ -32,7 +32,7 @@ export class KanbanColumnService {
 
   /** Creates a new column in a board. */
   createKanbanColumn(name: string, boardId: number): Observable<KanbanColumn> {
-    const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns`;
+    const url = `${environment.apiUrl + "/boards"}/${boardId}/kanbanColumns`;
     return this.http.post<KanbanColumn>(url, { name });
   }
 
@@ -40,7 +40,9 @@ export class KanbanColumnService {
   updateKanbanColumn(kanbanColumn: KanbanColumn): Observable<KanbanColumn> {
     if (!kanbanColumn.id) throw new Error("KanbanColumn ID required");
     if (!kanbanColumn.boardId) throw new Error("KanbanColumn boardId required");
-    const url = `${environment.apiUrlBoards}/${kanbanColumn.boardId}/kanbanColumns/${kanbanColumn.id}`;
+    const url = `${environment.apiUrl + "/boards"}/${
+      kanbanColumn.boardId
+    }/kanbanColumns/${kanbanColumn.id}`;
     return this.http.put<KanbanColumn>(url, kanbanColumn);
   }
 
@@ -49,7 +51,9 @@ export class KanbanColumnService {
     kanbanColumnId: number,
     boardId: number
   ): Observable<void> {
-    const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns/${kanbanColumnId}`;
+    const url = `${
+      environment.apiUrl + "/boards"
+    }/${boardId}/kanbanColumns/${kanbanColumnId}`;
     return new Observable<void>((observer) => {
       this.http.delete<void>(url).subscribe({
         next: () => {
@@ -75,7 +79,9 @@ export class KanbanColumnService {
     kanbanColumnId: number,
     targetIndex: number
   ): Observable<any> {
-    const url = `${environment.apiUrlBoards}/${boardId}/kanbanColumns/move`;
+    const url = `${
+      environment.apiUrl + "/boards"
+    }/${boardId}/kanbanColumns/move`;
     return this.http.put(url, {
       kanbanColumnId,
       targetPosition: targetIndex + 1,

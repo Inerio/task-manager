@@ -13,7 +13,7 @@ import { AlertService } from "./alert.service";
 export class AttachmentService {
   private readonly http = inject(HttpClient);
   private readonly alertService = inject(AlertService);
-  readonly apiUrl = environment.apiUrl;
+  private readonly apiUrl = environment.apiUrl;
 
   /** Returns the download/preview URL for an attachment */
   buildAttachmentUrl(taskId: number, filename: string): string {

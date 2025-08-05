@@ -7,7 +7,7 @@ import { Observable } from "rxjs";
 /** Service for managing boards (CRUD, signal-based state). */
 @Injectable({ providedIn: "root" })
 export class BoardService {
-  private readonly apiUrl = environment.apiUrlBoards;
+  private readonly apiUrl = environment.apiUrl + "/boards";
 
   /** All boards in workspace (reactive signal). */
   private readonly _boards = signal<Board[]>([]);

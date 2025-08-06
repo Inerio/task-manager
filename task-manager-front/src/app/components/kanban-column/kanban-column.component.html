@@ -1,7 +1,47 @@
 <div class="task-kanbanColumn">
   <div class="task-dropzone-column">
-    <!-- Empty column dropzone -->
+    <!-- Empty column UI: show + Add task button first, then dropzone below -->
     @if (filteredTasks().length === 0) {
+    <!-- Add Task Button FIRST -->
+    <button (click)="toggleForm()" class="add-btn">+ Add task</button>
+
+    <!-- Task add form (modal logic unchanged) -->
+    @if (showForm()) {
+    <div class="add-task-form">
+      <input
+        class="form-control"
+        type="text"
+        [value]="newTask().title"
+        (input)="updateNewTaskField('title', $any($event.target).value)"
+        placeholder="Task title"
+        required
+        autocomplete="off"
+      />
+      <textarea
+        class="form-control textarea"
+        [value]="newTask().description"
+        (input)="updateNewTaskField('description', $any($event.target).value)"
+        placeholder="Description"
+        required
+        rows="4"
+      ></textarea>
+      <input
+        class="form-control"
+        type="date"
+        [value]="newTask().dueDate ?? ''"
+        (input)="updateNewTaskField('dueDate', $any($event.target).value)"
+        placeholder="Due date (optional)"
+        autocomplete="off"
+      />
+      <div class="btn-group">
+        <button class="btn btn-success" (click)="addTask()">Save</button>
+        <button class="btn btn-secondary" (click)="toggleForm()">Cancel</button>
+      </div>
+    </div>
+    }
+
+    <!-- Empty column dropzone SECOND -->
+    @if (hasAnyTask) {
     <div
       class="task-dropzone"
       [class.drag-over]="dropzoneDragOver()"
@@ -11,9 +51,9 @@
     >
       <span>Drop a task here</span>
     </div>
-    }
+    } }
 
-    <!-- Task list rendering -->
+    <!-- Task list rendering (unchanged) -->
     @for (task of filteredTasks(); track trackById($index, task); let idx =
     $index) {
     <app-task-item
@@ -22,11 +62,13 @@
     ></app-task-item>
     }
 
-    <!-- Add Task Button -->
+    <!-- Add Task Button: ONLY visible if column is not empty -->
+    @if (filteredTasks().length > 0) {
     <button (click)="toggleForm()" class="add-btn">+ Add task</button>
+    }
 
-    <!-- Task add form -->
-    @if (showForm()) {
+    <!-- Task add form (visible in non-empty state as well) -->
+    @if (showForm() && filteredTasks().length > 0) {
     <div class="add-task-form">
       <input
         class="form-control"

@@ -60,6 +60,14 @@ export class BoardComponent implements OnChanges {
   );
   readonly dragOverIndex = signal<number | null>(null);
 
+  /** Has at least one task in this board */
+  readonly hasAnyTask = computed(() => {
+    const colIds = this.kanbanColumnService.kanbanColumns().map((c) => c.id);
+    return this.taskService
+      .tasks()
+      .some((t) => colIds.includes(t.kanbanColumnId));
+  });
+
   /** Columns to display (reordered if dragging) */
   readonly kanbanColumns = computed(() => {
     const raw = this.kanbanColumnService.kanbanColumns();

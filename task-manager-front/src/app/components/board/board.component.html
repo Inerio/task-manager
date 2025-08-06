@@ -87,6 +87,7 @@
     <app-kanban-column
       [kanbanColumnId]="kanbanColumn.id!"
       [title]="kanbanColumn.name"
+      [hasAnyTask]="hasAnyTask()"
     ></app-kanban-column>
 
     @if (!!editingTitleId() && !isEditingTitle(kanbanColumn)) {

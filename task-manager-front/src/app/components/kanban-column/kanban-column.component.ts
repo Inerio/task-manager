@@ -29,6 +29,7 @@ import { getTaskDragData } from "../../utils/drag-drop-utils";
 export class KanbanColumnComponent {
   @Input({ required: true }) title!: string;
   @Input({ required: true }) kanbanColumnId!: number;
+  @Input() hasAnyTask = false;
 
   // --- Services ---
   private readonly taskService = inject(TaskService);
@@ -60,10 +61,10 @@ export class KanbanColumnComponent {
 
   addTask(): void {
     const { title, description, dueDate } = this.newTask();
-    if (!title || !description) return;
+    if (!title) return;
     const taskToCreate: Task = {
       title,
-      description,
+      description: description ?? "",
       completed: false,
       kanbanColumnId: this.kanbanColumnId,
       dueDate: dueDate || null,

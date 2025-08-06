@@ -208,7 +208,7 @@
   border-radius: 8px;
   border: 1.3px solid #bfc2ce;
   font-size: 1rem;
-  padding: 0.35rem 2.5em 0.85em 0.7em; // right+bottom padding for emoji icon
+  padding: 0.35rem 2.5em 0.85em 0.7em;
   box-shadow: none;
   margin-bottom: 0.65rem;
   outline: none;
@@ -221,7 +221,7 @@
 /* Emoji icon bottom-right of textarea */
 .emoji-trigger-bottom {
   position: absolute;
-  right: 0.65em;
+  right: 0.6em;
   bottom: 1em;
   z-index: 20;
   font-size: 1.36em;

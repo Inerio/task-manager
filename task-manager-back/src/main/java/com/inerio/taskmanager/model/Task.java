@@ -32,11 +32,11 @@ public class Task {
     private Long id;
 
     /** Task title (cannot be null). */
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String title;
 
     /** Task description */
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     /** Completion status of the task (true if done, false otherwise). */

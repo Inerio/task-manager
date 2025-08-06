@@ -72,18 +72,22 @@ export class TaskComponent
   readonly maxSize = 5 * 1024 * 1024;
 
   // --- Truncation config & state ---
-  readonly TITLE_TRUNCATE = 32;
-  readonly DESC_TRUNCATE = 120;
+  readonly TITLE_TRUNCATE_BASE = 18;
+  readonly TITLE_TRUNCATE_WITH_BADGE = 22;
+  readonly DESC_TRUNCATE = 139;
   showFullTitle = signal(false);
   showFullDescription = signal(false);
 
   // --- Display computed (signal-based, reactive) ---
+  readonly titleTruncateLength = computed(() =>
+    this.dueBadge() ? this.TITLE_TRUNCATE_WITH_BADGE : this.TITLE_TRUNCATE_BASE
+  );
+
   readonly displayedTitle = computed(() => {
     const title = this.localTask().title ?? "";
+    const maxLen = this.titleTruncateLength();
     if (this.showFullTitle() || !title) return title;
-    return title.length <= this.TITLE_TRUNCATE
-      ? title
-      : title.slice(0, this.TITLE_TRUNCATE) + "…";
+    return title.length <= maxLen ? title : title.slice(0, maxLen) + "…";
   });
 
   readonly displayedDescription = computed(() => {
@@ -94,9 +98,10 @@ export class TaskComponent
       : desc.slice(0, this.DESC_TRUNCATE) + "…";
   });
 
-  readonly canTruncateTitle = computed(
-    () => (this.localTask().title ?? "").length > this.TITLE_TRUNCATE
-  );
+  readonly canTruncateTitle = computed(() => {
+    const title = this.localTask().title ?? "";
+    return title.length > this.titleTruncateLength();
+  });
   readonly canTruncateDescription = computed(
     () => (this.localTask().description ?? "").length > this.DESC_TRUNCATE
   );

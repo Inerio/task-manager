@@ -1,13 +1,13 @@
 <div class="task-kanbanColumn">
   <div class="task-dropzone-column">
-    <!-- Empty column UI: show + Add task button first, then dropzone below -->
+    <!-- === EMPTY COLUMN: Add Button + (form if open) + dropzone === -->
     @if (filteredTasks().length === 0) {
-    <!-- Add Task Button FIRST -->
+    <!-- Add Task Button -->
     <button (click)="toggleForm()" class="add-btn">+ Add task</button>
 
-    <!-- Task add form (modal logic unchanged) -->
+    <!-- Task add form (empty state) -->
     @if (showForm()) {
-    <div class="add-task-form">
+    <div class="add-task-form editing-task-form">
       <input
         class="form-control"
         type="text"
@@ -17,14 +17,52 @@
         required
         autocomplete="off"
       />
-      <textarea
-        class="form-control textarea"
-        [value]="newTask().description"
-        (input)="updateNewTaskField('description', $any($event.target).value)"
-        placeholder="Description"
-        required
-        rows="4"
-      ></textarea>
+
+      <div
+        class="desc-row-edit"
+        #emojiPickerContainer
+        style="position: relative"
+      >
+        <textarea
+          #descTextarea
+          class="form-control textarea"
+          [value]="newTask().description"
+          (input)="updateNewTaskField('description', $any($event.target).value)"
+          placeholder="Description"
+          rows="4"
+        ></textarea>
+        <span
+          class="emoji-trigger-bottom"
+          (click)="toggleEmojiPicker()"
+          title="Insert emoji"
+        >
+          <img
+            src="/svg/smile-plus.svg"
+            alt="Add emoji"
+            width="18"
+            height="18"
+            draggable="false"
+          />
+        </span>
+        @if (showEmojiPicker()) {
+        <emoji-picker
+          #emojiPicker
+          theme="light"
+          (emoji-click)="addEmojiToDescription($event)"
+          class="emoji-picker-dropdown"
+          style="
+            position: absolute;
+            left: 0;
+            top: 91%;
+            z-index: 99;
+            width: 100%;
+            min-width: 260px;
+            max-height: 370px;
+          "
+        ></emoji-picker>
+        }
+      </div>
+
       <input
         class="form-control"
         type="date"
@@ -33,6 +71,17 @@
         placeholder="Due date (optional)"
         autocomplete="off"
       />
+
+      <app-attachment-zone
+        [attachments]="newTask().attachments ?? []"
+        [taskId]="-1"
+        [acceptTypes]="acceptTypes"
+        [maxSize]="maxSize"
+        (filesUploaded)="onCreateFilesUploaded($event)"
+        (fileDeleted)="onCreateFileDeleted($event)"
+        (fileDownloaded)="onCreateFileDownloaded($event)"
+      ></app-attachment-zone>
+
       <div class="btn-group">
         <button class="btn btn-success" (click)="addTask()">Save</button>
         <button class="btn btn-secondary" (click)="toggleForm()">Cancel</button>
@@ -40,7 +89,7 @@
     </div>
     }
 
-    <!-- Empty column dropzone SECOND -->
+    <!-- Dropzone (empty state, if board has any task) -->
     @if (hasAnyTask) {
     <div
       class="task-dropzone"
@@ -53,23 +102,17 @@
     </div>
     } }
 
-    <!-- Task list rendering (unchanged) -->
+    <!-- === COLUMN WITH TASKS: list + add + form (if open) === -->
     @for (task of filteredTasks(); track trackById($index, task); let idx =
     $index) {
     <app-task-item
       [task]="task"
       (taskDropped)="onTaskItemDrop($event, idx)"
     ></app-task-item>
-    }
-
-    <!-- Add Task Button: ONLY visible if column is not empty -->
-    @if (filteredTasks().length > 0) {
+    } @if (filteredTasks().length > 0) {
     <button (click)="toggleForm()" class="add-btn">+ Add task</button>
-    }
-
-    <!-- Task add form (visible in non-empty state as well) -->
-    @if (showForm() && filteredTasks().length > 0) {
-    <div class="add-task-form">
+    } @if (showForm() && filteredTasks().length > 0) {
+    <div class="add-task-form editing-task-form">
       <input
         class="form-control"
         type="text"
@@ -79,14 +122,52 @@
         required
         autocomplete="off"
       />
-      <textarea
-        class="form-control textarea"
-        [value]="newTask().description"
-        (input)="updateNewTaskField('description', $any($event.target).value)"
-        placeholder="Description"
-        required
-        rows="4"
-      ></textarea>
+
+      <div
+        class="desc-row-edit"
+        #emojiPickerContainer
+        style="position: relative"
+      >
+        <textarea
+          #descTextarea
+          class="form-control textarea"
+          [value]="newTask().description"
+          (input)="updateNewTaskField('description', $any($event.target).value)"
+          placeholder="Description"
+          rows="4"
+        ></textarea>
+        <span
+          class="emoji-trigger-bottom"
+          (click)="toggleEmojiPicker()"
+          title="Insert emoji"
+        >
+          <img
+            src="/svg/smile-plus.svg"
+            alt="Add emoji"
+            width="18"
+            height="18"
+            draggable="false"
+          />
+        </span>
+        @if (showEmojiPicker()) {
+        <emoji-picker
+          #emojiPicker
+          theme="light"
+          (emoji-click)="addEmojiToDescription($event)"
+          class="emoji-picker-dropdown"
+          style="
+            position: absolute;
+            left: 0;
+            top: 91%;
+            z-index: 99;
+            width: 100%;
+            min-width: 260px;
+            max-height: 370px;
+          "
+        ></emoji-picker>
+        }
+      </div>
+
       <input
         class="form-control"
         type="date"
@@ -95,6 +176,17 @@
         placeholder="Due date (optional)"
         autocomplete="off"
       />
+
+      <app-attachment-zone
+        [attachments]="newTask().attachments ?? []"
+        [taskId]="-1"
+        [acceptTypes]="acceptTypes"
+        [maxSize]="maxSize"
+        (filesUploaded)="onCreateFilesUploaded($event)"
+        (fileDeleted)="onCreateFileDeleted($event)"
+        (fileDownloaded)="onCreateFileDownloaded($event)"
+      ></app-attachment-zone>
+
       <div class="btn-group">
         <button class="btn btn-success" (click)="addTask()">Save</button>
         <button class="btn btn-secondary" (click)="toggleForm()">Cancel</button>

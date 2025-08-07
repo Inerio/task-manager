@@ -40,7 +40,6 @@
   .add-task-form {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
     margin-top: 1rem;
     font-family: "Poppins", "Roboto", "Helvetica Neue", Arial, sans-serif;
   }
@@ -67,4 +66,126 @@
     box-shadow: 0 0 0 3px #90caf9;
     color: #1976d2;
   }
+}
+
+/* === Harmonized creation/edit mode === */
+.add-task-form.editing-task-form {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px 0 #0001;
+  padding: 0.7rem 1rem 0.32rem 1rem;
+  position: relative;
+
+  .form-control {
+    font-family: "Poppins", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.99rem;
+    padding: 0.44rem 0.7rem;
+    border-radius: 8px;
+    border: 1.8px solid #bfc2ce;
+    background: #fff;
+    outline: none;
+    box-shadow: none;
+    transition: border 0.18s, box-shadow 0.18s;
+    resize: vertical;
+    margin-bottom: 0.46rem;
+  }
+
+  .attachments-zone {
+    margin-bottom: 0.46rem;
+  }
+
+  .form-control.textarea {
+    min-height: 54px;
+    max-height: 180px;
+  }
+
+  .form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #3b82f633;
+  }
+
+  .desc-row-edit {
+    position: relative;
+  }
+  .desc-row-edit .form-control.textarea {
+    background: #f7f9fc;
+    border-radius: 8px;
+    border: 1.3px solid #bfc2ce;
+    font-size: 1rem;
+    padding: 0.35rem 2.5em 0.85em 0.7em;
+    box-shadow: none;
+    margin-bottom: 0.65rem;
+    outline: none;
+    min-height: 54px;
+    height: 180px;
+    max-height: 360px;
+    resize: vertical;
+  }
+
+  .emoji-trigger-bottom {
+    position: absolute;
+    right: 0.6em;
+    bottom: 1em;
+    z-index: 20;
+    font-size: 1.36em;
+    cursor: pointer;
+    user-select: none;
+    padding: 0;
+    background: none;
+    border: none;
+    transition: filter 0.1s;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    &:hover {
+      filter: brightness(1.18);
+    }
+    img {
+      display: block;
+      pointer-events: none;
+    }
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+    justify-content: flex-start;
+
+    .btn {
+      padding: 0.12rem 0.2rem;
+      font-size: 0.97rem;
+      min-height: 24px;
+      border-radius: 7px;
+      border: none;
+      font-family: "Poppins", Arial, sans-serif;
+      font-weight: 400;
+      cursor: pointer;
+      box-shadow: 0 1px 2px 0 #0001;
+      transition: background 0.18s, color 0.14s;
+    }
+
+    .btn-success {
+      background: #45b959;
+      color: #fff;
+      &:hover {
+        background: #269d3c;
+      }
+    }
+    .btn-secondary {
+      background: #dadada;
+      color: #333;
+      &:hover {
+        background: #bbb;
+      }
+    }
+  }
+}
+
+.add-task-form.editing-task-form .emoji-picker-dropdown {
+  min-width: 260px;
+  max-width: 420px;
+  width: 100%;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px #00000022;
 }

@@ -7,7 +7,6 @@ import {
   ViewChild,
   inject,
   signal,
-  Signal,
 } from "@angular/core";
 import { AlertService } from "../../services/alert.service";
 import { isFileDragEvent } from "../../utils/drag-drop-utils";

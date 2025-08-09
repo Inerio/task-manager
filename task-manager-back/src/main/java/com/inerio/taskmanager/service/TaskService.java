@@ -274,9 +274,6 @@ public class TaskService {
      * @throws Exception if upload fails or constraints are not respected.
      */
     public Task uploadAttachment(Long taskId, MultipartFile file) throws Exception {
-        Task task = taskRepository.findById(taskId)
-            .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
-
         Path uploadPath = Paths.get(UPLOAD_DIR, taskId.toString());
         Files.createDirectories(uploadPath);
 
@@ -284,19 +281,25 @@ public class TaskService {
         if (filename == null || filename.isBlank()) {
             throw new IllegalArgumentException("Invalid filename");
         }
-        if (task.getAttachments().contains(filename)) {
-            throw new IllegalStateException("Attachment already exists: " + filename);
-        }
-        Path filePath = uploadPath.resolve(filename);
-        if (Files.exists(filePath)) {
-            throw new IllegalStateException("A file with this name already exists on the server: " + filename);
-        }
 
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-        task.getAttachments().add(filename);
-        taskRepository.save(task);
+        synchronized (this) {
+            Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
 
-        return task;
+            if (task.getAttachments().contains(filename)) {
+                throw new IllegalStateException("Attachment already exists: " + filename);
+            }
+            Path filePath = uploadPath.resolve(filename);
+            if (Files.exists(filePath)) {
+                throw new IllegalStateException("A file with this name already exists on the server: " + filename);
+            }
+
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            task.getAttachments().add(filename);
+            taskRepository.save(task);
+
+            return task;
+        }
     }
 
     /**

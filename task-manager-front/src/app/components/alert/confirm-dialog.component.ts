@@ -1,19 +1,22 @@
-import { Component, inject, computed } from "@angular/core";
+import {
+  Component,
+  inject,
+  computed,
+  ChangeDetectionStrategy,
+  HostListener,
+} from "@angular/core";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
-/**
- * Displays a global confirm dialog (promise-based) when triggered from anywhere in the app.
- */
 @Component({
   selector: "app-confirm-dialog",
   standalone: true,
   templateUrl: "./confirm-dialog.component.html",
   styleUrls: ["./confirm-dialog.component.scss"],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConfirmDialogComponent {
   private readonly confirmDialog = inject(ConfirmDialogService);
 
-  // Dialog state (signal, readonly)
   readonly state = this.confirmDialog.state;
   readonly visible = computed(() => this.state().visible);
 
@@ -22,5 +25,11 @@ export class ConfirmDialogComponent {
   }
   cancel(): void {
     this.confirmDialog.cancel();
+  }
+
+  // Close with ESC anywhere
+  @HostListener("document:keydown.escape")
+  onEsc(): void {
+    if (this.visible()) this.cancel();
   }
 }

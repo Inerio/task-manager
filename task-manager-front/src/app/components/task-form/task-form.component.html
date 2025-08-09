@@ -1,0 +1,81 @@
+<div
+  #formContainer
+  class="task-form editing-task-form"
+  (pointerdown)="$event.stopPropagation()"
+  (mousedown)="$event.stopPropagation()"
+  (mouseup)="$event.stopPropagation()"
+  (click)="$event.stopPropagation()"
+  (focusin)="$event.stopPropagation()"
+  (focusout)="$event.stopPropagation()"
+  (keydown.escape)="$event.stopPropagation()"
+  [formGroup]="form"
+>
+  <input
+    class="form-control"
+    type="text"
+    formControlName="title"
+    placeholder="Task title"
+    required
+    autocomplete="off"
+  />
+
+  <div class="desc-row-edit" style="position: relative">
+    <textarea
+      #descTextarea
+      class="form-control textarea"
+      formControlName="description"
+      placeholder="Description"
+      rows="4"
+    ></textarea>
+
+    <span
+      class="emoji-trigger-bottom"
+      (click)="toggleEmojiPicker(); $event.stopPropagation()"
+      title="Insert emoji"
+    >
+      <img
+        src="/svg/smile-plus.svg"
+        alt="Add emoji"
+        width="18"
+        height="18"
+        draggable="false"
+      />
+    </span>
+
+    @if (showEmojiPicker()) {
+    <app-emoji-picker
+      class="emoji-picker-dropdown"
+      (emojiSelected)="onEmojiSelected($event)"
+    ></app-emoji-picker>
+    }
+  </div>
+
+  <input
+    class="form-control"
+    type="date"
+    formControlName="dueDate"
+    placeholder="Due date (optional)"
+    autocomplete="off"
+  />
+  <app-attachment-zone
+    [attachments]="localTask().attachments ?? []"
+    [taskId]="localTask().id ?? -1"
+    [acceptTypes]="acceptTypes"
+    [maxSize]="maxSize"
+    (filesUploaded)="onFilesBuffered($event)"
+    (fileDeleted)="onBufferedFileDelete($event)"
+    (fileDownloaded)="onFileDownload($event)"
+    [creationMode]="!localTask().id"
+    [pendingFiles]="pendingFiles()"
+    (dialogOpen)="onDialogOpen($event)"
+  ></app-attachment-zone>
+
+  <div class="btn-group">
+    <button class="btn btn-success" type="button" (click)="handleSave()">
+      {{ editMode ? "Save" : "Create" }}
+    </button>
+    <button class="btn btn-secondary" type="button" (click)="handleCancel()">
+      Cancel
+    </button>
+  </div>
+</div>

@@ -27,7 +27,7 @@
     cursor: grabbing;
   }
 
-  /* Due badge and due date row (aligned left, fixed top) */
+  /* Due badge & date row */
   .due-row {
     display: flex;
     align-items: center;
@@ -36,11 +36,11 @@
     top: 0.5rem;
     left: 0.5rem;
     z-index: 11;
-    padding-right: 2.6rem; // Prevent overlap with checkbox
+    padding-right: 2.6rem; // avoid overlap with checkbox
   }
 
   .due-badge {
-    position: static; // Row container manages positioning
+    position: static;
     background: #f7f9fc;
     color: #1a283d;
     font-size: 0.73rem;
@@ -104,7 +104,7 @@
   }
 
   &.editing {
-    padding-top: 0.7rem;
+    padding: 0 !important;
   }
 
   .task-content-readonly {
@@ -191,7 +191,7 @@
   }
 }
 
-/* Button group styles */
+/* Compact buttons inside card */
 .btn-group .btn {
   padding: 0.12rem 0.2rem !important;
   font-size: 0.97rem !important;
@@ -218,7 +218,7 @@
   resize: vertical;
 }
 
-/* Emoji icon bottom-right of textarea */
+/* Emoji icon at bottom-right of textarea */
 .emoji-trigger-bottom {
   position: absolute;
   right: 0.6em;
@@ -248,6 +248,7 @@
   box-shadow: 0 0 0 2px #3b82f633;
 }
 
+/* DnD highlight */
 .task-card.drag-over-card {
   background: #f4faff;
   border: 2.5px solid #1976d2;
@@ -256,4 +257,23 @@
   z-index: 999;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s,
     transform 0.15s;
+}
+
+/* Unify styling with task-form when editing */
+.task-card.editing {
+  padding: 0 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+
+.task-card.editing .task-form.editing-task-form {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px 0 #0001;
+  padding: 0.7rem 1rem 0.32rem 1rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  font-family: "Poppins", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  background: #fff;
 }

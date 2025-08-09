@@ -1,95 +1,122 @@
-import { Injectable, computed, signal } from "@angular/core";
+import { Injectable, computed, signal, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { KanbanColumn } from "../models/kanban-column.model";
-import { Observable } from "rxjs";
+import {
+  type KanbanColumn,
+  type KanbanColumnId,
+} from "../models/kanban-column.model";
 import { environment } from "../../environments/environment.local";
+import { firstValueFrom } from "rxjs";
+import { AlertService } from "./alert.service";
 
-/** Service for managing kanban columns, with signals and optimistic UI updates. */
+/** Kanban columns CRUD + ordering with signals and optimistic updates. */
 @Injectable({ providedIn: "root" })
 export class KanbanColumnService {
+  private readonly http = inject(HttpClient);
+  private readonly alert = inject(AlertService);
+
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
   readonly kanbanColumns = computed(() => this._kanbanColumns());
 
   private readonly _loading = signal(false);
   readonly loading = computed(() => this._loading());
 
-  constructor(private http: HttpClient) {}
-
-  /** Loads all columns for the given board. */
+  /** Load columns for a board. */
   loadKanbanColumns(boardId: number): void {
     if (!boardId) {
       this._kanbanColumns.set([]);
       return;
     }
     this._loading.set(true);
-    const url = `${environment.apiUrl + "/boards"}/${boardId}/kanbanColumns`;
+    const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns`;
     this.http.get<KanbanColumn[]>(url).subscribe({
-      next: (data) => this._kanbanColumns.set(data ?? []),
-      error: () => this._kanbanColumns.set([]),
+      next: (cols) => this._kanbanColumns.set(cols ?? []),
+      error: () => {
+        this._kanbanColumns.set([]);
+        this.alert.show("error", "Error loading columns.");
+      },
       complete: () => this._loading.set(false),
     });
   }
 
-  /** Creates a new column in a board. */
-  createKanbanColumn(name: string, boardId: number): Observable<KanbanColumn> {
-    const url = `${environment.apiUrl + "/boards"}/${boardId}/kanbanColumns`;
-    return this.http.post<KanbanColumn>(url, { name });
+  /** Create a column; updates local signal on success. */
+  async createKanbanColumn(
+    name: string,
+    boardId: number
+  ): Promise<KanbanColumn> {
+    const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns`;
+    try {
+      const created = await firstValueFrom(
+        this.http.post<KanbanColumn>(url, { name })
+      );
+      this._kanbanColumns.update((list) => [...list, created]);
+      return created;
+    } catch (err) {
+      this.alert.show("error", "Error creating column.");
+      throw err;
+    }
   }
 
-  /** Updates a column. Throws if id/boardId is missing. */
-  updateKanbanColumn(kanbanColumn: KanbanColumn): Observable<KanbanColumn> {
+  /** Update a column; replaces it in the local signal on success. */
+  async updateKanbanColumn(kanbanColumn: KanbanColumn): Promise<KanbanColumn> {
     if (!kanbanColumn.id) throw new Error("KanbanColumn ID required");
     if (!kanbanColumn.boardId) throw new Error("KanbanColumn boardId required");
-    const url = `${environment.apiUrl + "/boards"}/${
-      kanbanColumn.boardId
-    }/kanbanColumns/${kanbanColumn.id}`;
-    return this.http.put<KanbanColumn>(url, kanbanColumn);
+    const url = `${environment.apiUrl}/boards/${kanbanColumn.boardId}/kanbanColumns/${kanbanColumn.id}`;
+    try {
+      const updated = await firstValueFrom(
+        this.http.put<KanbanColumn>(url, kanbanColumn)
+      );
+      this._kanbanColumns.update((list) =>
+        list.map((c) => (c.id === updated.id ? updated : c))
+      );
+      return updated;
+    } catch (err) {
+      this.alert.show("error", "Error updating column.");
+      throw err;
+    }
   }
 
-  /** Deletes a column, updates signal locally for instant feedback. */
-  deleteKanbanColumn(
-    kanbanColumnId: number,
+  /** Delete a column; removes it from the local signal on success. */
+  async deleteKanbanColumn(
+    kanbanColumnId: KanbanColumnId,
     boardId: number
-  ): Observable<void> {
-    const url = `${
-      environment.apiUrl + "/boards"
-    }/${boardId}/kanbanColumns/${kanbanColumnId}`;
-    return new Observable<void>((observer) => {
-      this.http.delete<void>(url).subscribe({
-        next: () => {
-          this._kanbanColumns.set(
-            this._kanbanColumns().filter((col) => col.id !== kanbanColumnId)
-          );
-          observer.next();
-          observer.complete();
-        },
-        error: (err) => observer.error(err),
-      });
-    });
+  ): Promise<void> {
+    const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns/${kanbanColumnId}`;
+    try {
+      await firstValueFrom(this.http.delete<void>(url));
+      this._kanbanColumns.update((list) =>
+        list.filter((c) => c.id !== kanbanColumnId)
+      );
+    } catch (err) {
+      this.alert.show("error", "Error deleting column.");
+      throw err;
+    }
   }
 
   /**
-   * Moves a column to a new index (1-based for backend).
-   * @param boardId Board identifier.
-   * @param kanbanColumnId Column identifier.
-   * @param targetIndex Zero-based target index (backend expects +1).
+   * Move a column to a new index.
+   * @param targetIndex Zero-based client index (backend expects +1).
    */
-  moveKanbanColumn(
+  async moveKanbanColumn(
     boardId: number,
-    kanbanColumnId: number,
+    kanbanColumnId: KanbanColumnId,
     targetIndex: number
-  ): Observable<any> {
-    const url = `${
-      environment.apiUrl + "/boards"
-    }/${boardId}/kanbanColumns/move`;
-    return this.http.put(url, {
-      kanbanColumnId,
-      targetPosition: targetIndex + 1,
-    });
+  ): Promise<void> {
+    const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns/move`;
+    try {
+      await firstValueFrom(
+        this.http.put<void>(url, {
+          kanbanColumnId,
+          targetPosition: targetIndex + 1,
+        })
+      );
+    } catch (err) {
+      this.alert.show("error", "Error moving column.");
+      throw err;
+    }
   }
 
-  /** Optimistically sets column order in signal for instant UI feedback. */
-  reorderKanbanColumns(newOrder: KanbanColumn[]): void {
-    this._kanbanColumns.set(newOrder);
+  /** Optimistically set order in local state. */
+  reorderKanbanColumns(newOrder: ReadonlyArray<KanbanColumn>): void {
+    this._kanbanColumns.set([...newOrder]);
   }
 }

@@ -1,13 +1,20 @@
 <div
   class="attachments-zone"
-  [class.has-attachments]="attachments.length"
+  [class.has-attachments]="
+    attachments.length || (creationMode && pendingFiles.length)
+  "
   [class.drag-over]="isDragging()"
   (drop)="onFileDrop($event)"
   (dragover)="onDragOver($event)"
   (dragleave)="onDragLeave()"
-  (click)="triggerFileSelect()"
+  (pointerdown)="onZonePointerDown($event)"
+  (mousedown)="onZoneMouseDown($event)"
+  (mouseup)="onZoneMouseUp($event)"
+  (click)="onZoneClick($event)"
+  (focusin)="stop($event)"
+  (focusout)="stop($event)"
 >
-  <!-- Hidden file input (accessible everywhere via #fileInput) -->
+  <!-- Hidden file input -->
   <input
     type="file"
     #fileInput
@@ -15,21 +22,34 @@
     [accept]="acceptTypes"
     multiple
     hidden
+    (pointerdown)="stop($event)"
+    (mousedown)="stop($event)"
+    (mouseup)="stop($event)"
+    (click)="stop($event)"
+    (focusin)="stop($event)"
+    (focusout)="stop($event)"
   />
 
-  <!-- Display attached files as tags -->
+  <!-- Attached files -->
+  @if (attachments.length > 0) {
   <div class="attachment-tags">
-    @if (attachments.length > 0) { @for (filename of attachments; track
-    trackByFilename($index, filename)) {
+    @for (filename of getUniqueAttachments(); track trackByFilename($index,
+    filename)) {
     <span class="attachment-tag">
       <span
         class="filename"
+        tabindex="0"
         (click)="onDownloadAttachment(filename); $event.stopPropagation()"
+        (keydown.enter)="
+          onDownloadAttachment(filename); $event.stopPropagation()
+        "
+        (keydown.space)="
+          onDownloadAttachment(filename); $event.stopPropagation()
+        "
         (mouseenter)="showPreview(filename, $event)"
         (mousemove)="showPreview(filename, $event)"
         (mouseleave)="hidePreview()"
         [attr.title]="previewFilename() === filename ? null : 'Download'"
-        title="Download"
       >
         {{ filename }}
       </span>
@@ -41,10 +61,28 @@
         ✖
       </button>
     </span>
-    } }
+    }
   </div>
+  }
 
-  @if (attachments.length === 0) {
+  <!-- Pending buffer (creation mode) -->
+  @if (creationMode && pendingFiles.length > 0) {
+  <div class="attachment-tags">
+    @for (file of pendingFiles; track trackByFile($index, file)) {
+    <span class="attachment-tag pending">
+      <span class="filename" title="To be uploaded">{{ file.name }}</span>
+      <button
+        class="remove-btn"
+        (click)="onDeletePendingFile(file.name); $event.stopPropagation()"
+        title="Remove"
+      >
+        ✖
+      </button>
+    </span>
+    }
+  </div>
+  } @if ((attachments.length === 0) && (!creationMode || pendingFiles.length ===
+  0)) {
   <div class="empty-upload-text">
     <span class="fake-link">Choose a file</span>
   </div>

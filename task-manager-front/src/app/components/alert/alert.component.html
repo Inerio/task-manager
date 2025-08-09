@@ -1,24 +1,21 @@
-<!--
-  Alert Stack: Shows all alerts as "toasts", stacked from top.
-  Each alert has its own close button and auto-dismiss.
--->
+<!-- Alert Stack: simple toast list -->
 <div class="alert-stack">
-  <!-- For each alert, render a toast box -->
-  @for (alert of alerts(); track alert.id) {
+  @for (alert of alerts(); track trackById($index, alert)) {
   <div
     class="alert-box"
     [ngClass]="alert.type"
     role="alert"
-    tabindex="0"
     aria-live="polite"
+    aria-atomic="true"
+    tabindex="0"
   >
     <span>{{ alert.message }}</span>
     <button
       class="alert-close-btn"
+      type="button"
       (click)="dismiss(alert.id)"
       aria-label="Close"
       title="Close"
-      tabindex="0"
     >
       &times;
     </button>

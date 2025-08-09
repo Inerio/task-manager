@@ -1,10 +1,6 @@
-import { Injectable, signal, Signal } from "@angular/core";
+import { Injectable, signal, type Signal } from "@angular/core";
 
-/* ==== CONFIRM DIALOG SERVICE ==== */
-
-/**
- * Internal state for confirm dialog.
- */
+/** Internal state shape for the confirm dialog. */
 interface ConfirmDialogState {
   visible: boolean;
   title: string;
@@ -14,7 +10,7 @@ interface ConfirmDialogState {
 
 @Injectable({ providedIn: "root" })
 export class ConfirmDialogService {
-  private _state = signal<ConfirmDialogState>({
+  private readonly _state = signal<ConfirmDialogState>({
     visible: false,
     title: "",
     message: "",
@@ -23,12 +19,9 @@ export class ConfirmDialogService {
 
   readonly state: Signal<ConfirmDialogState> = this._state.asReadonly();
 
-  /**
-   * Opens the dialog and returns a promise that resolves with the user's choice.
-   * Prevents multiple dialogs open at once (resolves previous as false if any).
-   */
+  /** Open the dialog and resolve with user's choice (true/false). */
   open(title: string, message: string): Promise<boolean> {
-    // If already open, auto-resolve previous as "cancel"
+    // If already open, resolve previous as "cancel".
     if (this._state().visible) {
       this._state().resolve?.(false);
     }
@@ -37,9 +30,7 @@ export class ConfirmDialogService {
     });
   }
 
-  /**
-   * Called when the user confirms. Idempotent.
-   */
+  /** Confirm action (idempotent). */
   confirm(): void {
     if (this._state().visible) {
       this._state().resolve?.(true);
@@ -47,9 +38,7 @@ export class ConfirmDialogService {
     }
   }
 
-  /**
-   * Called when the user cancels. Idempotent.
-   */
+  /** Cancel action (idempotent). */
   cancel(): void {
     if (this._state().visible) {
       this._state().resolve?.(false);
@@ -57,9 +46,7 @@ export class ConfirmDialogService {
     }
   }
 
-  /**
-   * Closes the dialog and clears the resolver.
-   */
+  /** Close dialog and clear resolver. */
   close(): void {
     this._state.set({ ...this._state(), visible: false, resolve: undefined });
   }

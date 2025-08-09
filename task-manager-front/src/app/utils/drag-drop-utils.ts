@@ -1,86 +1,99 @@
-/* ==== DRAG & DROP UTILS — TASKS ==== */
+/* ==== DRAG & DROP UTILS — TASKS & COLUMNS ==== */
+
+const DATA_KEYS = {
+  type: "type",
+  taskId: "task-id",
+  columnId: "kanbanColumn-id",
+} as const;
+
+type DragKind = "task" | "column";
 
 export interface TaskDragData {
   taskId: number;
   kanbanColumnId: number;
 }
 
-/**
- * Attach task drag data to event.
- */
+export interface ColumnDragData {
+  kanbanColumnId: number;
+}
+
+function set(dt: DataTransfer | null, key: string, value: string): void {
+  dt?.setData(key, value);
+}
+
+function get(dt: DataTransfer | null, key: string): string {
+  return dt?.getData(key) ?? "";
+}
+
+function getNumber(dt: DataTransfer | null, key: string): number | null {
+  const v = Number(get(dt, key));
+  return Number.isFinite(v) ? v : null;
+}
+
+/** Attach task drag data to the event. */
 export function setTaskDragData(
   event: DragEvent,
   taskId: number,
   kanbanColumnId: number
 ): void {
-  event.dataTransfer?.setData("type", "task");
-  event.dataTransfer?.setData("task-id", String(taskId));
-  event.dataTransfer?.setData("kanbanColumn-id", String(kanbanColumnId));
+  const dt = event.dataTransfer ?? null;
+  set(dt, DATA_KEYS.type, "task");
+  set(dt, DATA_KEYS.taskId, String(taskId));
+  set(dt, DATA_KEYS.columnId, String(kanbanColumnId));
 }
 
-/**
- * Extract task drag data from event, or null if not present/valid.
- */
+/** Extract task drag data from the event, or null if invalid. */
 export function getTaskDragData(event: DragEvent): TaskDragData | null {
-  const dt = event.dataTransfer;
-  if (!dt || dt.getData("type") !== "task") return null;
-  const taskId = Number(dt.getData("task-id"));
-  const kanbanColumnId = Number(dt.getData("kanbanColumn-id"));
-  if (!Number.isFinite(taskId) || !Number.isFinite(kanbanColumnId)) return null;
+  const dt = event.dataTransfer ?? null;
+  if (get(dt, DATA_KEYS.type) !== "task") return null;
+
+  const taskId = getNumber(dt, DATA_KEYS.taskId);
+  const kanbanColumnId = getNumber(dt, DATA_KEYS.columnId);
+  if (taskId == null || kanbanColumnId == null) return null;
+
   return { taskId, kanbanColumnId };
 }
 
-/**
- * Is the drag event for a task?
- */
+/** Is the drag event for a task? */
 export function isTaskDragEvent(event: DragEvent): boolean {
-  return !!event.dataTransfer && event.dataTransfer.getData("type") === "task";
+  return (
+    !!event.dataTransfer && get(event.dataTransfer, DATA_KEYS.type) === "task"
+  );
 }
 
-/* ==== DRAG & DROP UTILS — COLUMNS ==== */
-
-export interface ColumnDragData {
-  kanbanColumnId: number;
-}
-
-/**
- * Attach column drag data to event.
- */
+/** Attach column drag data to the event. */
 export function setColumnDragData(
   event: DragEvent,
   kanbanColumnId: number
 ): void {
-  event.dataTransfer?.setData("type", "column");
-  event.dataTransfer?.setData("kanbanColumn-id", String(kanbanColumnId));
+  const dt = event.dataTransfer ?? null;
+  set(dt, DATA_KEYS.type, "column");
+  set(dt, DATA_KEYS.columnId, String(kanbanColumnId));
 }
 
-/**
- * Extract column drag data from event, or null if not present/valid.
- */
+/** Extract column drag data from the event, or null if invalid. */
 export function getColumnDragData(event: DragEvent): ColumnDragData | null {
-  const dt = event.dataTransfer;
-  if (!dt || dt.getData("type") !== "column") return null;
-  const kanbanColumnId = Number(dt.getData("kanbanColumn-id"));
-  if (!Number.isFinite(kanbanColumnId)) return null;
+  const dt = event.dataTransfer ?? null;
+  if (get(dt, DATA_KEYS.type) !== "column") return null;
+
+  const kanbanColumnId = getNumber(dt, DATA_KEYS.columnId);
+  if (kanbanColumnId == null) return null;
+
   return { kanbanColumnId };
 }
 
-/**
- * Is the drag event for a column?
- */
+/** Is the drag event for a column? */
 export function isColumnDragEvent(event: DragEvent): boolean {
   return (
-    !!event.dataTransfer && event.dataTransfer.getData("type") === "column"
+    !!event.dataTransfer && get(event.dataTransfer, DATA_KEYS.type) === "column"
   );
 }
 
 /* ==== DRAG & DROP UTILS — FILES ==== */
 
-/**
- * Is the drag event a file drop?
- */
+/** Is the drag event a file drop? */
 export function isFileDragEvent(event: DragEvent): boolean {
-  // Use .includes for max compatibility (some browsers use lowercase, etc.)
+  // Cross-browser friendly: check case-insensitively
   return (
     !!event.dataTransfer &&
     Array.from(event.dataTransfer.types).some(

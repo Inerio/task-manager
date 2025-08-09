@@ -5,48 +5,28 @@ import {
   inject,
   Input,
   signal,
-  Signal,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-  AfterViewChecked,
-  Renderer2,
-  CUSTOM_ELEMENTS_SCHEMA,
+  type Signal,
 } from "@angular/core";
-import { FormsModule } from "@angular/forms";
-import { Task } from "../../models/task.model";
+import { Task, TaskWithPendingFiles } from "../../models/task.model";
 import { TaskService } from "../../services/task.service";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { DragDropGlobalService } from "../../services/drag-drop-global.service";
 import { TaskComponent } from "../task/task.component";
+import { TaskFormComponent } from "../task-form/task-form.component";
 import { getTaskDragData } from "../../utils/drag-drop-utils";
-import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
+import { AttachmentService } from "../../services/attachment.service";
 
 /**
- * KanbanColumnComponent:
- * Displays a single kanban column with its tasks,
- * add form, and drag & drop for tasks (Angular v20+ full signal).
+ * A single Kanban column: renders its tasks, an add form, and manages DnD.
  */
 @Component({
   selector: "app-kanban-column",
   standalone: true,
-  imports: [CommonModule, FormsModule, TaskComponent, AttachmentZoneComponent],
+  imports: [CommonModule, TaskComponent, TaskFormComponent],
   templateUrl: "./kanban-column.component.html",
   styleUrls: ["./kanban-column.component.scss"],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
-  // Emoji picker references
-  @ViewChild("emojiPicker", { static: false }) emojiPickerRef?: ElementRef;
-  @ViewChild("emojiPickerContainer", { static: false })
-  emojiPickerContainer?: ElementRef<HTMLDivElement>;
-  @ViewChild("descTextarea") descTextarea?: ElementRef<HTMLTextAreaElement>;
-  readonly showEmojiPicker = signal(false);
-
-  // Attachment parameters
-  readonly acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
-  readonly maxSize = 5 * 1024 * 1024;
-
+export class KanbanColumnComponent {
   @Input({ required: true }) title!: string;
   @Input({ required: true }) kanbanColumnId!: number;
   @Input() hasAnyTask = false;
@@ -55,17 +35,15 @@ export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
   private readonly taskService = inject(TaskService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
-  private readonly renderer = inject(Renderer2);
+  private readonly attachmentService = inject(AttachmentService);
 
   // State signals
   readonly showForm = signal(false);
-  readonly newTask = signal<Partial<Task>>(this.getEmptyTask());
+  readonly editingTask = signal<null | Task>(null);
   readonly dragOverIndex = signal<number | null>(null);
   readonly dropzoneDragOver = signal(false);
 
-  /**
-   * List of tasks for this column, sorted by position.
-   */
+  /** Tasks for this column, sorted by position. */
   readonly filteredTasks: Signal<Task[]> = computed(() =>
     this.taskService
       .tasks()
@@ -73,128 +51,65 @@ export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   );
 
-  // ========== Emoji Picker Shadow DOM Handling ==========
-  ngAfterViewInit(): void {
-    // Auto-close emoji picker on click outside
-    this.renderer.listen("document", "mousedown", (event: MouseEvent) => {
-      if (!this.showEmojiPicker()) return;
-      const inContainer = this.emojiPickerContainer?.nativeElement.contains(
-        event.target as Node
-      );
-      let inPicker = false;
-      if (this.emojiPickerRef?.nativeElement) {
-        const picker = this.emojiPickerRef.nativeElement as HTMLElement;
-        if (picker.contains(event.target as Node)) inPicker = true;
-        else if (
-          picker.shadowRoot &&
-          picker.shadowRoot.contains(event.target as Node)
-        )
-          inPicker = true;
-      }
-      if (!inContainer && !inPicker) this.showEmojiPicker.set(false);
-    });
+  // ---- OPEN/CLOSE instead of toggle to avoid accidental close on file dialog cancel ----
+  openForm(): void {
+    if (!this.showForm()) {
+      this.showForm.set(true);
+      this.editingTask.set(null);
+      queueMicrotask(() => {
+        const input = document.querySelector(
+          '.task-form input.form-control[type="text"]'
+        ) as HTMLInputElement | null;
+        input?.focus();
+      });
+    }
   }
 
-  ngAfterViewChecked(): void {
-    // Style the emoji picker shadow root (copy from TaskComponent)
-    if (this.showEmojiPicker() && this.emojiPickerRef?.nativeElement) {
-      const picker = this.emojiPickerRef.nativeElement;
-      if (picker.shadowRoot) {
-        picker.shadowRoot.host.style.transform = "scale(0.715)";
-        picker.shadowRoot.host.style.transformOrigin = "top left";
-        picker.shadowRoot.host.style.width = "140%";
-        picker.shadowRoot.host.style.minWidth = "0";
-        picker.shadowRoot.host.style.setProperty("--background", "#fff");
-        picker.shadowRoot.host.style.setProperty(
-          "--category-button-active-background",
-          "#e3f2fd"
-        );
-        picker.shadowRoot.host.style.setProperty(
-          "--search-background",
-          "#f7f9fc"
-        );
-        picker.shadowRoot.host.style.setProperty("--border-radius", "16px");
-        picker.shadowRoot.host.style.setProperty("--color", "#232323");
-        if (!picker.shadowRoot.getElementById("custom-scrollbar-style")) {
-          const style = document.createElement("style");
-          style.id = "custom-scrollbar-style";
-          style.textContent = `
-            ::-webkit-scrollbar { width: 9px; background: #f7f9fc; border-radius: 12px; }
-            ::-webkit-scrollbar-thumb { background: #d3d8e2; border-radius: 12px; }
-            ::-webkit-scrollbar-thumb:hover { background: #b2b8c7; }
-          `;
-          picker.shadowRoot.appendChild(style);
+  closeForm(): void {
+    if (this.showForm()) this.showForm.set(false);
+    this.editingTask.set(null);
+  }
+
+  /** Called when save from the form is validated. */
+  async handleTaskFormSave(payload: TaskWithPendingFiles): Promise<void> {
+    const { _pendingFiles = [], ...task } = payload;
+
+    if (!task.title || !task.kanbanColumnId) {
+      this.closeForm();
+      return;
+    }
+
+    try {
+      if (!task.id) {
+        // Create
+        const created = await this.taskService.createTask(task as Task);
+        if (_pendingFiles.length) {
+          await Promise.all(
+            _pendingFiles.map((f) =>
+              this.attachmentService.uploadAttachment(created.id!, f)
+            )
+          );
+          await this.taskService.refreshTaskById(created.id!);
+        }
+      } else {
+        // Update
+        await this.taskService.updateTask(task.id!, task as Task);
+        if (_pendingFiles.length) {
+          await Promise.all(
+            _pendingFiles.map((f) =>
+              this.attachmentService.uploadAttachment(task.id!, f)
+            )
+          );
+          await this.taskService.refreshTaskById(task.id!);
         }
       }
+    } finally {
+      this.closeForm();
     }
   }
 
-  // ========== Attachments Handlers ==========
-  onCreateFilesUploaded(files: File[]) {
-    const attachments = [...(this.newTask().attachments ?? [])];
-    for (const file of files) {
-      if (!attachments.includes(file.name)) {
-        attachments.push(file.name);
-      }
-    }
-    this.newTask.set({ ...this.newTask(), attachments });
-  }
-  onCreateFileDeleted(filename: string) {
-    const attachments = (this.newTask().attachments ?? []).filter(
-      (f: string) => f !== filename
-    );
-    this.newTask.set({ ...this.newTask(), attachments });
-  }
-  onCreateFileDownloaded(filename: string) {
-    // Placeholder: No download on creation
-  }
-
-  // ========== UI / Form ==========
-  toggleEmojiPicker(): void {
-    this.showEmojiPicker.set(!this.showEmojiPicker());
-  }
-
-  addEmojiToDescription(event: any): void {
-    const emoji =
-      event.detail?.unicode ??
-      event.emoji?.native ??
-      event.emoji?.emoji ??
-      event.detail ??
-      "";
-    const current = this.newTask().description || "";
-    this.newTask.set({ ...this.newTask(), description: current + emoji });
-  }
-
-  toggleForm(): void {
-    this.showForm.update((v) => !v);
-    if (!this.showForm()) this.resetForm();
-  }
-
-  addTask(): void {
-    const { title, description, dueDate } = this.newTask();
-    if (!title) return;
-    const taskToCreate: Task = {
-      title,
-      description: description ?? "",
-      completed: false,
-      kanbanColumnId: this.kanbanColumnId,
-      dueDate: dueDate || null,
-    };
-    this.taskService.createTask(taskToCreate);
-    this.resetForm();
-    this.showForm.set(false);
-  }
-
-  private resetForm(): void {
-    this.newTask.set(this.getEmptyTask());
-  }
-
-  private getEmptyTask(): Partial<Task> {
-    return { title: "", description: "", completed: false, dueDate: null };
-  }
-
-  updateNewTaskField(field: keyof Task, value: string | null): void {
-    this.newTask.set({ ...this.newTask(), [field]: value ?? "" });
+  handleTaskFormCancel(): void {
+    this.closeForm();
   }
 
   async deleteAllInColumn(): Promise<void> {
@@ -210,9 +125,7 @@ export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
   onDropzoneDragOver(event: DragEvent): void {
     event.preventDefault();
     if (this.dragDropGlobal.isTaskDrag()) {
-      if (!this.dropzoneDragOver()) {
-        this.dropzoneDragOver.set(true);
-      }
+      if (!this.dropzoneDragOver()) this.dropzoneDragOver.set(true);
     } else {
       if (this.dropzoneDragOver()) this.dropzoneDragOver.set(false);
     }
@@ -247,11 +160,6 @@ export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
     this.dragOverIndex.set(null);
   }
 
-  /**
-   * Handles drop event on a task or dropzone.
-   * - If moving within same column: reorder and sync positions.
-   * - If moving between columns: update columnId and reindex both columns.
-   */
   async onTaskDrop(event: DragEvent, targetIndex: number): Promise<void> {
     if (
       event.dataTransfer?.types.includes("Files") ||
@@ -260,7 +168,7 @@ export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
       return;
     }
     event.preventDefault();
-    this.dropzoneDragOver.set(false);
+
     const dragData = getTaskDragData(event);
     if (!dragData) return;
     const { taskId, kanbanColumnId: fromColumnId } = dragData;
@@ -270,7 +178,7 @@ export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
     const draggedTask = allTasks.find((t) => t.id === taskId);
     if (!draggedTask) return;
 
-    // --- Move within the same column ---
+    // Reorder within the same column
     if (fromColumnId === this.kanbanColumnId) {
       const columnTasks = [...this.filteredTasks()];
       const fromIdx = columnTasks.findIndex((t) => t.id === taskId);
@@ -283,7 +191,7 @@ export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
       return;
     }
 
-    // --- Move to another column ---
+    // Move between columns
     const sourceTasks = allTasks.filter(
       (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
     );
@@ -306,15 +214,12 @@ export class KanbanColumnComponent implements AfterViewInit, AfterViewChecked {
     this.dragOverIndex.set(null);
   }
 
-  /**
-   * Receives task drop event from child task component.
-   */
   async onTaskItemDrop(event: DragEvent, targetIndex: number): Promise<void> {
     await this.onTaskDrop(event, targetIndex);
   }
 
-  /** TrackBy for tasks */
-  trackById(index: number, task: Task): number | undefined {
+  /** TrackBy for tasks. */
+  trackById(_index: number, task: Task): number | undefined {
     return task.id;
   }
 }

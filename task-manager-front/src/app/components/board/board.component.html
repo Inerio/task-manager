@@ -1,8 +1,9 @@
-<div class="task-columns">
-  @for (kanbanColumn of kanbanColumns(); track kanbanColumn.id; let idx =
-  $index) {
+<div class="task-columns" role="list" aria-label="Kanban columns">
+  @for (kanbanColumn of kanbanColumns(); track trackByColumnId($index,
+  kanbanColumn); let idx = $index) {
   <div
     class="column-draggable"
+    role="listitem"
     [class.is-dragged]="draggedKanbanColumnId() === kanbanColumn.id"
     [class.drag-over]="
       dragOverIndex() === idx && draggedKanbanColumnId() !== null
@@ -11,6 +12,7 @@
   >
     @if (isEditingTitle(kanbanColumn)) {
     <button
+      type="button"
       class="cancel-edit-btn-top"
       (mousedown)="cancelTitleEdit()"
       title="Cancel add/edit"
@@ -24,19 +26,23 @@
       [class.disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       draggable="true"
       (dragstart)="onColumnDragStart(kanbanColumn.id!, idx, $event)"
-      (dragenter)="onColumnDragEnter(idx, $event)"
-      (dragover)="onColumnDragOver(idx, $event)"
+      (dragenter)="onColumnDragHover(idx, $event)"
+      (dragover)="onColumnDragHover(idx, $event)"
       (drop)="onColumnDrop($event)"
       (dragend)="onColumnDragEnd()"
+      [attr.aria-grabbed]="
+        draggedKanbanColumnId() === kanbanColumn.id ? 'true' : 'false'
+      "
     >
       <button
+        type="button"
         class="btn-close-kanbanColumn styled-x-btn"
         (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
         title="Delete column"
         aria-label="Delete this column"
         [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       >
-        <img src="svg/x.svg" alt="Close" width="17" height="17" />
+        <img src="/svg/x.svg" alt="Close" width="17" height="17" />
       </button>
 
       @if (!isEditingTitle(kanbanColumn)) {
@@ -51,7 +57,7 @@
         @if (!kanbanColumn.name.trim()) {
         <span class="edit-title-placeholder">
           edit
-          <img src="svg/pencil.svg" alt="Edit" class="edit-icon" />
+          <img src="/svg/pencil.svg" alt="Edit" class="edit-icon" />
         </span>
         } @else {
         {{ kanbanColumn.name }}
@@ -69,12 +75,12 @@
         (keydown.escape)="cancelTitleEdit()"
         maxlength="60"
         required
-        [autofocus]="true"
         [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
       />
       }
 
       <button
+        type="button"
         class="btn-delete-column styled-trash-btn"
         (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
         title="Delete all tasks in this column"
@@ -96,10 +102,12 @@
   </div>
   } @if (kanbanColumns().length < MAX_KANBANCOLUMNS) {
   <button
+    type="button"
     class="add-kanbanColumn-fab-inline"
     [disabled]="kanbanColumns().length >= MAX_KANBANCOLUMNS"
     (click)="addKanbanColumnAndEdit()"
     title="Add column"
+    aria-label="Add column"
   >
     +
   </button>

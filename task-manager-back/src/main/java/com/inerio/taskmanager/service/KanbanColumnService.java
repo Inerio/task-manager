@@ -5,21 +5,27 @@ import com.inerio.taskmanager.model.Board;
 import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.repository.BoardRepository;
 import com.inerio.taskmanager.repository.KanbanColumnRepository;
+import com.inerio.taskmanager.repository.TaskRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.FileSystemUtils;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * Service layer for business logic related to Kanban columns (KanbanColumn) in a multi-board setup.
  * <p>
- * Handles CRUD operations, position management for drag and drop, and conversions to DTOs.
+ * Handles CRUD operations, position management for drag and drop, conversions to DTOs,
+ * and (when deleting a column) cleans the on-disk upload folders of the tasks that belonged to it.
  * </p>
  *
  * <ul>
  *     <li>Ensures column order and unique naming within a board.</li>
  *     <li>Limits the number of columns per board if required by business logic.</li>
  *     <li>Provides helpers for UI-friendly API responses.</li>
+ *     <li>Removes {@code uploads/{taskId}} directories when a column is deleted.</li>
  * </ul>
  */
 @Service
@@ -27,16 +33,32 @@ public class KanbanColumnService {
 
     private final KanbanColumnRepository kanbanColumnRepository;
     private final BoardRepository boardRepository;
+    private final TaskRepository taskRepository;
+
+    /**
+     * Base upload directory on disk where task attachments are stored.
+     * <p>
+     * Defaults to {@code "uploads"} if the property is not set.
+     * </p>
+     */
+    @Value("${app.upload-dir:uploads}")
+    private String uploadDir;
 
     /**
      * Constructs the service with required dependency injection.
      *
      * @param kanbanColumnRepository The JPA repository for KanbanColumn.
      * @param boardRepository        The JPA repository for Board.
+     * @param taskRepository         The JPA repository for Task (used to list tasks of a column before deletion).
      */
-    public KanbanColumnService(KanbanColumnRepository kanbanColumnRepository, BoardRepository boardRepository) {
+    public KanbanColumnService(
+            KanbanColumnRepository kanbanColumnRepository,
+            BoardRepository boardRepository,
+            TaskRepository taskRepository
+    ) {
         this.kanbanColumnRepository = kanbanColumnRepository;
         this.boardRepository = boardRepository;
+        this.taskRepository = taskRepository;
     }
 
     // ==========================
@@ -113,9 +135,11 @@ public class KanbanColumnService {
     }
 
     /**
-     * Deletes a KanbanColumn by ID and repacks all other columns to ensure positions are continuous within the board.
+     * Deletes a KanbanColumn by ID, repacks positions of remaining columns,
+     * and removes the on-disk upload folders for all tasks that belonged to this column.
      * <p>
-     * Ensures no "holes" remain in ordering after a column is deleted.
+     * The DB deletion uses cascade and orphan removal for tasks. Before deleting the column,
+     * this method collects the task IDs to clean the {@code uploads/{taskId}} directories afterward.
      * </p>
      *
      * @param id The ID of the column to delete.
@@ -125,9 +149,11 @@ public class KanbanColumnService {
         KanbanColumn column = kanbanColumnRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("KanbanColumn not found with id " + id));
         Board board = column.getBoard();
+        List<Long> taskIds = taskRepository.findByKanbanColumn(column)
+                .stream()
+                .map(t -> t.getId())
+                .toList();
         kanbanColumnRepository.deleteById(id);
-
-        // After deletion, ensure all column positions on the board are contiguous (starting from 1)
         List<KanbanColumn> remaining = kanbanColumnRepository.findByBoardOrderByPositionAsc(board);
         int pos = 1;
         for (KanbanColumn kanbanColumn : remaining) {
@@ -137,6 +163,9 @@ public class KanbanColumnService {
             }
             pos++;
         }
+
+        // Clean upload folders on disk: uploads/{taskId}
+        taskIds.forEach(this::deleteTaskFolderQuiet);
     }
 
     /**
@@ -195,8 +224,31 @@ public class KanbanColumnService {
 
     // ============== INTERNAL HELPERS ==============
 
+    /**
+     * Retrieves an existing Board or throws an exception if not found.
+     *
+     * @param boardId the board ID to look up
+     * @return the Board entity
+     * @throws RuntimeException if the board is not found
+     */
     private Board getBoardOrThrow(Long boardId) {
         return boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("Board not found with id " + boardId));
+    }
+
+    /**
+     * Deletes the upload directory for a given task ID, ignoring any I/O errors.
+     * <p>
+     * Directory layout is assumed to be {@code ${app.upload-dir}/${taskId}}.
+     * </p>
+     *
+     * @param taskId the task identifier
+     */
+    private void deleteTaskFolderQuiet(Long taskId) {
+        try {
+            FileSystemUtils.deleteRecursively(Path.of(uploadDir, String.valueOf(taskId)));
+        } catch (Exception ignored) {
+            // Intentionally ignore any filesystem errors to avoid breaking the delete flow.
+        }
     }
 }

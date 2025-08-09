@@ -7,8 +7,8 @@
   draggable="true"
   (dragstart)="onTaskDragStart($event)"
   (dragend)="onTaskDragEnd()"
-  (dragenter)="onTaskDragEnter($event)"
-  (dragleave)="onTaskDragLeave($event)"
+  (dragenter)="onTaskDragEnter()"
+  (dragleave)="onTaskDragLeave()"
   (dragover)="onTaskDragOver($event)"
   (drop)="onTaskDrop($event)"
   [class.drag-over-card]="isDragOver()"
@@ -23,6 +23,8 @@
         [class.truncated]="canTruncateTitle() && !showFullTitle()"
         (click)="toggleTitleTruncate()"
         [style.cursor]="canTruncateTitle() ? 'pointer' : 'auto'"
+        [attr.aria-expanded]="showFullTitle()"
+        role="button"
         [title]="
           canTruncateTitle()
             ? showFullTitle()
@@ -31,7 +33,6 @@
             : null
         "
       ></h4>
-
       <input
         type="checkbox"
         class="task-checkbox-icon-inline"
@@ -68,7 +69,6 @@
       "
     ></h4>
     }
-
     <p
       [innerHTML]="displayedDescription() | linkify"
       [class.truncated]="canTruncateDescription() && !showFullDescription()"
@@ -88,9 +88,9 @@
       [taskId]="localTask().id!"
       [acceptTypes]="acceptTypes"
       [maxSize]="maxSize"
-      (filesUploaded)="onUploadFiles($event)"
-      (fileDeleted)="onDeleteAttachment($event)"
-      (fileDownloaded)="onDownloadAttachment($event)"
+      (filesUploaded)="onAttachmentUploaded($event)"
+      (fileDeleted)="onAttachmentDeleted($event)"
+      (fileDownloaded)="onAttachmentDownloaded($event)"
     ></app-attachment-zone>
 
     <div class="btn-group">
@@ -103,87 +103,13 @@
     </div>
   </div>
   }
-
-  <!-- ==== EDIT MODE ==== -->
+  <!-- ==== EDIT MODE: delegated to TaskForm ==== -->
   @else {
-  <input
-    class="form-control"
-    type="text"
-    [(ngModel)]="localTask().title"
-    placeholder="Task title"
-    required
-    autocomplete="off"
-  />
-  <div class="desc-row-edit" #emojiPickerContainer style="position: relative">
-    <textarea
-      #descTextarea
-      class="form-control textarea"
-      [(ngModel)]="localTask().description"
-      placeholder="Description"
-      rows="4"
-    ></textarea>
-    <span
-      class="emoji-trigger-bottom"
-      (click)="toggleEmojiPicker()"
-      title="Insert emoji"
-    >
-      <img
-        src="/svg/smile-plus.svg"
-        alt="Add emoji"
-        width="18"
-        height="18"
-        draggable="false"
-      />
-    </span>
-    @if (showEmojiPicker()) {
-    <!--
-      NOTE: 'emoji-picker' is a Web Component (not a native Angular component).
-      This component uses CUSTOM_ELEMENTS_SCHEMA to support it.
-      No warning or error will appear at runtime or in build.
-      See: https://angular.io/guide/elements#using-custom-elements-in-angular
-    -->
-    <emoji-picker
-      #emojiPicker
-      theme="light"
-      (emoji-click)="addEmojiToDescription($event)"
-      class="emoji-picker-dropdown"
-      style="
-        position: absolute;
-        left: 0;
-        top: 91%;
-        z-index: 99;
-        width: 100%;
-        min-width: 260px;
-        max-height: 370px;
-      "
-    ></emoji-picker>
-    }
-  </div>
-  <input
-    class="form-control"
-    type="date"
-    [(ngModel)]="localTask().dueDate"
-    placeholder="Due date (optional)"
-    autocomplete="off"
-  />
-
-  <app-attachment-zone
-    [attachments]="localTask().attachments ?? []"
-    [taskId]="localTask().id!"
-    [acceptTypes]="acceptTypes"
-    [maxSize]="maxSize"
-    (filesUploaded)="onUploadFiles($event)"
-    (fileDeleted)="onDeleteAttachment($event)"
-    (fileDownloaded)="onDownloadAttachment($event)"
-  ></app-attachment-zone>
-
-  <div class="btn-group">
-    <button class="btn btn-success" (click)="saveEdit()" title="Save">
-      Save
-    </button>
-    <button class="btn btn-secondary" (click)="cancelEdit()" title="Cancel">
-      Cancel
-    </button>
-  </div>
+  <app-task-form
+    [task]="localTask()"
+    [editMode]="true"
+    (save)="saveEdit($event)"
+    (cancel)="cancelEdit()"
+  ></app-task-form>
   }
 </div>

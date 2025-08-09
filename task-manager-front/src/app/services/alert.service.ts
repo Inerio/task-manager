@@ -1,8 +1,8 @@
-import { Injectable, signal, Signal } from "@angular/core";
+import { Injectable, signal, type Signal } from "@angular/core";
 
 /**
- * Provides a reactive alert "stack" (toast) system, with auto-dismiss.
- * Each alert has its own timeout and can be closed manually.
+ * Simple reactive alert/toast stack.
+ * Each alert auto-dismisses after its own timeout.
  */
 export interface AlertMessage {
   id: number;
@@ -13,33 +13,29 @@ export interface AlertMessage {
 
 @Injectable({ providedIn: "root" })
 export class AlertService {
-  private _alerts = signal<AlertMessage[]>([]);
+  private readonly _alerts = signal<AlertMessage[]>([]);
   private _nextId = 1;
 
-  /** Reactive, readonly stack of alerts. */
+  /** Readonly, reactive alert list. */
   get alerts(): Signal<AlertMessage[]> {
     return this._alerts.asReadonly();
   }
 
-  /**
-   * Show an alert (toast) of given type and message.
-   * Each alert is auto-dismissed after `durationMs` (default: 3500ms).
-   */
-  show(type: AlertMessage["type"], message: string, durationMs = 3500) {
+  /** Show a toast message with optional duration (ms, default 3500). */
+  show(type: AlertMessage["type"], message: string, durationMs = 3500): void {
     const id = this._nextId++;
     const alert: AlertMessage = { id, type, message, timeout: durationMs };
-    this._alerts.update((alerts) => [...alerts, alert]);
-    // Auto-dismiss this alert after durationMs
+    this._alerts.update((list) => [...list, alert]);
     setTimeout(() => this.dismiss(id), durationMs);
   }
 
-  /** Dismiss a specific alert by its id. */
-  dismiss(id: number) {
-    this._alerts.update((alerts) => alerts.filter((alert) => alert.id !== id));
+  /** Remove a toast by id. */
+  dismiss(id: number): void {
+    this._alerts.update((list) => list.filter((a) => a.id !== id));
   }
 
-  /** Dismiss all alerts (optional utility) */
-  clearAll() {
+  /** Clear all toasts. */
+  clearAll(): void {
     this._alerts.set([]);
   }
 }

@@ -1,35 +1,70 @@
-import { signal, WritableSignal } from "@angular/core";
+// import { signal, WritableSignal } from '@angular/core';
+import type { KanbanColumnId } from "./kanban-column.model";
 
-/* ==== TASK MODEL ==== */
+/** Distinct alias for task identifiers. */
+export type TaskId = number;
 
 /**
- * Represents a single task item in the kanban board.
+ * Represents a single task in a kanban column.
  */
 export interface Task {
-  /** Task unique identifier (may be undefined for drafts/new). */
-  id?: number;
-  /** Title (required, always present in DB). */
+  /** Unique identifier (undefined for drafts). */
+  id?: TaskId;
+  /** Title (required). */
   title: string;
-  /** Description (required, may be empty). */
+  /** Free-text description (may be empty). */
   description: string;
-  /** Is the task marked as completed? */
+  /** Completion status. */
   completed: boolean;
   /** Parent kanban column identifier. */
-  kanbanColumnId: number;
-  /** Due date (YYYY-MM-DD), or null/undefined if not set. */
+  kanbanColumnId: KanbanColumnId;
+  /** Due date in ISO format (YYYY-MM-DD) or null if not set. */
   dueDate?: string | null;
-  /** Edit mode state, local UI only (never from backend). */
+  /**
+   * UI-only flag used by components (never persisted).
+   * Prefer keeping this out of API payloads.
+   */
   isEditing?: boolean;
-  /** Filenames of attachments. */
-  attachments?: string[];
-  /** Position in column (0-based or 1-based as per backend). */
+  /** Filenames associated to this task (as returned by the backend). */
+  attachments?: readonly string[];
+  /** Position inside the column (0/1-based depending on backend). */
   position?: number;
 }
 
 /**
- * Helper: returns a reactive signal from a Task object.
- * Useful for local editing or derived state in components.
+ * Creation payload helper: shape commonly sent to POST /tasks.
+ * Keeps fields optional when server can default them.
  */
-export function createTaskSignal(task: Task): WritableSignal<Task> {
-  return signal({ ...task });
+export type TaskCreation = Omit<
+  Task,
+  "id" | "attachments" | "position" | "completed" | "isEditing"
+> & {
+  attachments?: string[];
+  completed?: boolean;
+  position?: number;
+};
+
+/**
+ * Helper type used by the TaskForm to carry yet-to-upload files.
+ */
+export type TaskWithPendingFiles = Partial<Task> & { _pendingFiles?: File[] };
+
+/**
+ * Type guard for runtime safety when consuming unknown API responses.
+ */
+export function isTask(value: unknown): value is Task {
+  if (value == null || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v["title"] === "string" && typeof v["kanbanColumnId"] === "number"
+  );
 }
+
+/**
+ * @deprecated Prefer using Angular's `signal()` directly in the component
+ * that needs it, e.g. `const s = signal(task);`. Keeping this for backward
+ * compatibility; safe to remove once no call sites remain.
+ */
+// export function createTaskSignal(task: Task): WritableSignal<Task> {
+//   return signal({ ...task });
+// }

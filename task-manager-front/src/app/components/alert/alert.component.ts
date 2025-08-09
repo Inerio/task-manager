@@ -1,25 +1,30 @@
-import { Component, computed, inject } from "@angular/core";
-import { CommonModule } from "@angular/common";
+import {
+  Component,
+  computed,
+  inject,
+  ChangeDetectionStrategy,
+} from "@angular/core";
+import { NgClass } from "@angular/common";
 import { AlertService } from "../../services/alert.service";
 
-/**
- * Displays a stack of alerts (toast notifications), one per active alert.
- * (This component is still called AlertComponent for compatibility)
- */
 @Component({
   selector: "app-alert",
   standalone: true,
-  imports: [CommonModule],
+  imports: [NgClass],
   templateUrl: "./alert.component.html",
   styleUrls: ["./alert.component.scss"],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertComponent {
   private readonly alertService = inject(AlertService);
 
-  /** All current alerts (reactive signal) */
+  /** All current alerts (reactive signal). */
   readonly alerts = computed(() => this.alertService.alerts());
 
-  dismiss(id: number) {
+  /** Track function for @for. */
+  readonly trackById = (_: number, a: { id: number }) => a.id;
+
+  dismiss(id: number): void {
     this.alertService.dismiss(id);
   }
 }

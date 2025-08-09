@@ -187,10 +187,10 @@ export class AppComponent {
     );
     if (!confirmed) return;
 
-    this.taskService.deleteAllTasksByBoardId(selectedBoard.id).subscribe({
-      next: () => this.taskService.loadTasks(),
-      error: () => alert("Error while deleting all tasks for this board."),
-    });
+    this.taskService
+      .deleteAllTasksByBoardId(selectedBoard.id)
+      .then(() => this.taskService.loadTasks())
+      .catch(() => alert("Error while deleting all tasks for this board."));
   }
 
   // ==== Utility getters ====

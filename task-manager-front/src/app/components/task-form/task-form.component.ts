@@ -182,8 +182,28 @@ export class TaskFormComponent
   }
 
   onEmojiSelected(emoji: string): void {
-    const cur = this.form.controls.description.value ?? "";
-    this.form.controls.description.setValue(cur + emoji);
+    const ta = this.descTextarea?.nativeElement;
+    const ctrl = this.form.controls.description;
+    if (!ta) {
+      ctrl.setValue((ctrl.value ?? "") + emoji);
+      return;
+    }
+    ta.focus();
+    const prevScroll = ta.scrollTop;
+    const start = ta.selectionStart ?? ta.value.length;
+    const end = ta.selectionEnd ?? start;
+    if (typeof ta.setRangeText === "function") {
+      ta.setRangeText(emoji, start, end, "end");
+    } else {
+      const v = ta.value;
+      ta.value = v.slice(0, start) + emoji + v.slice(end);
+      const caret = start + emoji.length;
+      ta.setSelectionRange(caret, caret);
+    }
+    ta.scrollTop = prevScroll;
+    ctrl.setValue(ta.value);
+    ctrl.markAsDirty();
+    ctrl.markAsTouched();
   }
 
   // === Files ===

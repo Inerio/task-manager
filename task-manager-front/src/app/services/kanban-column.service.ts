@@ -119,4 +119,26 @@ export class KanbanColumnService {
   reorderKanbanColumns(newOrder: ReadonlyArray<KanbanColumn>): void {
     this._kanbanColumns.set([...newOrder]);
   }
+
+  /**
+   * Insert a client-only draft column at the end of the list.
+   * Drafts have no `id` and will be persisted on save.
+   */
+  insertDraftColumn(boardId: number): KanbanColumn {
+    const draft: KanbanColumn = { boardId, name: "" };
+    this._kanbanColumns.update((list) => [...list, draft]);
+    return draft;
+  }
+
+  /** Remove a column by reference (works for drafts without id). */
+  removeColumnRef(ref: KanbanColumn): void {
+    this._kanbanColumns.update((list) => list.filter((c) => c !== ref));
+  }
+
+  /** Replace a column by reference (used to swap a draft with the created one). */
+  replaceRef(oldRef: KanbanColumn, replacement: KanbanColumn): void {
+    this._kanbanColumns.update((list) =>
+      list.map((c) => (c === oldRef ? replacement : c))
+    );
+  }
 }

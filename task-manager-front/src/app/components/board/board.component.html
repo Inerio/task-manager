@@ -10,12 +10,12 @@
     "
     [class.editing]="isEditingTitle(kanbanColumn)"
   >
-    @if (isEditingTitle(kanbanColumn)) {
+    @if (isEditingTitle(kanbanColumn) && isDraft(kanbanColumn)) {
     <button
       type="button"
       class="cancel-edit-btn-top"
       (mousedown)="cancelTitleEdit()"
-      title="Cancel add/edit"
+      title="Cancel add"
     >
       ✖ Cancel
     </button>
@@ -23,7 +23,7 @@
 
     <div
       class="column-header"
-      [class.disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
+      [class.disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
       draggable="true"
       (dragstart)="onColumnDragStart(kanbanColumn.id!, idx, $event)"
       (dragenter)="onColumnDragHover(idx, $event)"
@@ -40,7 +40,7 @@
         (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
         title="Delete column"
         aria-label="Delete this column"
-        [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
+        [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
       >
         <img src="/svg/x.svg" alt="Close" width="17" height="17" />
       </button>
@@ -65,7 +65,7 @@
       </span>
       } @else {
       <input
-        id="edit-kanbanColumn-title-{{ kanbanColumn.id }}"
+        id="edit-kanbanColumn-title-{{ kanbanColumn.id ?? 'draft' }}"
         class="kanbanColumn-title-input"
         type="text"
         [value]="editingTitleValue()"
@@ -75,7 +75,7 @@
         (keydown.escape)="cancelTitleEdit()"
         maxlength="60"
         required
-        [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
+        [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
       />
       }
 
@@ -84,7 +84,7 @@
         class="btn-delete-column styled-trash-btn"
         (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
         title="Delete all tasks in this column"
-        [disabled]="!!editingTitleId() && !isEditingTitle(kanbanColumn)"
+        [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
       >
         <img src="/svg/trash.svg" alt="Clear" width="19" height="19" />
       </button>
@@ -96,7 +96,7 @@
       [hasAnyTask]="hasAnyTask()"
     ></app-kanban-column>
 
-    @if (!!editingTitleId() && !isEditingTitle(kanbanColumn)) {
+    @if (!!editingColumn() && !isEditingTitle(kanbanColumn)) {
     <div class="column-blocker"></div>
     }
   </div>

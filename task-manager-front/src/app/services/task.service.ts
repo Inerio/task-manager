@@ -11,6 +11,7 @@ import { firstValueFrom } from "rxjs";
 import { environment } from "../../environments/environment.local";
 import { type Task, type TaskId } from "../models/task.model";
 import { AlertService } from "./alert.service";
+import { LoadingService } from "./loading.service";
 
 /** Tasks CRUD + reordering with signals as the single source of truth. */
 @Injectable({ providedIn: "root" })
@@ -18,6 +19,7 @@ export class TaskService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrl + "/tasks";
   private readonly alert = inject(AlertService);
+  private readonly loading = inject(LoadingService);
 
   /** All tasks loaded from backend (SSOT). */
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
@@ -26,9 +28,10 @@ export class TaskService {
 
   // === Fetch ===
 
-  /** Load all tasks. */
+  /** Load all tasks. Shown under the global loading overlay. */
   loadTasks(): void {
-    this.http.get<Task[]>(this.apiUrl).subscribe({
+    // Wrap the HTTP observable so the global overlay toggles automatically.
+    this.loading.wrap$(this.http.get<Task[]>(this.apiUrl)).subscribe({
       next: (data) => this.tasksSignal.set(data ?? []),
       error: () => this.alert.show("error", "Error loading tasks."),
     });

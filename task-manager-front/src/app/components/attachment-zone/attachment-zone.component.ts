@@ -12,6 +12,7 @@ import {
 import { AlertService } from "../../services/alert.service";
 import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { AttachmentService } from "../../services/attachment.service";
+import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
 /**
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
@@ -44,6 +45,7 @@ export class AttachmentZoneComponent {
 
   private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
   @Output() filesUploaded = new EventEmitter<File[]>();
   @Output() fileDeleted = new EventEmitter<string>();
@@ -129,7 +131,12 @@ export class AttachmentZoneComponent {
   onDeleteAttachment(filename: string): void {
     this.fileDeleted.emit(filename);
   }
-  onDownloadAttachment(filename: string): void {
+  async onDownloadAttachment(filename: string): Promise<void> {
+    const ok = await this.confirmDialog.open(
+      "Download file",
+      `Do you want to download “${filename}”?`
+    );
+    if (!ok) return;
     this.fileDownloaded.emit(filename);
   }
   onDeletePendingFile(filename: string): void {

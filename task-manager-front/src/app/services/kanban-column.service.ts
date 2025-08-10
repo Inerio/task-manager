@@ -7,28 +7,34 @@ import {
 import { environment } from "../../environments/environment.local";
 import { firstValueFrom } from "rxjs";
 import { AlertService } from "./alert.service";
+import { LoadingService } from "./loading.service";
 
 /** Kanban columns CRUD + ordering with signals and optimistic updates. */
 @Injectable({ providedIn: "root" })
 export class KanbanColumnService {
   private readonly http = inject(HttpClient);
   private readonly alert = inject(AlertService);
+  /** Renamed to avoid clashing with the `loading` computed signal below. */
+  private readonly globalLoading = inject(LoadingService);
 
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
   readonly kanbanColumns = computed(() => this._kanbanColumns());
 
   private readonly _loading = signal(false);
+  /** Local loading state used by components (e.g. to disable UI). */
   readonly loading = computed(() => this._loading());
 
-  /** Load columns for a board. */
+  /** Load columns for a board (drives both local loading + global overlay). */
   loadKanbanColumns(boardId: number): void {
     if (!boardId) {
       this._kanbanColumns.set([]);
       return;
     }
     this._loading.set(true);
+
     const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns`;
-    this.http.get<KanbanColumn[]>(url).subscribe({
+    // Use the global overlay while keeping local loading for UI logic.
+    this.globalLoading.wrap$(this.http.get<KanbanColumn[]>(url)).subscribe({
       next: (cols) => this._kanbanColumns.set(cols ?? []),
       error: () => {
         this._kanbanColumns.set([]);
@@ -120,25 +126,33 @@ export class KanbanColumnService {
     this._kanbanColumns.set([...newOrder]);
   }
 
-  /**
-   * Insert a client-only draft column at the end of the list.
-   * Drafts have no `id` and will be persisted on save.
-   */
+  // ------- Draft helpers used by BoardComponent -------
+
+  /** Insert a client-side draft column (id undefined) at the end. */
   insertDraftColumn(boardId: number): KanbanColumn {
-    const draft: KanbanColumn = { boardId, name: "" };
-    this._kanbanColumns.update((list) => [...list, draft]);
+    const draft: KanbanColumn = {
+      id: undefined,
+      boardId,
+      name: "",
+      position: this._kanbanColumns().length,
+    };
+    this._kanbanColumns.update((arr) => [...arr, draft]);
     return draft;
   }
 
-  /** Remove a column by reference (works for drafts without id). */
-  removeColumnRef(ref: KanbanColumn): void {
-    this._kanbanColumns.update((list) => list.filter((c) => c !== ref));
+  /** Replace a reference in the array (used to swap draft with created). */
+  replaceRef(from: KanbanColumn, to: KanbanColumn): void {
+    this._kanbanColumns.update((arr) => {
+      const idx = arr.indexOf(from);
+      if (idx === -1) return arr;
+      const copy = arr.slice();
+      copy[idx] = to;
+      return copy;
+    });
   }
 
-  /** Replace a column by reference (used to swap a draft with the created one). */
-  replaceRef(oldRef: KanbanColumn, replacement: KanbanColumn): void {
-    this._kanbanColumns.update((list) =>
-      list.map((c) => (c === oldRef ? replacement : c))
-    );
+  /** Remove a column by reference (used to cancel a draft). */
+  removeColumnRef(ref: KanbanColumn): void {
+    this._kanbanColumns.update((arr) => arr.filter((c) => c !== ref));
   }
 }

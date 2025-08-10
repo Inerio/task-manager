@@ -1,0 +1,33 @@
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(245, 247, 253, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 99999;
+}
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  /* Conic spinner with subtle brand color */
+  background: conic-gradient(#1976d2 0 90deg, transparent 0 360deg) top/100%
+      100% no-repeat,
+    radial-gradient(farthest-side, #1976d2 94%, transparent) center/12px 12px
+      no-repeat;
+  -webkit-mask: radial-gradient(farthest-side, transparent 52%, #000 53%);
+  mask: radial-gradient(farthest-side, transparent 52%, #000 53%);
+  animation: spin 0.9s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

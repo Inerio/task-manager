@@ -6,6 +6,8 @@ import { BoardComponent } from "./components/board/board.component";
 import { BoardService } from "./services/board.service";
 import { ConfirmDialogService } from "./services/confirm-dialog.service";
 import { TaskService } from "./services/task.service";
+import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
+import { LoadingService } from "./services/loading.service"; // <-- ADD
 
 interface TempBoard {
   id: null;
@@ -22,6 +24,7 @@ interface TempBoard {
     AlertComponent,
     ConfirmDialogComponent,
     BoardComponent,
+    LoadingOverlayComponent,
   ],
 })
 export class AppComponent {
@@ -29,6 +32,7 @@ export class AppComponent {
   private readonly boardService = inject(BoardService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly taskService = inject(TaskService);
+  private readonly loading = inject(LoadingService); // <-- ADD
 
   readonly boards = this.boardService.boards;
   readonly selectedBoardId = signal<number | null>(null);
@@ -94,7 +98,9 @@ export class AppComponent {
       this.cancelBoardEdit();
       return;
     }
-    this.boardService.createBoard(name).subscribe({
+
+    // Wrap the creation call => overlay while creating the board.
+    this.loading.wrap$(this.boardService.createBoard(name)).subscribe({
       next: (board) => {
         this.boardService.loadBoards();
         setTimeout(() => {

@@ -8,7 +8,7 @@ import { ConfirmDialogService } from "./services/confirm-dialog.service";
 import { TaskService } from "./services/task.service";
 import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
 import { LoadingService } from "./services/loading.service";
-import { KanbanColumnService } from "./services/kanban-column.service"; // <-- NEW
+import { KanbanColumnService } from "./services/kanban-column.service";
 
 interface TempBoard {
   id: null;
@@ -29,12 +29,12 @@ interface TempBoard {
   ],
 })
 export class AppComponent {
-  // ==== State and injected services ====
+  // Services
   private readonly boardService = inject(BoardService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly taskService = inject(TaskService);
   private readonly loading = inject(LoadingService);
-  private readonly kanbanColumnService = inject(KanbanColumnService); // <-- NEW
+  private readonly kanbanColumnService = inject(KanbanColumnService);
 
   readonly boards = this.boardService.boards;
   readonly selectedBoardId = signal<number | null>(null);
@@ -47,6 +47,9 @@ export class AppComponent {
   readonly editingSelectedBoard = signal<boolean>(false);
   readonly editingSelectedBoardValue = signal<string>("");
 
+  /** Footer year */
+  readonly currentYear = new Date().getFullYear();
+
   /** Displayed boards (computed: boards + temp new board if editing) */
   readonly displayedBoards = computed(() => {
     if (this.editingBoardId() === null) return this.boards();
@@ -58,7 +61,7 @@ export class AppComponent {
 
   constructor() {
     this.boardService.loadBoards();
-    // Automatically select the first board on load if none selected
+    // Auto select first board
     computed(() => {
       const firstId = this.boards()[0]?.id;
       if (typeof firstId === "number" && this.selectedBoardId() === null) {
@@ -68,7 +71,6 @@ export class AppComponent {
   }
 
   // ==== Sidebar: Board selection and add ====
-
   selectBoard(id: number | null | undefined): void {
     if (typeof id === "number" && this.selectedBoardId() !== id) {
       this.selectedBoardId.set(id);
@@ -79,7 +81,7 @@ export class AppComponent {
 
   addBoard(): void {
     if (this.editingBoardId() === null) {
-      this.editingBoardId.set(-1); // -1 indicates editing state
+      this.editingBoardId.set(-1);
       this.editingBoardValue.set("");
       setTimeout(() => {
         const el = document.getElementById(
@@ -96,7 +98,7 @@ export class AppComponent {
 
   /**
    * Save new board, then offer a simple Kanban template.
-   * If the user accepts, auto-create 3 columns: "To do" / "In progress" / "Done".
+   * If accepted, auto-create 3 columns.
    */
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
@@ -105,14 +107,12 @@ export class AppComponent {
       return;
     }
 
-    // Show overlay while creating the board.
     this.loading.wrap$(this.boardService.createBoard(name)).subscribe({
       next: async (board) => {
         this.boardService.loadBoards();
         const newId = typeof board.id === "number" ? board.id : null;
         if (newId !== null) this.selectedBoardId.set(newId);
 
-        // Build a pretty, multiline message. \u00A0 = non-breaking space.
         const msg =
           "Would you like a simple Kanban template with 3 columns:\n" +
           '• "To\u00A0do"\n' +
@@ -133,7 +133,6 @@ export class AppComponent {
                 newId
               );
               await this.kanbanColumnService.createKanbanColumn("Done", newId);
-              // Reload to ensure consistent order & fresh state
               this.kanbanColumnService.loadKanbanColumns(newId);
             })()
           );
@@ -149,8 +148,7 @@ export class AppComponent {
     this.editingBoardValue.set("");
   }
 
-  // ==== Board title main area: Edit, Save, Cancel ====
-
+  // ==== Board title main area ====
   startSelectedBoardEdit(): void {
     const board = this.getSelectedBoard();
     if (board) {
@@ -190,8 +188,7 @@ export class AppComponent {
     this.editingSelectedBoardValue.set("");
   }
 
-  // ==== Board deletion and global task deletion (with confirm dialogs) ====
-
+  // ==== Board deletion and global task deletion ====
   async deleteSelectedBoard(): Promise<void> {
     const board = this.getSelectedBoard();
     if (!board || typeof board.id !== "number") return;
@@ -203,7 +200,6 @@ export class AppComponent {
     this.boardService.deleteBoard(board.id).subscribe({
       next: () => {
         this.boardService.loadBoards();
-        // Auto-select another board if possible
         this.selectedBoardId.set(
           this.boards().find((b) => b.id !== board.id)?.id ?? null
         );
@@ -229,8 +225,7 @@ export class AppComponent {
       .catch(() => alert("Error while deleting all tasks for this board."));
   }
 
-  // ==== Utility getters ====
-
+  // ==== Utils ====
   getSelectedBoard() {
     return this.boards().find((b) => b.id === this.selectedBoardId());
   }

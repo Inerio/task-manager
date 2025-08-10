@@ -8,7 +8,7 @@ body {
   min-height: 100vh;
   position: relative;
 
-  // Watermark on the right, covers all area except the sidebar, larger size
+  // Decorative watermark on the right, fixed so it doesn't create scroll
   &::after {
     content: "";
     position: fixed;
@@ -65,6 +65,7 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   box-sizing: border-box;
+
   &:hover {
     background: #e0edfa;
     color: #1976d2;
@@ -92,7 +93,6 @@ body {
   transition: border 0.15s, box-shadow 0.15s, background 0.16s;
   background: #f5f7fa;
 }
-
 .board-edit-input:focus {
   border: 2px solid #1651a3;
   box-shadow: 0 0 0 2px #1976d244;
@@ -111,6 +111,7 @@ body {
   cursor: pointer;
   transition: background 0.15s, box-shadow 0.15s;
   box-shadow: 0 1px 4px #1976d244;
+
   &:hover {
     background: #1651a3;
   }
@@ -270,7 +271,7 @@ body {
   }
 }
 
-// Ensure all content stays above the watermark
+// Keep content above the watermark
 .board-area,
 .board-header,
 .boards-list,
@@ -309,4 +310,17 @@ body {
     margin-left: 0.06em;
     line-height: 1.07;
   }
+}
+
+/* ===== Footer =====*/
+.app-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #7b8aa1;
+  z-index: 200;
+  pointer-events: none;
 }

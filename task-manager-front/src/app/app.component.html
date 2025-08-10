@@ -8,7 +8,6 @@
       <span class="tasukeru-sub">Boards</span>
     </h1>
     <nav class="boards-list">
-      <!-- Board list (includes temp board if adding) -->
       @for (board of displayedBoards(); track board.id) { @if (board.id !==
       null) {
       <div
@@ -19,7 +18,6 @@
         {{ board.name }}
       </div>
       } @else {
-      <!-- Inline new board input -->
       <input
         id="new-board-input"
         class="board-item board-edit-input"
@@ -48,7 +46,6 @@
   <section class="board-area">
     <header class="board-header">
       <div class="board-title-wrapper">
-        <!-- Editable board title or input -->
         @if (!editingSelectedBoard()) {
         <h2
           class="selected-board-title"
@@ -86,7 +83,7 @@
         />
         }
       </div>
-      <!-- Delete all tasks button: always on the right -->
+
       <button
         class="delete-btn styled-trash-btn delete-all-btn"
         (click)="deleteAllTasks()"
@@ -96,8 +93,15 @@
         <span class="delete-all-label">Delete all tasks</span>
       </button>
     </header>
+
     <app-board [boardId]="selectedBoardId()!"></app-board>
   </section>
   }
 </div>
+
+<!-- Fixed footer (does not push content, always visible) -->
+<footer class="app-footer">
+  © {{ currentYear }} Tasukeru. All rights reserved.
+</footer>
+
 <app-loading-overlay></app-loading-overlay>

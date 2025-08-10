@@ -9,7 +9,8 @@
     (click)="$event.stopPropagation()"
   >
     <h3>{{ state().title }}</h3>
-    <p>{{ state().message }}</p>
+    <!-- Use class for clarity; SCSS renders \n as real line breaks -->
+    <p class="message">{{ state().message }}</p>
     <div class="btn-group">
       <button
         class="btn btn-success"
@@ -17,10 +18,10 @@
         autofocus
         (click)="confirm()"
       >
-        Yes
+        {{ state().confirmText ?? "Yes" }}
       </button>
       <button class="btn btn-secondary" type="button" (click)="cancel()">
-        No
+        {{ state().cancelText ?? "No" }}
       </button>
     </div>
   </div>

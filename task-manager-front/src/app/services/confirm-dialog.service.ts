@@ -6,6 +6,8 @@ interface ConfirmDialogState {
   title: string;
   message: string;
   resolve?: (value: boolean) => void;
+  confirmText?: string;
+  cancelText?: string;
 }
 
 @Injectable({ providedIn: "root" })
@@ -15,18 +17,34 @@ export class ConfirmDialogService {
     title: "",
     message: "",
     resolve: undefined,
+    confirmText: undefined,
+    cancelText: undefined,
   });
 
   readonly state: Signal<ConfirmDialogState> = this._state.asReadonly();
 
-  /** Open the dialog and resolve with user's choice (true/false). */
-  open(title: string, message: string): Promise<boolean> {
-    // If already open, resolve previous as "cancel".
+  /**
+   * Open the dialog and resolve with user's choice (true/false).
+   * You may override button labels via `options`.
+   */
+  open(
+    title: string,
+    message: string,
+    options?: { confirmText?: string; cancelText?: string }
+  ): Promise<boolean> {
+    // If already open, resolve previous as "cancel" to avoid dangling promises.
     if (this._state().visible) {
       this._state().resolve?.(false);
     }
     return new Promise<boolean>((resolve) => {
-      this._state.set({ visible: true, title, message, resolve });
+      this._state.set({
+        visible: true,
+        title,
+        message,
+        resolve,
+        confirmText: options?.confirmText,
+        cancelText: options?.cancelText,
+      });
     });
   }
 
@@ -46,8 +64,15 @@ export class ConfirmDialogService {
     }
   }
 
-  /** Close dialog and clear resolver. */
+  /** Close dialog and clear resolver/labels. */
   close(): void {
-    this._state.set({ ...this._state(), visible: false, resolve: undefined });
+    const s = this._state();
+    this._state.set({
+      ...s,
+      visible: false,
+      resolve: undefined,
+      confirmText: undefined,
+      cancelText: undefined,
+    });
   }
 }

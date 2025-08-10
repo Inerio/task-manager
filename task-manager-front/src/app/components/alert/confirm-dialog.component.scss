@@ -32,7 +32,9 @@
   margin-right: auto;
 }
 
-.confirm-dialog p {
+/* Render \n as real line breaks and keep spacing tidy */
+.confirm-dialog p,
+.confirm-dialog .message {
   max-width: 90%;
   margin-left: auto;
   margin-right: auto;

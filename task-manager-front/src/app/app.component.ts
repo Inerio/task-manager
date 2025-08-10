@@ -7,7 +7,8 @@ import { BoardService } from "./services/board.service";
 import { ConfirmDialogService } from "./services/confirm-dialog.service";
 import { TaskService } from "./services/task.service";
 import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
-import { LoadingService } from "./services/loading.service"; // <-- ADD
+import { LoadingService } from "./services/loading.service";
+import { KanbanColumnService } from "./services/kanban-column.service"; // <-- NEW
 
 interface TempBoard {
   id: null;
@@ -32,7 +33,8 @@ export class AppComponent {
   private readonly boardService = inject(BoardService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly taskService = inject(TaskService);
-  private readonly loading = inject(LoadingService); // <-- ADD
+  private readonly loading = inject(LoadingService);
+  private readonly kanbanColumnService = inject(KanbanColumnService); // <-- NEW
 
   readonly boards = this.boardService.boards;
   readonly selectedBoardId = signal<number | null>(null);
@@ -92,6 +94,10 @@ export class AppComponent {
     this.editingBoardValue.set((event.target as HTMLInputElement).value);
   }
 
+  /**
+   * Save new board, then offer a simple Kanban template.
+   * If the user accepts, auto-create 3 columns: "To do" / "In progress" / "Done".
+   */
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
     if (!name) {
@@ -99,15 +105,39 @@ export class AppComponent {
       return;
     }
 
-    // Wrap the creation call => overlay while creating the board.
+    // Show overlay while creating the board.
     this.loading.wrap$(this.boardService.createBoard(name)).subscribe({
-      next: (board) => {
+      next: async (board) => {
         this.boardService.loadBoards();
-        setTimeout(() => {
-          if (typeof board.id === "number") {
-            this.selectedBoardId.set(board.id);
-          }
-        }, 300);
+        const newId = typeof board.id === "number" ? board.id : null;
+        if (newId !== null) this.selectedBoardId.set(newId);
+
+        // Build a pretty, multiline message. \u00A0 = non-breaking space.
+        const msg =
+          "Would you like a simple Kanban template with 3 columns:\n" +
+          '• "To\u00A0do"\n' +
+          '• "In\u00A0progress"\n' +
+          '• "Done"';
+
+        const useTemplate = await this.confirmDialog.open(
+          "Start with a template?",
+          msg
+        );
+
+        if (useTemplate && newId !== null) {
+          await this.loading.wrap(
+            (async () => {
+              await this.kanbanColumnService.createKanbanColumn("To do", newId);
+              await this.kanbanColumnService.createKanbanColumn(
+                "In progress",
+                newId
+              );
+              await this.kanbanColumnService.createKanbanColumn("Done", newId);
+              // Reload to ensure consistent order & fresh state
+              this.kanbanColumnService.loadKanbanColumns(newId);
+            })()
+          );
+        }
       },
       complete: () => this.cancelBoardEdit(),
       error: () => this.cancelBoardEdit(),

@@ -17,7 +17,10 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 /**
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
  * and deferred/buffered uploads in creation mode.
- * Also emits (dialogOpen) to inform parent when native picker opens.
+ *
+ * When available (Chromium + secure context), uses the File System Access API
+ * to open files (no native <input> side-effects). Falls back to hidden
+ * <input type="file"> on unsupported browsers.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -50,8 +53,13 @@ export class AttachmentZoneComponent {
   @Output() filesUploaded = new EventEmitter<File[]>();
   @Output() fileDeleted = new EventEmitter<string>();
   @Output() fileDownloaded = new EventEmitter<string>();
+  /**
+   * Emitted only for the <input> fallback to let parent know a native dialog opens.
+   * (The FS Access path does not emit to avoid ghost events/guards.)
+   */
   @Output() dialogOpen = new EventEmitter<boolean>();
 
+  // ===== Track helpers =====
   trackByFilename(_index: number, filename: string): string {
     return filename;
   }
@@ -59,10 +67,10 @@ export class AttachmentZoneComponent {
     return file.name;
   }
 
+  // ===== Event suppression inside the zone =====
   stop(e: Event): void {
     e.stopPropagation();
   }
-
   onZonePointerDown(e: PointerEvent): void {
     this.stop(e);
   }
@@ -73,16 +81,85 @@ export class AttachmentZoneComponent {
     this.stop(e);
   }
 
+  // ===== Open dialog =====
   onZoneClick(e: MouseEvent): void {
     this.stop(e);
-    this.openFileDialog();
+    void this.openFileDialog();
   }
 
-  private openFileDialog(): void {
+  /** Decide which picker to use. */
+  private async openFileDialog(): Promise<void> {
+    if (this.canUseFSAccess()) {
+      await this.openViaFSAccess();
+      return;
+    }
+    // Fallback to the hidden input (keeps your existing behavior).
     this.dialogOpen.emit(true);
     this.fileInput?.nativeElement.click();
   }
 
+  /** FS Access support check. */
+  private canUseFSAccess(): boolean {
+    return (
+      typeof (window as any).showOpenFilePicker === "function" &&
+      window.isSecureContext
+    );
+  }
+
+  /**
+   * Open using File System Access API.
+   * We don't emit dialogOpen here to avoid triggering "native picker" guards upstream.
+   */
+  private async openViaFSAccess(): Promise<void> {
+    try {
+      const handles: any[] = await (window as any).showOpenFilePicker({
+        multiple: true,
+        // We keep filtering client-side for broader compatibility.
+        excludeAcceptAllOption: false,
+      });
+      const files = await Promise.all(handles.map((h: any) => h.getFile()));
+      const accepted = files.filter((f) => this.matchesAccept(f));
+      if (!accepted.length) return;
+
+      // Optional max size filter (kept simple; same rule as your drag/drop)
+      const sized = accepted.filter((f) => f.size <= this.maxSize);
+      if (sized.length < accepted.length) {
+        this.alertService.show(
+          "error",
+          "Some files exceeded the size limit and were ignored."
+        );
+      }
+
+      this.handleFileSelection(sized);
+    } catch {
+      // User cancelled or API blocked: do nothing.
+    }
+  }
+
+  /**
+   * Accept filter compatible with strings like:
+   * ".png,.pdf,image/*,application/pdf"
+   */
+  private matchesAccept(file: File): boolean {
+    const accept = (this.acceptTypes || "").trim();
+    if (!accept) return true;
+
+    const rules = accept
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    const name = file.name.toLowerCase();
+    const type = (file.type || "").toLowerCase();
+
+    return rules.some((rule) => {
+      if (rule.startsWith(".")) return name.endsWith(rule);
+      if (rule.endsWith("/*")) return type.startsWith(rule.slice(0, -1));
+      return type === rule;
+    });
+  }
+
+  // ===== <input type="file"> fallback =====
   onFileSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = input.files;
@@ -90,29 +167,49 @@ export class AttachmentZoneComponent {
       this.dialogOpen.emit(false);
       return;
     }
-    this.handleFileSelection(Array.from(files));
+    // Lightweight size filter to mirror FS path
+    const list = Array.from(files);
+    const sized = list.filter((f) => f.size <= this.maxSize);
+    if (sized.length < list.length) {
+      this.alertService.show(
+        "error",
+        "Some files exceeded the size limit and were ignored."
+      );
+    }
+
+    this.handleFileSelection(sized);
     input.value = "";
     this.dialogOpen.emit(false);
   }
 
+  // ===== Drag & drop =====
   onDragOver(event: DragEvent): void {
     if (!isFileDragEvent(event)) return;
     event.preventDefault();
     this.isDragging.set(true);
   }
-
   onDragLeave(): void {
     this.isDragging.set(false);
   }
-
   onFileDrop(event: DragEvent): void {
     if (!isFileDragEvent(event)) return;
     event.preventDefault();
     const files = event.dataTransfer?.files;
-    if (files?.length) this.handleFileSelection(Array.from(files));
+    if (files?.length) {
+      const list = Array.from(files);
+      const sized = list.filter((f) => f.size <= this.maxSize);
+      if (sized.length < list.length) {
+        this.alertService.show(
+          "error",
+          "Some files exceeded the size limit and were ignored."
+        );
+      }
+      this.handleFileSelection(sized);
+    }
     this.isDragging.set(false);
   }
 
+  // ===== Common selection handling =====
   private handleFileSelection(selectedFiles: File[]) {
     const already = new Set([
       ...this.attachments,
@@ -128,9 +225,11 @@ export class AttachmentZoneComponent {
     if (uniques.length) this.filesUploaded.emit(uniques);
   }
 
+  // ===== Attachment actions =====
   onDeleteAttachment(filename: string): void {
     this.fileDeleted.emit(filename);
   }
+
   async onDownloadAttachment(filename: string): Promise<void> {
     const ok = await this.confirmDialog.open(
       "Download file",
@@ -139,10 +238,12 @@ export class AttachmentZoneComponent {
     if (!ok) return;
     this.fileDownloaded.emit(filename);
   }
+
   onDeletePendingFile(filename: string): void {
     this.fileDeleted.emit(filename);
   }
 
+  // ===== Preview helpers =====
   isImage(filename: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
   }

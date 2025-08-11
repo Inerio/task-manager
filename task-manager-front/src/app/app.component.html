@@ -3,10 +3,16 @@
 
 <div class="main-layout">
   <aside class="sidebar">
+    <!-- Language switcher sits above the brand, top-left -->
+    <div class="sidebar-lang" style="margin-bottom: 10px">
+      <app-language-switcher></app-language-switcher>
+    </div>
+
     <h1 class="tasukeru-title">
-      <span class="tasukeru-main">Tasukeru</span>
-      <span class="tasukeru-sub">Boards</span>
+      <span class="tasukeru-main">{{ "app.brand" | transloco }}</span>
+      <span class="tasukeru-sub">{{ "boards.title" | transloco }}</span>
     </h1>
+
     <nav class="boards-list">
       @for (board of displayedBoards(); track board.id) { @if (board.id !==
       null) {
@@ -29,15 +35,16 @@
         (keydown.escape)="cancelBoardEdit()"
         required
         autofocus
-        placeholder="Board name"
+        placeholder="{{ 'boards.namePlaceholder' | transloco }}"
       />
       } }
+
       <button
         class="add-board-btn"
         (click)="addBoard()"
         [disabled]="editingBoardId() !== null"
       >
-        + Add Board
+        {{ "boards.add" | transloco }}
       </button>
     </nav>
   </aside>
@@ -59,7 +66,7 @@
           <span class="board-title-text">{{ selectedBoardName }}</span>
           <button
             class="styled-x-btn"
-            title="Delete board"
+            [title]="'boards.delete' | transloco"
             (click)="deleteSelectedBoard(); $event.stopPropagation()"
             aria-label="Delete board"
           >
@@ -79,7 +86,7 @@
           maxlength="60"
           required
           autofocus
-          placeholder="Board name"
+          placeholder="{{ 'boards.namePlaceholder' | transloco }}"
         />
         }
       </div>
@@ -87,10 +94,12 @@
       <button
         class="delete-btn styled-trash-btn delete-all-btn"
         (click)="deleteAllTasks()"
-        title="Delete all tasks"
+        [title]="'boards.deleteAll' | transloco"
       >
         <img src="/svg/trash.svg" alt="Delete all" width="19" height="19" />
-        <span class="delete-all-label">Delete all tasks</span>
+        <span class="delete-all-label">{{
+          "boards.deleteAll" | transloco
+        }}</span>
       </button>
     </header>
 
@@ -101,7 +110,8 @@
 
 <!-- Fixed footer (does not push content, always visible) -->
 <footer class="app-footer">
-  © {{ currentYear }} Tasukeru. All rights reserved.
+  © {{ currentYear }} {{ "app.brand" | transloco }}.
+  {{ "app.copyright" | transloco }}
 </footer>
 
 <app-loading-overlay></app-loading-overlay>

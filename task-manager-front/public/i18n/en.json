@@ -1,0 +1,19 @@
+{
+  "app": {
+    "brand": "Tasukeru",
+    "copyright": "All rights reserved."
+  },
+  "lang": {
+    "label": "Language",
+    "en": "EN",
+    "fr": "FR",
+    "switch": "Switch language"
+  },
+  "boards": {
+    "title": "Boards",
+    "add": "+ Add Board",
+    "namePlaceholder": "Board name",
+    "delete": "Delete board",
+    "deleteAll": "Delete all tasks"
+  }
+}

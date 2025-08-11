@@ -1,5 +1,6 @@
 import { Component, signal, inject, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { TranslocoModule } from "@jsverse/transloco";
 import { AlertComponent } from "./components/alert/alert.component";
 import { ConfirmDialogComponent } from "./components/alert/confirm-dialog.component";
 import { BoardComponent } from "./components/board/board.component";
@@ -9,6 +10,7 @@ import { TaskService } from "./services/task.service";
 import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
 import { LoadingService } from "./services/loading.service";
 import { KanbanColumnService } from "./services/kanban-column.service";
+import { LanguageSwitcherComponent } from "./components/language-switcher/language-switcher.component";
 
 interface TempBoard {
   id: null;
@@ -22,14 +24,15 @@ interface TempBoard {
   styleUrls: ["./app.component.scss"],
   imports: [
     CommonModule,
+    TranslocoModule,
     AlertComponent,
     ConfirmDialogComponent,
     BoardComponent,
     LoadingOverlayComponent,
+    LanguageSwitcherComponent,
   ],
 })
 export class AppComponent {
-  // Services
   private readonly boardService = inject(BoardService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly taskService = inject(TaskService);
@@ -57,6 +60,7 @@ export class AppComponent {
       ...this.boards(),
       { id: null, name: this.editingBoardValue() } as TempBoard,
     ];
+    // Note: when id is null, this is a temporary inline "new board" row
   });
 
   constructor() {
@@ -115,9 +119,9 @@ export class AppComponent {
 
         const msg =
           "Would you like a simple Kanban template with 3 columns:\n" +
-          '• "To\u00A0do"\n' +
-          '• "In\u00A0progress"\n' +
-          '• "Done"';
+          "To\u00A0do" +
+          " • In\u00A0progress" +
+          " • Done";
 
         const useTemplate = await this.confirmDialog.open(
           "Start with a template?",

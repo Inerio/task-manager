@@ -1,0 +1,23 @@
+<div
+  class="lang-toggle"
+  role="group"
+  [attr.aria-label]="'lang.switch' | transloco"
+>
+  <button
+    type="button"
+    [class.active]="active() === 'en'"
+    [attr.aria-pressed]="active() === 'en'"
+    (click)="switchTo('en')"
+  >
+    {{ "lang.en" | transloco }}
+  </button>
+
+  <button
+    type="button"
+    [class.active]="active() === 'fr'"
+    [attr.aria-pressed]="active() === 'fr'"
+    (click)="switchTo('fr')"
+  >
+    {{ "lang.fr" | transloco }}
+  </button>
+</div>

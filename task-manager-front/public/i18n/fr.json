@@ -1,0 +1,19 @@
+{
+  "app": {
+    "brand": "Tasukeru",
+    "copyright": "Tous droits réservés."
+  },
+  "lang": {
+    "label": "Langue",
+    "en": "EN",
+    "fr": "FR",
+    "switch": "Changer de langue"
+  },
+  "boards": {
+    "title": "Tableaux",
+    "add": "+ Ajouter un tableau",
+    "namePlaceholder": "Nom du tableau",
+    "delete": "Supprimer le tableau",
+    "deleteAll": "Supprimer toutes les tâches"
+  }
+}

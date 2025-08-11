@@ -2,7 +2,7 @@
   <div class="task-dropzone-column">
     <!-- Add button always on top -->
     <button type="button" (click)="openForm()" class="add-btn">
-      + Add task
+      + {{ "task.add" | transloco }}
     </button>
 
     @if (showForm()) {
@@ -30,7 +30,7 @@
       (drop)="onDropzoneDrop($event)"
       aria-dropeffect="move"
     >
-      <span>Drop a task here</span>
+      <span>{{ "task.dropHere" | transloco }}</span>
     </div>
     }
 

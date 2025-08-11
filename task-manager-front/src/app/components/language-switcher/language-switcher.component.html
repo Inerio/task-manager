@@ -7,7 +7,7 @@
     type="button"
     [class.active]="active() === 'en'"
     [attr.aria-pressed]="active() === 'en'"
-    (click)="switchTo('en')"
+    (click)="toggle()"
   >
     {{ "lang.en" | transloco }}
   </button>
@@ -16,7 +16,7 @@
     type="button"
     [class.active]="active() === 'fr'"
     [attr.aria-pressed]="active() === 'fr'"
-    (click)="switchTo('fr')"
+    (click)="toggle()"
   >
     {{ "lang.fr" | transloco }}
   </button>

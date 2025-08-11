@@ -9,6 +9,7 @@ import {
   SimpleChanges,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { KanbanColumnComponent } from "../kanban-column/kanban-column.component";
 import { KanbanColumnService } from "../../services/kanban-column.service";
 import { TaskService } from "../../services/task.service";
@@ -29,7 +30,7 @@ import {
   standalone: true,
   templateUrl: "./board.component.html",
   styleUrls: ["./board.component.scss"],
-  imports: [CommonModule, KanbanColumnComponent],
+  imports: [CommonModule, TranslocoModule, KanbanColumnComponent],
 })
 export class BoardComponent implements OnChanges {
   /** Board ID (signal-based, for reactivity). */
@@ -42,6 +43,7 @@ export class BoardComponent implements OnChanges {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly alert = inject(AlertService);
+  private readonly i18n = inject(TranslocoService);
 
   /** Loading state from column service. */
   readonly loading = this.kanbanColumnService.loading;
@@ -176,7 +178,7 @@ export class BoardComponent implements OnChanges {
         targetIdx
       );
     } catch {
-      this.alert.show("error", "Move error: Could not move column.");
+      this.alert.show("error", this.i18n.translate("errors.movingColumn"));
     } finally {
       this.resetDragState();
     }
@@ -191,7 +193,7 @@ export class BoardComponent implements OnChanges {
     this.dragOverIndex.set(null);
   }
 
-  // ==== COLUMN CRUD ==== (unchanged)
+  // ==== COLUMN CRUD ====
   async addKanbanColumnAndEdit(): Promise<void> {
     const id = this._boardId();
     if (!id) return;
@@ -219,15 +221,15 @@ export class BoardComponent implements OnChanges {
     if (!boardId) return;
 
     const confirmed = await this.confirmDialog.open(
-      "Delete column",
-      `Delete column “${name}” and all its tasks?`
+      this.i18n.translate("boards.column.delete"),
+      this.i18n.translate("boards.column.deleteConfirm", { name })
     );
     if (!confirmed) return;
 
     try {
       await this.kanbanColumnService.deleteKanbanColumn(id, boardId);
     } catch {
-      this.alert.show("error", "Error while deleting column.");
+      this.alert.show("error", this.i18n.translate("errors.deletingColumn"));
     }
   }
 
@@ -235,15 +237,18 @@ export class BoardComponent implements OnChanges {
     if (this.editingColumn()) return;
 
     const confirmed = await this.confirmDialog.open(
-      "Delete tasks",
-      `Delete all tasks in “${name}”?`
+      this.i18n.translate("boards.column.deleteTasksTitle"),
+      this.i18n.translate("boards.column.deleteTasksConfirm", { name })
     );
     if (!confirmed) return;
 
     try {
       this.taskService.deleteTasksByKanbanColumnId(id);
     } catch {
-      this.alert.show("error", "Error while deleting all tasks in column.");
+      this.alert.show(
+        "error",
+        this.i18n.translate("errors.deletingTasksInColumn")
+      );
     }
   }
 
@@ -283,7 +288,7 @@ export class BoardComponent implements OnChanges {
         await this.kanbanColumnService.updateKanbanColumn(updated);
       }
     } catch {
-      this.alert.show("error", "Error while saving column.");
+      this.alert.show("error", this.i18n.translate("errors.updatingColumn"));
     } finally {
       this.editingColumn.set(null);
       this.editingTitleValue.set("");

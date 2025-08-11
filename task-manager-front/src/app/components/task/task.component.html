@@ -27,11 +27,11 @@
         [style.cursor]="canTruncateTitle() ? 'pointer' : 'auto'"
         [attr.aria-expanded]="showFullTitle()"
         role="button"
-        [title]="
+        [attr.title]="
           canTruncateTitle()
             ? showFullTitle()
-              ? 'Hide full title'
-              : 'Show full title'
+              ? ('task.showFullTitle.hide' | transloco)
+              : ('task.showFullTitle.show' | transloco)
             : null
         "
       ></h4>
@@ -44,7 +44,10 @@
     </div>
     } @else {
     <div class="due-row">
-      <span class="due-badge" [class.late]="dueBadge() === 'Late!'">
+      <span
+        class="due-badge"
+        [class.late]="dueBadge() === ('task.due.late' | transloco)"
+      >
         {{ dueBadge() }}
       </span>
       @if (localTask().dueDate) {
@@ -62,11 +65,11 @@
       [class.truncated]="canTruncateTitle() && !showFullTitle()"
       (click)="toggleTitleTruncate()"
       [style.cursor]="canTruncateTitle() ? 'pointer' : 'auto'"
-      [title]="
+      [attr.title]="
         canTruncateTitle()
           ? showFullTitle()
-            ? 'Hide full title'
-            : 'Show full title'
+            ? ('task.showFullTitle.hide' | transloco)
+            : ('task.showFullTitle.show' | transloco)
           : null
       "
     ></h4>
@@ -76,11 +79,11 @@
       [class.truncated]="canTruncateDescription() && !showFullDescription()"
       (click)="onDescriptionClick($event)"
       [style.cursor]="canTruncateDescription() ? 'pointer' : 'auto'"
-      [title]="
+      [attr.title]="
         canTruncateDescription()
           ? showFullDescription()
-            ? 'Hide full description'
-            : 'Show full description'
+            ? ('task.showFullDescription.hide' | transloco)
+            : ('task.showFullDescription.show' | transloco)
           : null
       "
     ></p>
@@ -96,11 +99,20 @@
     ></app-attachment-zone>
 
     <div class="btn-group">
-      <button class="btn btn-success" (click)="startEdit()" title="Edit">
-        Edit
+      <button
+        class="btn btn-success"
+        (click)="startEdit()"
+        [attr.title]="'common.edit' | transloco"
+      >
+        {{ "common.edit" | transloco }}
       </button>
-      <button class="btn btn-secondary" (click)="deleteTask()" title="Delete">
-        Delete
+      <button
+        class="btn btn-secondary"
+        (click)="(deleteTask)"
+        [attr.title]="'common.delete' | transloco"
+        (click)="deleteTask()"
+      >
+        {{ "common.delete" | transloco }}
       </button>
     </div>
   </div>

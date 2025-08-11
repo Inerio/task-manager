@@ -7,6 +7,7 @@ import {
   signal,
   type Signal,
 } from "@angular/core";
+import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
 import { TaskService } from "../../services/task.service";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
@@ -22,7 +23,7 @@ import { AttachmentService } from "../../services/attachment.service";
 @Component({
   selector: "app-kanban-column",
   standalone: true,
-  imports: [CommonModule, TaskComponent, TaskFormComponent],
+  imports: [CommonModule, TranslocoModule, TaskComponent, TaskFormComponent],
   templateUrl: "./kanban-column.component.html",
   styleUrls: ["./kanban-column.component.scss"],
 })
@@ -36,6 +37,7 @@ export class KanbanColumnComponent {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly attachmentService = inject(AttachmentService);
+  private readonly i18n = inject(TranslocoService);
 
   // State signals
   readonly showForm = signal(false);
@@ -137,8 +139,10 @@ export class KanbanColumnComponent {
 
   async deleteAllInColumn(): Promise<void> {
     const confirmed = await this.confirmDialog.open(
-      "Delete all tasks",
-      `Do you want to delete all tasks from "${this.title}"?`
+      this.i18n.translate("boards.column.deleteAllTasksTitle"),
+      this.i18n.translate("boards.column.deleteAllTasksConfirm", {
+        title: this.title,
+      })
     );
     if (!confirmed) return;
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);

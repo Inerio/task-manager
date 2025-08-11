@@ -9,11 +9,108 @@
     "fr": "FR",
     "switch": "Switch language"
   },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "download": "Download",
+    "remove": "Remove",
+    "chooseFile": "Choose a file",
+    "toBeUploaded": "To be uploaded"
+  },
   "boards": {
     "title": "Boards",
     "add": "+ Add Board",
     "namePlaceholder": "Board name",
     "delete": "Delete board",
-    "deleteAll": "Delete all tasks"
+    "deleteBoardConfirm": "Delete board \"{{name}}\"? This action cannot be undone.",
+    "deleteAll": "Delete all tasks",
+    "deleteAllTitle": "Board deletion",
+    "deleteAllConfirm": "Are you sure you want to delete all tasks in this board?",
+    "columnsAria": "Kanban columns",
+    "template": {
+      "title": "Start with a template?",
+      "message": "Would you like a simple Kanban template with 3 columns:\n• \"{{todo}}\"\n• \"{{inProgress}}\"\n• \"{{done}}\"",
+      "todo": "To do",
+      "inProgress": "In progress",
+      "done": "Done"
+    },
+    "column": {
+      "delete": "Delete column",
+      "deleteConfirm": "Delete column “{{name}}” and all its tasks?",
+      "deleteTasksTitle": "Delete tasks",
+      "deleteTasksConfirm": "Delete all tasks in “{{name}}”?",
+      "deleteAll": "Delete all tasks in this column",
+      "rename": "Rename this column",
+      "add": "Add column",
+      "cancelAdd": "Cancel add",
+      "editPlaceholder": "edit"
+    }
+  },
+  "task": {
+    "add": "Add task",
+    "dropHere": "Drop a task here",
+    "titlePlaceholder": "Task title",
+    "descriptionPlaceholder": "Description",
+    "insertEmoji": "Insert emoji",
+    "addEmoji": "Add emoji",
+    "dueDatePlaceholder": "Due date (optional)",
+    "buttons": {
+      "save": "Save",
+      "create": "Create",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "showFullTitle": {
+      "show": "Show full title",
+      "hide": "Hide full title"
+    },
+    "showFullDescription": {
+      "show": "Show full description",
+      "hide": "Hide full description"
+    },
+    "due": {
+      "late": "Late!",
+      "today": "Due today!",
+      "oneDay": "1 day left",
+      "nDays": "{{count}} days left"
+    }
+  },
+  "attachments": {
+    "downloadConfirmTitle": "Download file",
+    "downloadConfirmMessage": "Do you want to download “{{filename}}”?",
+    "errors": {
+      "tooLarge": "Some files exceeded the size limit and were ignored.",
+      "alreadyAttached": "Some files were already attached and have been ignored.",
+      "upload": "Error uploading attachment.",
+      "download": "Error downloading attachment.",
+      "delete": "Error deleting attachment."
+    }
+  },
+  "confirm": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "errors": {
+    "loadingTasks": "Error loading tasks.",
+    "creatingTask": "Error creating task",
+    "updatingTask": "Error updating task.",
+    "deletingTask": "Error deleting task.",
+    "deletingTasksInColumn": "Error deleting tasks in column.",
+    "deletingAllTasksForBoard": "Error deleting all tasks for board.",
+    "reorderingTasks": "Error reordering tasks.",
+    "loadingColumns": "Error loading columns.",
+    "creatingColumn": "Error creating column.",
+    "updatingColumn": "Error updating column.",
+    "deletingColumn": "Error deleting column.",
+    "movingColumn": "Error moving column.",
+    "loadingBoards": "Error loading boards.",
+    "deletingBoard": "Error while deleting board."
   }
 }

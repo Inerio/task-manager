@@ -7,6 +7,7 @@ import {
   type Signal,
   type WritableSignal,
 } from "@angular/core";
+import { TranslocoService } from "@jsverse/transloco";
 import { firstValueFrom } from "rxjs";
 import { environment } from "../../environments/environment.local";
 import { type Task, type TaskId } from "../models/task.model";
@@ -20,6 +21,7 @@ export class TaskService {
   private readonly apiUrl = environment.apiUrl + "/tasks";
   private readonly alert = inject(AlertService);
   private readonly loading = inject(LoadingService);
+  private readonly i18n = inject(TranslocoService);
 
   /** All tasks loaded from backend (SSOT). */
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
@@ -30,10 +32,10 @@ export class TaskService {
 
   /** Load all tasks. Shown under the global loading overlay. */
   loadTasks(): void {
-    // Wrap the HTTP observable so the global overlay toggles automatically.
     this.loading.wrap$(this.http.get<Task[]>(this.apiUrl)).subscribe({
       next: (data) => this.tasksSignal.set(data ?? []),
-      error: () => this.alert.show("error", "Error loading tasks."),
+      error: () =>
+        this.alert.show("error", this.i18n.translate("errors.loadingTasks")),
     });
   }
 
@@ -70,7 +72,7 @@ export class TaskService {
       this.tasksSignal.set([...this.tasksSignal(), newTask]);
       return newTask;
     } catch (err) {
-      this.alert.show("error", "Error creating task.");
+      this.alert.show("error", this.i18n.translate("errors.creatingTask"));
       throw err;
     }
   }
@@ -85,7 +87,7 @@ export class TaskService {
         this.tasksSignal().map((t) => (t.id === id ? updated : t))
       );
     } catch (err) {
-      this.alert.show("error", "Error updating task.");
+      this.alert.show("error", this.i18n.translate("errors.updatingTask"));
       throw err;
     }
   }
@@ -104,7 +106,7 @@ export class TaskService {
       await firstValueFrom(this.http.delete<void>(`${this.apiUrl}/${id}`));
       this.tasksSignal.set(this.tasksSignal().filter((t) => t.id !== id));
     } catch (err) {
-      this.alert.show("error", "Error deleting task.");
+      this.alert.show("error", this.i18n.translate("errors.deletingTask"));
       throw err;
     }
   }
@@ -118,7 +120,10 @@ export class TaskService {
         this.tasksSignal().filter((t) => t.kanbanColumnId !== kanbanColumnId)
       );
     } catch (err) {
-      this.alert.show("error", "Error deleting tasks in column.");
+      this.alert.show(
+        "error",
+        this.i18n.translate("errors.deletingTasksInColumn")
+      );
       throw err;
     }
   }
@@ -128,9 +133,12 @@ export class TaskService {
       await firstValueFrom(
         this.http.delete<void>(`${this.apiUrl}/board/${boardId}`)
       );
-      this.loadTasks(); // Keep it simple after mass delete.
+      this.loadTasks();
     } catch (err) {
-      this.alert.show("error", "Error deleting all tasks for board.");
+      this.alert.show(
+        "error",
+        this.i18n.translate("errors.deletingAllTasksForBoard")
+      );
       throw err;
     }
   }
@@ -140,16 +148,14 @@ export class TaskService {
       await firstValueFrom(this.http.delete<void>(`${this.apiUrl}/all`));
       this.tasksSignal.set([]);
     } catch (err) {
-      this.alert.show("error", "Error deleting all tasks.");
+      this.alert.show("error", this.i18n.translate("errors.deletingTask"));
       throw err;
     }
   }
 
   // === Reorder ===
 
-  /**
-   * Optimistically reorder a subset of tasks and sync with backend.
-   */
+  /** Optimistically reorder a subset of tasks and sync with backend. */
   async reorderTasks(tasks: Task[]): Promise<void> {
     const updatedIds = new Set(tasks.map((t) => t.id));
     const nextState = [
@@ -167,7 +173,7 @@ export class TaskService {
     try {
       await firstValueFrom(this.http.put<void>(`${this.apiUrl}/reorder`, dto));
     } catch (err) {
-      this.alert.show("error", "Error reordering tasks.");
+      this.alert.show("error", this.i18n.translate("errors.reorderingTasks"));
       throw err;
     }
   }

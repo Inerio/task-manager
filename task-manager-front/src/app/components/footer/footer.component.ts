@@ -1,4 +1,5 @@
 import { Component, Input, ChangeDetectionStrategy } from "@angular/core";
+import { TranslocoModule } from "@jsverse/transloco";
 
 @Component({
   selector: "app-footer",
@@ -6,6 +7,7 @@ import { Component, Input, ChangeDetectionStrategy } from "@angular/core";
   templateUrl: "./footer.component.html",
   styleUrls: ["./footer.component.scss"],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslocoModule],
 })
 export class FooterComponent {
   /** Brand shown before the legal text. Override via [brand] if needed. */

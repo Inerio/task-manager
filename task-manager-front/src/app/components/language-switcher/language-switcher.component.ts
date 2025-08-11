@@ -12,7 +12,7 @@ import { TranslocoService, TranslocoModule } from "@jsverse/transloco";
   standalone: true,
   templateUrl: "./language-switcher.component.html",
   styleUrls: ["./language-switcher.component.scss"],
-  imports: [TranslocoModule], // <-- needed for the |transloco pipe
+  imports: [TranslocoModule], // needed for the |transloco pipe
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LanguageSwitcherComponent implements OnInit, OnDestroy {
@@ -22,6 +22,7 @@ export class LanguageSwitcherComponent implements OnInit, OnDestroy {
   constructor(private transloco: TranslocoService) {}
 
   ngOnInit(): void {
+    // Restore last language (manual persist kept even if plugin is added later)
     const saved =
       (localStorage.getItem("translocoLang") as "en" | "fr") ?? null;
     const initial =
@@ -44,8 +45,9 @@ export class LanguageSwitcherComponent implements OnInit, OnDestroy {
     this.sub?.unsubscribe?.();
   }
 
-  switchTo(lang: "en" | "fr") {
-    if (lang === this.active()) return;
-    this.transloco.setActiveLang(lang);
+  /** Toggle language regardless of which button is clicked. */
+  toggle(): void {
+    const next = this.active() === "en" ? "fr" : "en";
+    this.transloco.setActiveLang(next);
   }
 }

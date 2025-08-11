@@ -1,5 +1,6 @@
 import { Injectable, signal, computed, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
+import { TranslocoService } from "@jsverse/transloco";
 import { type Board, type BoardId } from "../models/board.model";
 import { environment } from "../../environments/environment.local";
 import { Observable, tap } from "rxjs";
@@ -10,6 +11,7 @@ import { AlertService } from "./alert.service";
 export class BoardService {
   private readonly http = inject(HttpClient);
   private readonly alert = inject(AlertService);
+  private readonly i18n = inject(TranslocoService);
   private readonly apiUrl = environment.apiUrl + "/boards";
 
   /** Workspace boards state. */
@@ -22,7 +24,7 @@ export class BoardService {
       next: (boards) => this._boards.set(boards ?? []),
       error: () => {
         this._boards.set([]);
-        this.alert.show("error", "Error loading boards.");
+        this.alert.show("error", this.i18n.translate("errors.loadingBoards"));
       },
     });
   }

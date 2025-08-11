@@ -14,7 +14,7 @@
     class="form-control"
     type="text"
     formControlName="title"
-    placeholder="Task title"
+    [placeholder]="'task.titlePlaceholder' | transloco"
     required
     autocomplete="off"
   />
@@ -24,18 +24,18 @@
       #descTextarea
       class="form-control textarea"
       formControlName="description"
-      placeholder="Description"
+      [placeholder]="'task.descriptionPlaceholder' | transloco"
       rows="4"
     ></textarea>
 
     <span
       class="emoji-trigger-bottom"
       (click)="toggleEmojiPicker(); $event.stopPropagation()"
-      title="Insert emoji"
+      [attr.title]="'task.insertEmoji' | transloco"
     >
       <img
         src="/svg/smile-plus.svg"
-        alt="Add emoji"
+        [attr.alt]="'task.addEmoji' | transloco"
         width="18"
         height="18"
         draggable="false"
@@ -54,7 +54,7 @@
     class="form-control"
     type="date"
     formControlName="dueDate"
-    placeholder="Due date (optional)"
+    [placeholder]="'task.dueDatePlaceholder' | transloco"
     autocomplete="off"
   />
   <app-attachment-zone
@@ -72,10 +72,12 @@
 
   <div class="btn-group">
     <button class="btn btn-success" type="button" (click)="handleSave()">
-      {{ editMode ? "Save" : "Create" }}
+      {{
+        editMode ? ("common.save" | transloco) : ("common.create" | transloco)
+      }}
     </button>
     <button class="btn btn-secondary" type="button" (click)="handleCancel()">
-      Cancel
+      {{ "common.cancel" | transloco }}
     </button>
   </div>
 </div>

@@ -1,6 +1,6 @@
 import { Component, signal, inject, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { TranslocoModule } from "@jsverse/transloco";
+import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertComponent } from "./components/alert/alert.component";
 import { ConfirmDialogComponent } from "./components/alert/confirm-dialog.component";
 import { BoardComponent } from "./components/board/board.component";
@@ -38,6 +38,7 @@ export class AppComponent {
   private readonly taskService = inject(TaskService);
   private readonly loading = inject(LoadingService);
   private readonly kanbanColumnService = inject(KanbanColumnService);
+  private readonly i18n = inject(TranslocoService);
 
   readonly boards = this.boardService.boards;
   readonly selectedBoardId = signal<number | null>(null);
@@ -102,7 +103,7 @@ export class AppComponent {
 
   /**
    * Save new board, then offer a simple Kanban template.
-   * If accepted, auto-create 3 columns.
+   * If accepted, auto-create 3 columns (localized names).
    */
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
@@ -117,26 +118,28 @@ export class AppComponent {
         const newId = typeof board.id === "number" ? board.id : null;
         if (newId !== null) this.selectedBoardId.set(newId);
 
-        const msg =
-          "Would you like a simple Kanban template with 3 columns:\n" +
-          "To\u00A0do" +
-          " • In\u00A0progress" +
-          " • Done";
+        const todo = this.i18n.translate("boards.template.todo");
+        const inProgress = this.i18n.translate("boards.template.inProgress");
+        const done = this.i18n.translate("boards.template.done");
 
-        const useTemplate = await this.confirmDialog.open(
-          "Start with a template?",
-          msg
-        );
+        const title = this.i18n.translate("boards.template.title");
+        const msg = this.i18n.translate("boards.template.message", {
+          todo,
+          inProgress,
+          done,
+        });
+
+        const useTemplate = await this.confirmDialog.open(title, msg);
 
         if (useTemplate && newId !== null) {
           await this.loading.wrap(
             (async () => {
-              await this.kanbanColumnService.createKanbanColumn("To do", newId);
+              await this.kanbanColumnService.createKanbanColumn(todo, newId);
               await this.kanbanColumnService.createKanbanColumn(
-                "In progress",
+                inProgress,
                 newId
               );
-              await this.kanbanColumnService.createKanbanColumn("Done", newId);
+              await this.kanbanColumnService.createKanbanColumn(done, newId);
               this.kanbanColumnService.loadKanbanColumns(newId);
             })()
           );
@@ -197,8 +200,8 @@ export class AppComponent {
     const board = this.getSelectedBoard();
     if (!board || typeof board.id !== "number") return;
     const confirmed = await this.confirmDialog.open(
-      "Delete board",
-      `Delete board "${board.name}"? This action cannot be undone.`
+      this.i18n.translate("boards.delete"),
+      this.i18n.translate("boards.deleteBoardConfirm", { name: board.name })
     );
     if (!confirmed) return;
     this.boardService.deleteBoard(board.id).subscribe({
@@ -208,7 +211,7 @@ export class AppComponent {
           this.boards().find((b) => b.id !== board.id)?.id ?? null
         );
       },
-      error: () => alert("Error while deleting board."),
+      error: () => alert(this.i18n.translate("errors.deletingBoard")),
     });
   }
 
@@ -218,15 +221,17 @@ export class AppComponent {
     if (!selectedBoard || typeof selectedBoard.id !== "number") return;
 
     const confirmed = await this.confirmDialog.open(
-      "Board deletion",
-      "Are you sure you want to delete all tasks in this board?"
+      this.i18n.translate("boards.deleteAllTitle"),
+      this.i18n.translate("boards.deleteAllConfirm")
     );
     if (!confirmed) return;
 
     this.taskService
       .deleteAllTasksByBoardId(selectedBoard.id)
       .then(() => this.taskService.loadTasks())
-      .catch(() => alert("Error while deleting all tasks for this board."));
+      .catch(() =>
+        alert(this.i18n.translate("errors.deletingAllTasksForBoard"))
+      );
   }
 
   // ==== Utils ====

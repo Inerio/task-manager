@@ -5,6 +5,7 @@ import {
   ChangeDetectionStrategy,
   HostListener,
 } from "@angular/core";
+import { TranslocoModule } from "@jsverse/transloco";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
 @Component({
@@ -13,6 +14,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   templateUrl: "./confirm-dialog.component.html",
   styleUrls: ["./confirm-dialog.component.scss"],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslocoModule],
 })
 export class ConfirmDialogComponent {
   private readonly confirmDialog = inject(ConfirmDialogService);

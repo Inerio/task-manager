@@ -49,14 +49,18 @@
         (mouseenter)="showPreview(filename, $event)"
         (mousemove)="showPreview(filename, $event)"
         (mouseleave)="hidePreview()"
-        [attr.title]="previewFilename() === filename ? null : 'Download'"
+        [attr.title]="
+          previewFilename() === filename
+            ? null
+            : ('common.download' | transloco)
+        "
       >
         {{ filename }}
       </span>
       <button
         class="remove-btn"
         (click)="onDeleteAttachment(filename); $event.stopPropagation()"
-        title="Delete"
+        [attr.title]="'common.delete' | transloco"
       >
         ✖
       </button>
@@ -70,11 +74,13 @@
   <div class="attachment-tags">
     @for (file of pendingFiles; track trackByFile($index, file)) {
     <span class="attachment-tag pending">
-      <span class="filename" title="To be uploaded">{{ file.name }}</span>
+      <span class="filename" [attr.title]="'common.toBeUploaded' | transloco">{{
+        file.name
+      }}</span>
       <button
         class="remove-btn"
         (click)="onDeletePendingFile(file.name); $event.stopPropagation()"
-        title="Remove"
+        [attr.title]="'common.remove' | transloco"
       >
         ✖
       </button>
@@ -84,7 +90,7 @@
   } @if ((attachments.length === 0) && (!creationMode || pendingFiles.length ===
   0)) {
   <div class="empty-upload-text">
-    <span class="fake-link">Choose a file</span>
+    <span class="fake-link">{{ "common.chooseFile" | transloco }}</span>
   </div>
   }
 

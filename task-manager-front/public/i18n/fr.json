@@ -9,11 +9,108 @@
     "fr": "FR",
     "switch": "Changer de langue"
   },
+  "common": {
+    "yes": "Oui",
+    "no": "Non",
+    "loading": "Chargement",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "create": "Créer",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "download": "Télécharger",
+    "remove": "Retirer",
+    "chooseFile": "Choisir un fichier",
+    "toBeUploaded": "À téléverser"
+  },
   "boards": {
     "title": "Tableaux",
     "add": "+ Ajouter un tableau",
     "namePlaceholder": "Nom du tableau",
     "delete": "Supprimer le tableau",
-    "deleteAll": "Supprimer toutes les tâches"
+    "deleteBoardConfirm": "Supprimer le tableau « {{name}} » ? Cette action est irréversible.",
+    "deleteAll": "Supprimer toutes les tâches",
+    "deleteAllTitle": "Suppression du tableau",
+    "deleteAllConfirm": "Voulez-vous vraiment supprimer toutes les tâches de ce tableau ?",
+    "columnsAria": "Colonnes Kanban",
+    "template": {
+      "title": "Commencer avec un modèle ?",
+      "message": "Souhaitez-vous un modèle simple avec 3 colonnes :\n• « {{todo}} »\n• « {{inProgress}} »\n• « {{done}} »",
+      "todo": "À faire",
+      "inProgress": "En cours",
+      "done": "Terminé"
+    },
+    "column": {
+      "delete": "Supprimer la colonne",
+      "deleteConfirm": "Supprimer la colonne « {{name}} » et toutes ses tâches ?",
+      "deleteTasksTitle": "Supprimer les tâches",
+      "deleteTasksConfirm": "Supprimer toutes les tâches dans « {{name}} » ?",
+      "deleteAll": "Supprimer toutes les tâches de cette colonne",
+      "rename": "Renommer cette colonne",
+      "add": "Ajouter une colonne",
+      "cancelAdd": "Annuler l’ajout",
+      "editPlaceholder": "éditer"
+    }
+  },
+  "task": {
+    "add": "Ajouter une tâche",
+    "dropHere": "Déposer une tâche ici",
+    "titlePlaceholder": "Titre de la tâche",
+    "descriptionPlaceholder": "Description",
+    "insertEmoji": "Insérer un emoji",
+    "addEmoji": "Ajouter un emoji",
+    "dueDatePlaceholder": "Échéance (facultatif)",
+    "buttons": {
+      "save": "Enregistrer",
+      "create": "Créer",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "delete": "Supprimer"
+    },
+    "showFullTitle": {
+      "show": "Afficher tout le titre",
+      "hide": "Masquer le titre complet"
+    },
+    "showFullDescription": {
+      "show": "Afficher toute la description",
+      "hide": "Masquer la description complète"
+    },
+    "due": {
+      "late": "En retard !",
+      "today": "Échéance aujourd’hui !",
+      "oneDay": "Plus qu’un jour",
+      "nDays": "Plus que {{count}} jours"
+    }
+  },
+  "attachments": {
+    "downloadConfirmTitle": "Télécharger le fichier",
+    "downloadConfirmMessage": "Voulez-vous télécharger « {{filename}} » ?",
+    "errors": {
+      "tooLarge": "Certains fichiers dépassaient la limite de taille et ont été ignorés.",
+      "alreadyAttached": "Certains fichiers étaient déjà joints et ont été ignorés.",
+      "upload": "Erreur lors du téléversement de la pièce jointe.",
+      "download": "Erreur lors du téléchargement de la pièce jointe.",
+      "delete": "Erreur lors de la suppression de la pièce jointe."
+    }
+  },
+  "confirm": {
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "errors": {
+    "loadingTasks": "Erreur lors du chargement des tâches.",
+    "creatingTask": "Erreur lors de la création de la tâche",
+    "updatingTask": "Erreur lors de la mise à jour de la tâche.",
+    "deletingTask": "Erreur lors de la suppression de la tâche.",
+    "deletingTasksInColumn": "Erreur lors de la suppression des tâches de la colonne.",
+    "deletingAllTasksForBoard": "Erreur lors de la suppression de toutes les tâches du tableau.",
+    "reorderingTasks": "Erreur lors du réordonnancement des tâches.",
+    "loadingColumns": "Erreur lors du chargement des colonnes.",
+    "creatingColumn": "Erreur lors de la création de la colonne.",
+    "updatingColumn": "Erreur lors de la mise à jour de la colonne.",
+    "deletingColumn": "Erreur lors de la suppression de la colonne.",
+    "movingColumn": "Erreur lors du déplacement de la colonne.",
+    "loadingBoards": "Erreur lors du chargement des tableaux.",
+    "deletingBoard": "Erreur lors de la suppression du tableau."
   }
 }

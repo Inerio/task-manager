@@ -9,6 +9,7 @@ import {
   inject,
   signal,
 } from "@angular/core";
+import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertService } from "../../services/alert.service";
 import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { AttachmentService } from "../../services/attachment.service";
@@ -28,6 +29,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   styleUrls: ["./attachment-zone.component.scss"],
   templateUrl: "./attachment-zone.component.html",
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslocoModule],
 })
 export class AttachmentZoneComponent {
   @Input({ required: true }) attachments!: ReadonlyArray<string>;
@@ -49,6 +51,7 @@ export class AttachmentZoneComponent {
   private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly i18n = inject(TranslocoService);
 
   @Output() filesUploaded = new EventEmitter<File[]>();
   @Output() fileDeleted = new EventEmitter<string>();
@@ -114,19 +117,17 @@ export class AttachmentZoneComponent {
     try {
       const handles: any[] = await (window as any).showOpenFilePicker({
         multiple: true,
-        // We keep filtering client-side for broader compatibility.
         excludeAcceptAllOption: false,
       });
       const files = await Promise.all(handles.map((h: any) => h.getFile()));
       const accepted = files.filter((f) => this.matchesAccept(f));
       if (!accepted.length) return;
 
-      // Optional max size filter (kept simple; same rule as your drag/drop)
       const sized = accepted.filter((f) => f.size <= this.maxSize);
       if (sized.length < accepted.length) {
         this.alertService.show(
           "error",
-          "Some files exceeded the size limit and were ignored."
+          this.i18n.translate("attachments.errors.tooLarge")
         );
       }
 
@@ -136,10 +137,7 @@ export class AttachmentZoneComponent {
     }
   }
 
-  /**
-   * Accept filter compatible with strings like:
-   * ".png,.pdf,image/*,application/pdf"
-   */
+  /** Accept filter supporting ".png,.pdf,image/*,application/pdf" */
   private matchesAccept(file: File): boolean {
     const accept = (this.acceptTypes || "").trim();
     if (!accept) return true;
@@ -167,13 +165,12 @@ export class AttachmentZoneComponent {
       this.dialogOpen.emit(false);
       return;
     }
-    // Lightweight size filter to mirror FS path
     const list = Array.from(files);
     const sized = list.filter((f) => f.size <= this.maxSize);
     if (sized.length < list.length) {
       this.alertService.show(
         "error",
-        "Some files exceeded the size limit and were ignored."
+        this.i18n.translate("attachments.errors.tooLarge")
       );
     }
 
@@ -201,7 +198,7 @@ export class AttachmentZoneComponent {
       if (sized.length < list.length) {
         this.alertService.show(
           "error",
-          "Some files exceeded the size limit and were ignored."
+          this.i18n.translate("attachments.errors.tooLarge")
         );
       }
       this.handleFileSelection(sized);
@@ -219,7 +216,7 @@ export class AttachmentZoneComponent {
     if (uniques.length < selectedFiles.length) {
       this.alertService.show(
         "error",
-        "Some files were already attached and have been ignored."
+        this.i18n.translate("attachments.errors.alreadyAttached")
       );
     }
     if (uniques.length) this.filesUploaded.emit(uniques);
@@ -232,8 +229,8 @@ export class AttachmentZoneComponent {
 
   async onDownloadAttachment(filename: string): Promise<void> {
     const ok = await this.confirmDialog.open(
-      "Download file",
-      `Do you want to download “${filename}”?`
+      this.i18n.translate("attachments.downloadConfirmTitle"),
+      this.i18n.translate("attachments.downloadConfirmMessage", { filename })
     );
     if (!ok) return;
     this.fileDownloaded.emit(filename);

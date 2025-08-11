@@ -3,7 +3,7 @@
   class="loading-overlay"
   role="status"
   aria-live="polite"
-  aria-label="Loading"
+  [attr.aria-label]="'common.loading' | transloco"
 >
   <div class="spinner" aria-hidden="true"></div>
 </div>

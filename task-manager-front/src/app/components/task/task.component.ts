@@ -14,6 +14,7 @@ import {
   ViewChild,
   ElementRef,
 } from "@angular/core";
+import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { Task } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
 import { TaskService } from "../../services/task.service";
@@ -28,7 +29,12 @@ import { UPLOAD_CONFIG } from "../../tokens/upload.config";
 @Component({
   selector: "app-task",
   standalone: true,
-  imports: [LinkifyPipe, AttachmentZoneComponent, TaskFormComponent],
+  imports: [
+    TranslocoModule,
+    LinkifyPipe,
+    AttachmentZoneComponent,
+    TaskFormComponent,
+  ],
   templateUrl: "./task.component.html",
   styleUrls: ["./task.component.scss"],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,6 +50,7 @@ export class TaskComponent implements OnChanges {
   private readonly alertService = inject(AlertService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly uploadCfg = inject(UPLOAD_CONFIG);
+  private readonly i18n = inject(TranslocoService);
 
   readonly localTask: WritableSignal<Task> = signal({} as Task);
 
@@ -335,7 +342,10 @@ export class TaskComponent implements OnChanges {
           await this.refreshFromBackend(createdTask.id);
         }
       } catch {
-        this.alertService.show("error", "Error creating task");
+        this.alertService.show(
+          "error",
+          this.i18n.translate("errors.creatingTask")
+        );
       }
     }
   }
@@ -422,7 +432,7 @@ export class TaskComponent implements OnChanges {
     }
   }
 
-  /** Badge from due date. */
+  /** Badge from due date (localized). */
   dueBadge = computed(() => {
     const due = this.localTask().dueDate;
     if (!due) return null;
@@ -433,9 +443,9 @@ export class TaskComponent implements OnChanges {
     const diffDays = Math.ceil(
       (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
-    if (diffDays < 0) return "Late!";
-    if (diffDays === 0) return "Due today!";
-    if (diffDays === 1) return "1 day left";
-    return `${diffDays} days left`;
+    if (diffDays < 0) return this.i18n.translate("task.due.late");
+    if (diffDays === 0) return this.i18n.translate("task.due.today");
+    if (diffDays === 1) return this.i18n.translate("task.due.oneDay");
+    return this.i18n.translate("task.due.nDays", { count: diffDays });
   });
 }

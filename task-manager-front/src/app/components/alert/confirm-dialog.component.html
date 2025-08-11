@@ -18,10 +18,10 @@
         autofocus
         (click)="confirm()"
       >
-        {{ state().confirmText ?? "Yes" }}
+        {{ state().confirmText ?? ("confirm.yes" | transloco) }}
       </button>
       <button class="btn btn-secondary" type="button" (click)="cancel()">
-        {{ state().cancelText ?? "No" }}
+        {{ state().cancelText ?? ("confirm.no" | transloco) }}
       </button>
     </div>
   </div>

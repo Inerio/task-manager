@@ -1,5 +1,6 @@
 import { Injectable, computed, signal, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
+import { TranslocoService } from "@jsverse/transloco";
 import {
   type KanbanColumn,
   type KanbanColumnId,
@@ -16,6 +17,7 @@ export class KanbanColumnService {
   private readonly alert = inject(AlertService);
   /** Renamed to avoid clashing with the `loading` computed signal below. */
   private readonly globalLoading = inject(LoadingService);
+  private readonly i18n = inject(TranslocoService);
 
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
   readonly kanbanColumns = computed(() => this._kanbanColumns());
@@ -33,12 +35,11 @@ export class KanbanColumnService {
     this._loading.set(true);
 
     const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns`;
-    // Use the global overlay while keeping local loading for UI logic.
     this.globalLoading.wrap$(this.http.get<KanbanColumn[]>(url)).subscribe({
       next: (cols) => this._kanbanColumns.set(cols ?? []),
       error: () => {
         this._kanbanColumns.set([]);
-        this.alert.show("error", "Error loading columns.");
+        this.alert.show("error", this.i18n.translate("errors.loadingColumns"));
       },
       complete: () => this._loading.set(false),
     });
@@ -57,7 +58,7 @@ export class KanbanColumnService {
       this._kanbanColumns.update((list) => [...list, created]);
       return created;
     } catch (err) {
-      this.alert.show("error", "Error creating column.");
+      this.alert.show("error", this.i18n.translate("errors.creatingColumn"));
       throw err;
     }
   }
@@ -76,7 +77,7 @@ export class KanbanColumnService {
       );
       return updated;
     } catch (err) {
-      this.alert.show("error", "Error updating column.");
+      this.alert.show("error", this.i18n.translate("errors.updatingColumn"));
       throw err;
     }
   }
@@ -93,7 +94,7 @@ export class KanbanColumnService {
         list.filter((c) => c.id !== kanbanColumnId)
       );
     } catch (err) {
-      this.alert.show("error", "Error deleting column.");
+      this.alert.show("error", this.i18n.translate("errors.deletingColumn"));
       throw err;
     }
   }
@@ -116,7 +117,7 @@ export class KanbanColumnService {
         })
       );
     } catch (err) {
-      this.alert.show("error", "Error moving column.");
+      this.alert.show("error", this.i18n.translate("errors.movingColumn"));
       throw err;
     }
   }

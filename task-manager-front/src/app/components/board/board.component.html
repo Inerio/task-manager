@@ -1,7 +1,7 @@
 <div
   class="task-columns"
   role="list"
-  aria-label="Kanban columns"
+  [attr.aria-label]="'boards.columnsAria' | transloco"
   [class.columns-reordering]="draggedKanbanColumnId() !== null"
 >
   @for (kanbanColumn of kanbanColumns(); track trackByColumnId($index,
@@ -24,9 +24,9 @@
       type="button"
       class="cancel-edit-btn-top"
       (mousedown)="cancelTitleEdit()"
-      title="Cancel add"
+      [attr.title]="'boards.column.cancelAdd' | transloco"
     >
-      ✖ Cancel
+      ✖ {{ "boards.column.cancelAdd" | transloco }}
     </button>
     }
 
@@ -47,8 +47,8 @@
         type="button"
         class="btn-close-kanbanColumn styled-x-btn"
         (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
-        title="Delete column"
-        aria-label="Delete this column"
+        [attr.title]="'boards.column.delete' | transloco"
+        aria-label="{{ 'boards.column.delete' | transloco }}"
         [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
       >
         <img src="/svg/x.svg" alt="Close" width="17" height="17" />
@@ -61,11 +61,11 @@
         tabindex="0"
         (keydown.enter)="startEditTitle(kanbanColumn)"
         (keydown.space)="startEditTitle(kanbanColumn)"
-        title="Rename this column"
+        [attr.title]="'boards.column.rename' | transloco"
       >
         @if (!kanbanColumn.name.trim()) {
         <span class="edit-title-placeholder">
-          edit
+          {{ "boards.column.editPlaceholder" | transloco }}
           <img src="/svg/pencil.svg" alt="Edit" class="edit-icon" />
         </span>
         } @else {
@@ -92,7 +92,7 @@
         type="button"
         class="btn-delete-column styled-trash-btn"
         (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
-        title="Delete all tasks in this column"
+        [attr.title]="'boards.column.deleteAll' | transloco"
         [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
       >
         <img src="/svg/trash.svg" alt="Clear" width="19" height="19" />
@@ -115,8 +115,8 @@
     class="add-kanbanColumn-fab-inline"
     [disabled]="kanbanColumns().length >= MAX_KANBANCOLUMNS"
     (click)="addKanbanColumnAndEdit()"
-    title="Add column"
-    aria-label="Add column"
+    [attr.title]="'boards.column.add' | transloco"
+    aria-label="{{ 'boards.column.add' | transloco }}"
   >
     +
   </button>

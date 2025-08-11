@@ -1,5 +1,6 @@
 import { Injectable, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
+import { TranslocoService } from "@jsverse/transloco";
 import { environment } from "../../environments/environment.local";
 import { type Task, type TaskId } from "../models/task.model";
 import { firstValueFrom } from "rxjs";
@@ -12,6 +13,7 @@ import { AlertService } from "./alert.service";
 export class AttachmentService {
   private readonly http = inject(HttpClient);
   private readonly alert = inject(AlertService);
+  private readonly i18n = inject(TranslocoService);
   private readonly apiUrl = environment.apiUrl;
 
   /** Build the download/preview URL for a given attachment. */
@@ -33,7 +35,10 @@ export class AttachmentService {
         )
       );
     } catch {
-      this.alert.show("error", "Error uploading attachment.");
+      this.alert.show(
+        "error",
+        this.i18n.translate("attachments.errors.upload")
+      );
       return null;
     }
   }
@@ -50,7 +55,11 @@ export class AttachmentService {
           link.click();
           URL.revokeObjectURL(link.href);
         },
-        error: () => this.alert.show("error", "Error downloading attachment."),
+        error: () =>
+          this.alert.show(
+            "error",
+            this.i18n.translate("attachments.errors.download")
+          ),
       });
   }
 
@@ -64,7 +73,10 @@ export class AttachmentService {
         this.http.delete<Task>(this.buildAttachmentUrl(taskId, filename))
       );
     } catch {
-      this.alert.show("error", "Error deleting attachment.");
+      this.alert.show(
+        "error",
+        this.i18n.translate("attachments.errors.delete")
+      );
       return null;
     }
   }

@@ -22,6 +22,7 @@ import {
   NonNullableFormBuilder,
   Validators,
 } from "@angular/forms";
+import { TranslocoModule } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
 import { EmojiPickerComponent } from "../emoji-picker/emoji-picker.component";
@@ -31,7 +32,12 @@ import { TaskService } from "../../services/task.service";
 @Component({
   selector: "app-task-form",
   standalone: true,
-  imports: [ReactiveFormsModule, AttachmentZoneComponent, EmojiPickerComponent],
+  imports: [
+    ReactiveFormsModule,
+    TranslocoModule,
+    AttachmentZoneComponent,
+    EmojiPickerComponent,
+  ],
   templateUrl: "./task-form.component.html",
   styleUrls: ["./task-form.component.scss"],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

@@ -10,6 +10,7 @@ import {
   SimpleChanges,
   type WritableSignal,
   ChangeDetectionStrategy,
+  effect, // <-- ADD
 } from "@angular/core";
 import { Task } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
@@ -55,6 +56,26 @@ export class TaskComponent implements OnChanges {
   private dragOver = signal(false);
   isDragOver = () => this.dragOver();
   readonly dragging = signal(false);
+
+  // --- Drop pulse (visual confirmation) ---
+  /** Local toggle for the pulse animation on this card. */
+  readonly droppedPulse = signal(false);
+  private _pulseTimer: any = null;
+
+  constructor() {
+    // When the global service says "task X just dropped", pulse if X === me.
+    effect(() => {
+      const evt = this.dragDropGlobal.lastDroppedTask();
+      const me = this.localTask().id;
+      if (evt && me != null && evt.id === me) {
+        // Restart pulse
+        this.droppedPulse.set(false);
+        clearTimeout(this._pulseTimer);
+        this.droppedPulse.set(true);
+        this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
+      }
+    });
+  }
 
   // Truncation logic
   readonly TITLE_TRUNCATE_BASE = 18;

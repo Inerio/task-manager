@@ -4,6 +4,7 @@
   [class.completed]="localTask().completed"
   [class.dragging]="dragging()"
   [class.editing]="localTask().isEditing"
+  [class.dropped-pulse]="droppedPulse()"
   draggable="true"
   (dragstart)="onTaskDragStart($event)"
   (dragend)="onTaskDragEnd()"
@@ -102,9 +103,8 @@
       </button>
     </div>
   </div>
-  }
-  <!-- ==== EDIT MODE: delegated to TaskForm ==== -->
-  @else {
+  } @else {
+  <!-- ==== EDIT MODE ==== -->
   <app-task-form
     [task]="localTask()"
     [editMode]="true"

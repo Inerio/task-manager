@@ -51,7 +51,6 @@ export class BoardComponent implements OnChanges {
   readonly addKanbanColumnError = signal<string | null>(null);
 
   /** Edition state for columns' titles. */
-  // Store the column reference we are editing. Works for drafts (id is undefined).
   readonly editingColumn = signal<KanbanColumn | null>(null);
   readonly editingTitleValue = signal("");
 
@@ -60,6 +59,10 @@ export class BoardComponent implements OnChanges {
     () => this.dragDropGlobal.currentColumnDrag()?.columnId ?? null
   );
   readonly dragOverIndex = signal<number | null>(null);
+
+  /** Pulse state for dropped column. */
+  readonly columnPulseId = signal<number | null>(null);
+  private _colPulseTimer: any = null;
 
   /** True if the board has at least one task (Set-based micro-optim). */
   readonly hasAnyTask = computed(() => {
@@ -89,6 +92,17 @@ export class BoardComponent implements OnChanges {
       if (id != null) {
         this.kanbanColumnService.loadKanbanColumns(id);
         this.taskService.loadTasks();
+      }
+    });
+    effect(() => {
+      const evt = this.dragDropGlobal.lastDroppedColumn();
+      if (evt) {
+        this.columnPulseId.set(evt.id);
+        clearTimeout(this._colPulseTimer);
+        this._colPulseTimer = setTimeout(
+          () => this.columnPulseId.set(null),
+          950
+        );
       }
     });
   }
@@ -153,6 +167,7 @@ export class BoardComponent implements OnChanges {
     const [draggedColumn] = newArr.splice(currIdx, 1);
     newArr.splice(targetIdx, 0, draggedColumn);
     this.kanbanColumnService.reorderKanbanColumns(newArr);
+    this.dragDropGlobal.markColumnDropped(draggedId);
 
     try {
       await this.kanbanColumnService.moveKanbanColumn(
@@ -160,7 +175,6 @@ export class BoardComponent implements OnChanges {
         draggedId,
         targetIdx
       );
-      this.kanbanColumnService.loadKanbanColumns(boardId);
     } catch {
       this.alert.show("error", "Move error: Could not move column.");
     } finally {
@@ -177,12 +191,7 @@ export class BoardComponent implements OnChanges {
     this.dragOverIndex.set(null);
   }
 
-  // ==== COLUMN CRUD ====
-
-  /**
-   * Add new Kanban column as a client-side draft and auto-start its rename.
-   * Draft will be persisted on blur/Enter and canceled on Esc/Cancel button.
-   */
+  // ==== COLUMN CRUD ==== (unchanged)
   async addKanbanColumnAndEdit(): Promise<void> {
     const id = this._boardId();
     if (!id) return;
@@ -251,7 +260,6 @@ export class BoardComponent implements OnChanges {
     });
   }
 
-  /** Save edit: update existing or persist draft. */
   async saveTitleEdit(column: KanbanColumn): Promise<void> {
     const boardId = this._boardId();
     if (!boardId) return;
@@ -283,12 +291,10 @@ export class BoardComponent implements OnChanges {
     }
   }
 
-  /** Cancel edit: if draft, drop it; otherwise just exit edit mode. */
   cancelTitleEdit(): void {
     const editing = this.editingColumn();
     if (!editing) return;
     if (!editing.id) {
-      // Draft => remove from client store
       this.kanbanColumnService.removeColumnRef(editing);
     }
     this.editingColumn.set(null);

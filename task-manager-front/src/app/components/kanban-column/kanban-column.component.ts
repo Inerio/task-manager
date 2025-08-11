@@ -43,6 +43,16 @@ export class KanbanColumnComponent {
   readonly dragOverIndex = signal<number | null>(null);
   readonly dropzoneDragOver = signal(false);
 
+  /** Guard against nested dragenter/leaves on children. */
+  private dropzoneEnterCount = 0;
+
+  /** Accept dropzone only for tasks coming from another column. */
+  private isForeignTaskDrag(): boolean {
+    if (!this.dragDropGlobal.isTaskDrag()) return false;
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    return !!ctx && ctx.columnId !== this.kanbanColumnId;
+  }
+
   /** Tasks for this column, sorted by position. */
   readonly filteredTasks: Signal<Task[]> = computed(() =>
     this.taskService
@@ -81,8 +91,16 @@ export class KanbanColumnComponent {
 
     try {
       if (!task.id) {
-        // Create
         const created = await this.taskService.createTask(task as Task);
+
+        // Reorder locally so the new task is visually first
+        const current = this.filteredTasks();
+        const withoutCreated = current.filter((t) => t.id !== created.id);
+        const reordered = [
+          { ...created, position: 0 },
+          ...withoutCreated.map((t, idx) => ({ ...t, position: idx + 1 })),
+        ];
+        this.taskService.reorderTasks(reordered);
         if (_pendingFiles.length) {
           await Promise.all(
             _pendingFiles.map((f) =>
@@ -92,7 +110,6 @@ export class KanbanColumnComponent {
           await this.taskService.refreshTaskById(created.id!);
         }
       } else {
-        // Update
         await this.taskService.updateTask(task.id!, task as Task);
         if (_pendingFiles.length) {
           await Promise.all(
@@ -122,21 +139,39 @@ export class KanbanColumnComponent {
   }
 
   // ========== DRAG & DROP ==========
+  onDropzoneDragEnter(event: DragEvent): void {
+    if (!this.isForeignTaskDrag()) {
+      this.dropzoneEnterCount = 0;
+      this.dropzoneDragOver.set(false);
+      return;
+    }
+    this.dropzoneEnterCount++;
+    if (!this.dropzoneDragOver()) this.dropzoneDragOver.set(true);
+  }
+
   onDropzoneDragOver(event: DragEvent): void {
-    event.preventDefault();
-    if (this.dragDropGlobal.isTaskDrag()) {
+    if (this.isForeignTaskDrag()) {
+      event.preventDefault();
       if (!this.dropzoneDragOver()) this.dropzoneDragOver.set(true);
     } else {
       if (this.dropzoneDragOver()) this.dropzoneDragOver.set(false);
     }
   }
 
-  onDropzoneDragLeave(): void {
-    this.dropzoneDragOver.set(false);
+  onDropzoneDragLeave(event?: DragEvent): void {
+    if (!this.isForeignTaskDrag()) {
+      this.dropzoneEnterCount = 0;
+      this.dropzoneDragOver.set(false);
+      return;
+    }
+    this.dropzoneEnterCount = Math.max(0, this.dropzoneEnterCount - 1);
+    if (this.dropzoneEnterCount === 0) this.dropzoneDragOver.set(false);
   }
 
   async onDropzoneDrop(event: DragEvent): Promise<void> {
+    this.dropzoneEnterCount = 0;
     this.dropzoneDragOver.set(false);
+    if (!this.isForeignTaskDrag()) return;
     if (
       event.dataTransfer?.types.includes("Files") ||
       event.dataTransfer?.getData("type") !== "task"
@@ -188,6 +223,7 @@ export class KanbanColumnComponent {
       const reordered = columnTasks.map((t, idx) => ({ ...t, position: idx }));
       this.taskService.reorderTasks(reordered);
       this.dragOverIndex.set(null);
+      this.dragDropGlobal.markTaskDropped(taskId);
       return;
     }
 
@@ -212,6 +248,7 @@ export class KanbanColumnComponent {
     this.taskService.reorderTasks(reorderedSource);
     this.taskService.reorderTasks(reorderedTarget);
     this.dragOverIndex.set(null);
+    this.dragDropGlobal.markTaskDropped(taskId);
   }
 
   async onTaskItemDrop(event: DragEvent, targetIndex: number): Promise<void> {

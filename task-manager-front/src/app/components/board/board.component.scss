@@ -221,3 +221,32 @@
     filter: none;
   }
 }
+
+/* === DROP PULSE (column) === */
+@keyframes dropPulseColumn {
+  0% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.22);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+/* Apply the pulse on the column container for a light, consistent glow */
+.column-draggable.dropped-pulse .task-kanbanColumn {
+  animation: dropPulseColumn 900ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column-draggable.dropped-pulse .task-kanbanColumn {
+    animation: none;
+  }
+}
+
+/* When reordering columns, ignore inner elements so drop hits the wrapper */
+.columns-reordering .task-kanbanColumn {
+  pointer-events: none;
+}

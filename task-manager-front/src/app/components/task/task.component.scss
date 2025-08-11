@@ -277,3 +277,27 @@
   font-family: "Poppins", "Roboto", "Helvetica Neue", Arial, sans-serif;
   background: #fff;
 }
+
+/* === DROP PULSE (task) === */
+/* light blue glow that fades quickly */
+@keyframes dropPulseTask {
+  0% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.32), 0 2px 8px 0 #0001;
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(25, 118, 210, 0), 0 2px 8px 0 #0001;
+  }
+  100% {
+    box-shadow: 0 2px 8px 0 #0001;
+  }
+}
+
+.task-card.dropped-pulse {
+  animation: dropPulseTask 950ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-card.dropped-pulse {
+    animation: none;
+  }
+}

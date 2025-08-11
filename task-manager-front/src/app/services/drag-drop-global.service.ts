@@ -14,6 +14,12 @@ export class DragDropGlobalService {
   readonly currentColumnDrag = signal<{ columnId: number } | null>(null);
   readonly currentFileDrag = signal<boolean>(false);
 
+  /** Last dropped elements (used to trigger a visual pulse). */
+  readonly lastDroppedTask = signal<{ id: number; token: number } | null>(null);
+  readonly lastDroppedColumn = signal<{ id: number; token: number } | null>(
+    null
+  );
+
   startTaskDrag(taskId: number, columnId: number): void {
     this.currentDragType.set("task");
     this.currentTaskDrag.set({ taskId, columnId });
@@ -50,5 +56,13 @@ export class DragDropGlobalService {
   }
   isFileDrag(): boolean {
     return this.currentDragType() === "file" && this.currentFileDrag();
+  }
+
+  /** Markers to trigger a pulse on the dropped element. */
+  markTaskDropped(id: number): void {
+    this.lastDroppedTask.set({ id, token: Date.now() });
+  }
+  markColumnDropped(id: number): void {
+    this.lastDroppedColumn.set({ id, token: Date.now() });
   }
 }

@@ -1,4 +1,9 @@
-<div class="task-columns" role="list" aria-label="Kanban columns">
+<div
+  class="task-columns"
+  role="list"
+  aria-label="Kanban columns"
+  [class.columns-reordering]="draggedKanbanColumnId() !== null"
+>
   @for (kanbanColumn of kanbanColumns(); track trackByColumnId($index,
   kanbanColumn); let idx = $index) {
   <div
@@ -8,7 +13,11 @@
     [class.drag-over]="
       dragOverIndex() === idx && draggedKanbanColumnId() !== null
     "
+    [class.dropped-pulse]="columnPulseId() === kanbanColumn.id"
     [class.editing]="isEditingTitle(kanbanColumn)"
+    (dragenter)="onColumnDragHover(idx, $event)"
+    (dragover)="onColumnDragHover(idx, $event)"
+    (drop)="onColumnDrop($event)"
   >
     @if (isEditingTitle(kanbanColumn) && isDraft(kanbanColumn)) {
     <button

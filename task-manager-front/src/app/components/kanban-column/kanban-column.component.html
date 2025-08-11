@@ -1,10 +1,10 @@
 <div class="task-kanbanColumn">
   <div class="task-dropzone-column">
-    <!-- Empty column -->
-    @if (filteredTasks().length === 0) {
+    <!-- Add button always on top -->
     <button type="button" (click)="openForm()" class="add-btn">
       + Add task
     </button>
+
     @if (showForm()) {
     <div
       class="task-form-wrapper"
@@ -17,39 +17,30 @@
         (cancel)="handleTaskFormCancel()"
       ></app-task-form>
     </div>
-    } @if (hasAnyTask) {
+    }
+
+    <!-- Always show a top dropzone when the board has any task -->
+    @if (hasAnyTask) {
     <div
       class="task-dropzone"
       [class.drag-over]="dropzoneDragOver()"
+      (dragenter)="onDropzoneDragEnter($event)"
       (dragover)="onDropzoneDragOver($event)"
-      (dragleave)="onDropzoneDragLeave()"
+      (dragleave)="onDropzoneDragLeave($event)"
       (drop)="onDropzoneDrop($event)"
       aria-dropeffect="move"
     >
       <span>Drop a task here</span>
     </div>
-    } } @for (task of filteredTasks(); track trackById($index, task); let idx =
+    }
+
+    <!-- Tasks list -->
+    @for (task of filteredTasks(); track trackById($index, task); let idx =
     $index) {
     <app-task
       [task]="task"
       (taskDropped)="onTaskItemDrop($event, idx)"
     ></app-task>
-    } @if (filteredTasks().length > 0) {
-    <button type="button" (click)="openForm()" class="add-btn">
-      + Add task
-    </button>
-    @if (showForm()) {
-    <div
-      class="task-form-wrapper"
-      (mousedown)="$event.stopPropagation()"
-      (click)="$event.stopPropagation()"
-    >
-      <app-task-form
-        [task]="{ kanbanColumnId: kanbanColumnId, title: '' }"
-        (save)="handleTaskFormSave($event)"
-        (cancel)="handleTaskFormCancel()"
-      ></app-task-form>
-    </div>
-    } }
+    }
   </div>
 </div>

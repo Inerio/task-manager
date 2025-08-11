@@ -178,7 +178,61 @@ export class TaskFormComponent
   }
 
   toggleEmojiPicker(): void {
-    this.showEmojiPicker.set(!this.showEmojiPicker());
+    const next = !this.showEmojiPicker();
+    this.showEmojiPicker.set(next);
+
+    // When opening, wait for the DOM to paint the web component
+    // then ensure it is visible inside the viewport.
+    if (next) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => this.ensureEmojiPickerVisible());
+      });
+    }
+  }
+
+  /**
+   * Ensure the emoji picker is visible in the viewport.
+   * If the TOP of the task form is above the viewport, scroll UP first
+   * so the title/description are visible.
+   * Otherwise, if the picker overflows the bottom, scroll DOWN a bit.
+   */
+  private ensureEmojiPickerVisible(): void {
+    const container = this.formContainer?.nativeElement;
+    if (!container) return;
+
+    const dropdown = container.querySelector(
+      ".emoji-picker-dropdown"
+    ) as HTMLElement | null;
+    if (!dropdown) return;
+
+    const vpH = window.innerHeight || document.documentElement.clientHeight;
+
+    // --- tweakables ---
+    const FORM_TOP_SAFE = 12;
+    const TOP_MARGIN = 8;
+    const BOTTOM_SAFE = 240;
+    // -------------------
+
+    let dy = 0;
+
+    // make sure the top of the task form (title/desc) is visible
+    const contRect = container.getBoundingClientRect();
+    if (contRect.top < FORM_TOP_SAFE) {
+      dy = contRect.top - FORM_TOP_SAFE; // negative -> scroll up
+    } else {
+      // otherwise, ensure the dropdown itself doesn't overflow the viewport
+      const dropRect = dropdown.getBoundingClientRect();
+
+      if (dropRect.top < TOP_MARGIN) {
+        dy = dropRect.top - TOP_MARGIN;
+      } else if (dropRect.bottom > vpH - BOTTOM_SAFE) {
+        dy = dropRect.bottom - (vpH - BOTTOM_SAFE) + 30; // scroll down a bit extra
+      }
+    }
+
+    if (Math.abs(dy) > 1) {
+      window.scrollBy({ top: dy, behavior: "smooth" });
+    }
   }
 
   onEmojiSelected(emoji: string): void {

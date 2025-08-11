@@ -10,7 +10,9 @@ import {
   SimpleChanges,
   type WritableSignal,
   ChangeDetectionStrategy,
-  effect, // <-- ADD
+  effect,
+  ViewChild,
+  ElementRef,
 } from "@angular/core";
 import { Task } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
@@ -23,10 +25,6 @@ import { setTaskDragData } from "../../utils/drag-drop-utils";
 import { TaskFormComponent } from "../task-form/task-form.component";
 import { UPLOAD_CONFIG } from "../../tokens/upload.config";
 
-/**
- * TaskComponent: Displays a single task card (signals-based).
- * Edit mode is delegated to <app-task-form>.
- */
 @Component({
   selector: "app-task",
   standalone: true,
@@ -38,6 +36,8 @@ import { UPLOAD_CONFIG } from "../../tokens/upload.config";
 export class TaskComponent implements OnChanges {
   @Input({ required: true }) task!: Task;
   @Output() taskDropped = new EventEmitter<DragEvent>();
+
+  @ViewChild("cardEl") private cardEl?: ElementRef<HTMLElement>;
 
   private readonly taskService = inject(TaskService);
   private readonly attachmentService = inject(AttachmentService);
@@ -57,24 +57,52 @@ export class TaskComponent implements OnChanges {
   isDragOver = () => this.dragOver();
   readonly dragging = signal(false);
 
-  // --- Drop pulse (visual confirmation) ---
-  /** Local toggle for the pulse animation on this card. */
+  // --- Drop / save / create pulse (visual confirmation) ---
   readonly droppedPulse = signal(false);
   private _pulseTimer: any = null;
 
+  /** Per-card debounce so we don't re-pulse on unrelated signal changes. */
+  private lastPulseToken = { drop: 0, created: 0, saved: 0 };
+
   constructor() {
-    // When the global service says "task X just dropped", pulse if X === me.
+    // Pulse exactly once per new token for drop/created/saved
     effect(() => {
-      const evt = this.dragDropGlobal.lastDroppedTask();
       const me = this.localTask().id;
-      if (evt && me != null && evt.id === me) {
-        // Restart pulse
-        this.droppedPulse.set(false);
-        clearTimeout(this._pulseTimer);
-        this.droppedPulse.set(true);
-        this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
+      if (!me) return;
+
+      const d = this.dragDropGlobal.lastDroppedTask();
+      if (d && d.id === me && d.token !== this.lastPulseToken.drop) {
+        this.triggerPulse();
+        this.lastPulseToken.drop = d.token;
+      }
+
+      const c = this.dragDropGlobal.lastCreatedTask();
+      if (c && c.id === me && c.token !== this.lastPulseToken.created) {
+        this.triggerPulse();
+        this.lastPulseToken.created = c.token;
+      }
+
+      const s = this.dragDropGlobal.lastSavedTask();
+      if (s && s.id === me && s.token !== this.lastPulseToken.saved) {
+        this.triggerPulse();
+        this.lastPulseToken.saved = s.token;
       }
     });
+
+    // When a task switches to edit mode, ensure the whole form is visible
+    effect(() => {
+      const editing = this.localTask().isEditing;
+      if (editing) {
+        this.scheduleEnsureCardVisible();
+      }
+    });
+  }
+
+  private triggerPulse(): void {
+    this.droppedPulse.set(false);
+    clearTimeout(this._pulseTimer);
+    this.droppedPulse.set(true);
+    this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
   }
 
   // Truncation logic
@@ -127,6 +155,40 @@ export class TaskComponent implements OnChanges {
       this.showFullTitle.set(false);
       this.showFullDescription.set(false);
     }
+  }
+
+  // ==== Ensure the edit form is fully visible ====
+  /**
+   * Scroll the window just enough so that the card is not clipped.
+   * We keep extra space at the bottom to guarantee date/attachments/buttons are visible.
+   */
+  private ensureCardFullyVisible(): void {
+    const el = this.cardEl?.nativeElement;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const vpH = window.innerHeight || document.documentElement.clientHeight;
+
+    // Tunables:
+    const TOP_MARGIN = 8;
+    const BOTTOM_SAFE = 0;
+
+    let dy = 0;
+    if (rect.top < TOP_MARGIN) {
+      dy = rect.top - TOP_MARGIN;
+    } else if (rect.bottom > vpH - BOTTOM_SAFE) {
+      dy = rect.bottom - (vpH - BOTTOM_SAFE);
+    }
+
+    if (dy !== 0) {
+      window.scrollBy({ top: dy, behavior: "smooth" });
+    }
+  }
+
+  /** Re-run visibility checks a few times while the card expands in edit mode. */
+  private scheduleEnsureCardVisible(): void {
+    const runs = [0, 80, 160, 260, 360]; // ms
+    runs.forEach((t) => setTimeout(() => this.ensureCardFullyVisible(), t));
   }
 
   // --- Drag & drop handlers (card only) ---
@@ -220,6 +282,7 @@ export class TaskComponent implements OnChanges {
   // --- CRUD & editing (delegated to TaskForm) ---
   startEdit(): void {
     this.patchLocalTask({ isEditing: true });
+    this.scheduleEnsureCardVisible();
   }
 
   async saveEdit(partialTask: Partial<Task>): Promise<void> {
@@ -242,7 +305,9 @@ export class TaskComponent implements OnChanges {
 
     if (fullTask.id) {
       await this.taskService.updateTask(fullTask.id, fullTask);
-      this.refreshFromBackend(fullTask.id);
+      await this.refreshFromBackend(fullTask.id);
+      // Pulse on save
+      this.dragDropGlobal.markTaskSaved(fullTask.id);
     } else {
       try {
         const createdTask = await this.taskService.createTask(fullTask);
@@ -266,7 +331,9 @@ export class TaskComponent implements OnChanges {
         } else {
           this.localTask.set(createdTask);
         }
-        if (createdTask.id) this.refreshFromBackend(createdTask.id);
+        if (createdTask.id) {
+          await this.refreshFromBackend(createdTask.id);
+        }
       } catch {
         this.alertService.show("error", "Error creating task");
       }

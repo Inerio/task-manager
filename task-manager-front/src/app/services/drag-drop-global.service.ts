@@ -14,11 +14,15 @@ export class DragDropGlobalService {
   readonly currentColumnDrag = signal<{ columnId: number } | null>(null);
   readonly currentFileDrag = signal<boolean>(false);
 
-  /** Last dropped elements (used to trigger a visual pulse). */
+  /** Last dropped elements (to trigger a visual pulse). */
   readonly lastDroppedTask = signal<{ id: number; token: number } | null>(null);
   readonly lastDroppedColumn = signal<{ id: number; token: number } | null>(
     null
   );
+
+  /** Pulse on create/save to reuse the same glow animation. */
+  readonly lastCreatedTask = signal<{ id: number; token: number } | null>(null);
+  readonly lastSavedTask = signal<{ id: number; token: number } | null>(null);
 
   startTaskDrag(taskId: number, columnId: number): void {
     this.currentDragType.set("task");
@@ -64,5 +68,13 @@ export class DragDropGlobalService {
   }
   markColumnDropped(id: number): void {
     this.lastDroppedColumn.set({ id, token: Date.now() });
+  }
+
+  /** Pulse helpers for create/save */
+  markTaskCreated(id: number): void {
+    this.lastCreatedTask.set({ id, token: Date.now() });
+  }
+  markTaskSaved(id: number): void {
+    this.lastSavedTask.set({ id, token: Date.now() });
   }
 }

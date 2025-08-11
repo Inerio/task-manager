@@ -21,7 +21,19 @@ type EmojiPickerEl = HTMLElement & { shadowRoot: ShadowRoot | null };
       theme="light"
       (emoji-click)="onEmojiClick($event)"
       class="emoji-picker-dropdown"
-      style="position:absolute; left:50%; top:calc(100% - 18px); z-index:99; width:min(340px, 40vw); max-height:370px;"
+      style="
+        position:absolute; left:50%; top:calc(100% - 18px); z-index:99;
+        width:min(340px, 40vw); max-height:370px;
+        transform: translateX(-50%) scale(0.77); transform-origin: top center;
+        /* brand variables used by the picker CSS */
+        --background:#fff;
+        --category-button-active-background:#e3f2fd;
+        --search-background:#f7f9fc;
+        --border-radius:16px;
+        --color:#232323;
+        /* prevent flash of unstyled content */
+        visibility:hidden;
+      "
     ></emoji-picker>
   `,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -36,64 +48,63 @@ export class EmojiPickerComponent implements AfterViewInit {
   private stylesApplied = false;
 
   ngAfterViewInit(): void {
-    // Apply styles once the shadow DOM is ready. Some builds render the input a frame later,
-    // so we retry a few times (cheap, no listeners).
+    // Try immediately; if shadow isn't ready, retry for a few frames.
     let tries = 0;
-    const MAX_TRIES = 8;
+    const MAX_TRIES = 12;
 
     const apply = () => {
-      if (this.stylesApplied || !this.emojiPickerRef?.nativeElement) return;
+      if (this.stylesApplied) return;
+      const picker = this.emojiPickerRef?.nativeElement;
+      if (!picker) return;
 
-      const picker = this.emojiPickerRef.nativeElement;
-      const host = picker.shadowRoot?.host as HTMLElement | undefined;
+      // If the element hasn't been upgraded yet, try again shortly.
+      const host: HTMLElement | undefined = picker.shadowRoot?.host as any;
       if (!host) {
-        // Shadow root not ready yet — try next frame.
-        if (tries++ < MAX_TRIES) requestAnimationFrame(apply);
+        if (tries++ < MAX_TRIES) {
+          requestAnimationFrame(apply);
+        }
         return;
       }
 
-      // --- Host-level sizing/skin (kept from your version) ---
-      host.style.transform = "translateX(-50%) scale(0.77)";
-      host.style.transformOrigin = "top center";
-      host.style.setProperty("--background", "#fff");
-      host.style.setProperty("--category-button-active-background", "#e3f2fd");
-      host.style.setProperty("--search-background", "#f7f9fc");
-      host.style.setProperty("--border-radius", "16px");
-      host.style.setProperty("--color", "#232323");
+      // --- Shadow-level tweaks (cannot be done via outer CSS) ---
+      const sr = picker.shadowRoot!;
 
-      // Ensure the search input exists before styling it; if not, retry.
-      const searchInput = picker.shadowRoot?.querySelector(
+      // Style the search input (text and caret) once it exists.
+      const searchInput = sr.querySelector(
         'input[type="search"]'
       ) as HTMLInputElement | null;
 
       if (!searchInput) {
-        if (tries++ < MAX_TRIES) requestAnimationFrame(apply);
+        if (tries++ < MAX_TRIES) {
+          requestAnimationFrame(apply);
+        }
         return;
       }
 
-      // Text & caret color (readability on light bg).
       searchInput.style.color = "#111";
       searchInput.style.caretColor = "#111";
 
       // Inject once: scrollbar cosmetics + placeholder color.
-      if (!picker.shadowRoot!.getElementById("custom-scrollbar-style")) {
+      if (!sr.getElementById("custom-scrollbar-style")) {
         const style = document.createElement("style");
         style.id = "custom-scrollbar-style";
         style.textContent = `
           ::-webkit-scrollbar { width: 9px; background: #f7f9fc; border-radius: 12px; }
           ::-webkit-scrollbar-thumb { background: #d3d8e2; border-radius: 12px; }
           ::-webkit-scrollbar-thumb:hover { background: #b2b8c7; }
-
           input[type="search"] { color: #111 !important; caret-color: #111 !important; }
           input[type="search"]::placeholder { color: #8fa1b6 !important; opacity: 1; }
         `;
-        picker.shadowRoot!.appendChild(style);
+        sr.appendChild(style);
       }
 
+      // All set → reveal instantly (no flash of default skin).
+      picker.style.visibility = "visible";
       this.stylesApplied = true;
     };
 
-    requestAnimationFrame(apply);
+    // Kick off immediately (microtask), then let RAF retries pick it up.
+    Promise.resolve().then(apply);
   }
 
   onEmojiClick(event: any): void {

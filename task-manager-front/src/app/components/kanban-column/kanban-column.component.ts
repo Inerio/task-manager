@@ -101,6 +101,7 @@ export class KanbanColumnComponent {
           ...withoutCreated.map((t, idx) => ({ ...t, position: idx + 1 })),
         ];
         this.taskService.reorderTasks(reordered);
+
         if (_pendingFiles.length) {
           await Promise.all(
             _pendingFiles.map((f) =>
@@ -108,6 +109,11 @@ export class KanbanColumnComponent {
             )
           );
           await this.taskService.refreshTaskById(created.id!);
+        }
+
+        // Emit "created" pulse once (after the card exists in the view).
+        if (created.id) {
+          setTimeout(() => this.dragDropGlobal.markTaskCreated(created.id!), 0);
         }
       } else {
         await this.taskService.updateTask(task.id!, task as Task);
@@ -139,7 +145,7 @@ export class KanbanColumnComponent {
   }
 
   // ========== DRAG & DROP ==========
-  onDropzoneDragEnter(event: DragEvent): void {
+  onDropzoneDragEnter(_event: DragEvent): void {
     if (!this.isForeignTaskDrag()) {
       this.dropzoneEnterCount = 0;
       this.dropzoneDragOver.set(false);
@@ -158,7 +164,7 @@ export class KanbanColumnComponent {
     }
   }
 
-  onDropzoneDragLeave(event?: DragEvent): void {
+  onDropzoneDragLeave(_event?: DragEvent): void {
     if (!this.isForeignTaskDrag()) {
       this.dropzoneEnterCount = 0;
       this.dropzoneDragOver.set(false);

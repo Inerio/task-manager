@@ -9,6 +9,9 @@
   max-width: 100%;
   transition: background-color 0.3s, box-shadow 0.2s;
 
+  /* leave room when scrolled into view under the header */
+  scroll-margin-top: 72px;
+
   &:not(.has-badge) {
     padding-top: 0.7rem;
   }
@@ -279,7 +282,6 @@
 }
 
 /* === DROP PULSE (task) === */
-/* light blue glow that fades quickly */
 @keyframes dropPulseTask {
   0% {
     box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.32), 0 2px 8px 0 #0001;

@@ -7,10 +7,21 @@ import {
   AfterViewInit,
   CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectionStrategy,
+  OnDestroy,
+  inject,
 } from "@angular/core";
+import { TranslocoService } from "@jsverse/transloco";
+import { Subscription } from "rxjs";
+import i18nEn from "emoji-picker-element/i18n/en";
+import i18nFr from "emoji-picker-element/i18n/fr";
 
 /** Narrow type for the <emoji-picker> element so we avoid 'any'. */
-type EmojiPickerEl = HTMLElement & { shadowRoot: ShadowRoot | null };
+type EmojiPickerEl = HTMLElement & {
+  shadowRoot: ShadowRoot | null;
+  locale?: string; // "en" | "fr"
+  dataSource?: string | any;
+  i18n?: Record<string, any>;
+};
 
 @Component({
   selector: "app-emoji-picker",
@@ -21,6 +32,8 @@ type EmojiPickerEl = HTMLElement & { shadowRoot: ShadowRoot | null };
       theme="light"
       (emoji-click)="onEmojiClick($event)"
       class="emoji-picker-dropdown"
+      [attr.locale]="currentLocale"
+      [attr.data-source]="currentDataUrl"
       style="
         position:absolute; left:50%; top:calc(100% - 18px); z-index:99;
         width:min(340px, 40vw); max-height:370px;
@@ -31,7 +44,7 @@ type EmojiPickerEl = HTMLElement & { shadowRoot: ShadowRoot | null };
         --search-background:#f7f9fc;
         --border-radius:16px;
         --color:#232323;
-        /* prevent flash of unstyled content */
+        /* avoid flash of unstyled content */
         visibility:hidden;
       "
     ></emoji-picker>
@@ -39,52 +52,71 @@ type EmojiPickerEl = HTMLElement & { shadowRoot: ShadowRoot | null };
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EmojiPickerComponent implements AfterViewInit {
+export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
   @ViewChild("emojiPicker", { static: false })
   emojiPickerRef?: ElementRef<EmojiPickerEl>;
   @Output() emojiSelected = new EventEmitter<string>();
+
+  private readonly i18n = inject(TranslocoService);
+  private langSub?: Subscription;
+
+  /** Bound into the template as attributes so the custom element sees changes early. */
+  currentLocale: "en" | "fr" = (this.i18n.getActiveLang?.() || "").startsWith(
+    "fr"
+  )
+    ? "fr"
+    : "en";
+  currentDataUrl = this.toDataUrl(this.currentLocale);
 
   /** Prevent double-application of styles. */
   private stylesApplied = false;
 
   ngAfterViewInit(): void {
-    // Try immediately; if shadow isn't ready, retry for a few frames.
+    this.applyAllWithRetries();
+    this.langSub = this.i18n.langChanges$.subscribe(() => {
+      this.currentLocale = (this.i18n.getActiveLang?.() || "").startsWith("fr")
+        ? "fr"
+        : "en";
+      this.currentDataUrl = this.toDataUrl(this.currentLocale);
+      this.configurePicker();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langSub?.unsubscribe();
+  }
+
+  /** Build the public URL to the emojibase dataset under /public. */
+  private toDataUrl(locale: "en" | "fr"): string {
+    return `/emoji-picker/${locale}/emojibase/data.json`;
+  }
+
+  // --- bootstrap styles + first configuration with small retry window
+  private applyAllWithRetries(): void {
     let tries = 0;
     const MAX_TRIES = 12;
 
     const apply = () => {
-      if (this.stylesApplied) return;
       const picker = this.emojiPickerRef?.nativeElement;
-      if (!picker) return;
+      const sr = picker?.shadowRoot ?? null;
 
-      // If the element hasn't been upgraded yet, try again shortly.
-      const host: HTMLElement | undefined = picker.shadowRoot?.host as any;
-      if (!host) {
-        if (tries++ < MAX_TRIES) {
-          requestAnimationFrame(apply);
-        }
+      if (!picker || !sr) {
+        if (tries++ < MAX_TRIES) requestAnimationFrame(apply);
         return;
       }
 
-      // --- Shadow-level tweaks (cannot be done via outer CSS) ---
-      const sr = picker.shadowRoot!;
-
-      // Style the search input (text and caret) once it exists.
       const searchInput = sr.querySelector(
         'input[type="search"]'
       ) as HTMLInputElement | null;
 
       if (!searchInput) {
-        if (tries++ < MAX_TRIES) {
-          requestAnimationFrame(apply);
-        }
+        if (tries++ < MAX_TRIES) requestAnimationFrame(apply);
         return;
       }
 
+      // --- cosmetic tweaks inside the shadow DOM
       searchInput.style.color = "#111";
       searchInput.style.caretColor = "#111";
-
-      // Inject once: scrollbar cosmetics + placeholder color.
       if (!sr.getElementById("custom-scrollbar-style")) {
         const style = document.createElement("style");
         style.id = "custom-scrollbar-style";
@@ -98,13 +130,49 @@ export class EmojiPickerComponent implements AfterViewInit {
         sr.appendChild(style);
       }
 
-      // All set → reveal instantly (no flash of default skin).
-      picker.style.visibility = "visible";
-      this.stylesApplied = true;
+      // First full configuration (locale + dataset + placeholder + labels)
+      this.configurePicker().then(() => {
+        picker.style.visibility = "visible";
+        this.stylesApplied = true;
+      });
     };
-
-    // Kick off immediately (microtask), then let RAF retries pick it up.
     Promise.resolve().then(apply);
+  }
+
+  /** Configure locale + dataset (+placeholder + labels) — called at init and on language change. */
+  private async configurePicker(): Promise<void> {
+    const picker = this.emojiPickerRef?.nativeElement;
+    if (!picker) return;
+
+    const locale = this.currentLocale;
+
+    // UI labels (category names, "Search", etc.)
+    const ui = locale === "fr" ? (i18nFr as any) : (i18nEn as any);
+    try {
+      picker.i18n = ui;
+    } catch {}
+
+    // Make sure properties are also set on the element
+    try {
+      picker.locale = locale;
+    } catch {}
+    try {
+      picker.dataSource = this.currentDataUrl;
+    } catch {}
+
+    // Placeholder (Transloco > UI fallback)
+    const placeholder =
+      this.i18n.translate("emoji.searchPlaceholder") ||
+      ui?.searchLabel ||
+      (locale === "fr" ? "Rechercher" : "Search");
+
+    const input = picker.shadowRoot?.querySelector(
+      'input[type="search"]'
+    ) as HTMLInputElement | null;
+    if (input) {
+      input.placeholder = placeholder;
+      input.setAttribute("aria-label", placeholder);
+    }
   }
 
   onEmojiClick(event: any): void {

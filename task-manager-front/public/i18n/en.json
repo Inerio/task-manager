@@ -127,6 +127,9 @@
     "dark": "Dark",
     "notImplemented": "Theme switch: not yet implemented."
   },
+  "emoji": {
+    "searchPlaceholder": "Search"
+  },
   "errors": {
     "loadingTasks": "Error loading tasks.",
     "creatingTask": "Error creating task",

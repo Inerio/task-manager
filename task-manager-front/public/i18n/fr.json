@@ -127,6 +127,9 @@
     "dark": "Sombre",
     "notImplemented": "Interrupteur de thème : pas encore implémenté."
   },
+  "emoji": {
+    "searchPlaceholder": "Rechercher"
+  },
   "errors": {
     "loadingTasks": "Erreur lors du chargement des tâches.",
     "creatingTask": "Erreur lors de la création de la tâche",

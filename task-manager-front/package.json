@@ -23,6 +23,7 @@
     "@jsverse/transloco": "^7.6.1",
     "@jsverse/transloco-persist-lang": "^7.0.2",
     "emoji-picker-element": "^1.26.3",
+    "emoji-picker-element-data": "^1.7.2",
     "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

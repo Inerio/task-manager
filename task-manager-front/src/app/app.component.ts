@@ -12,6 +12,9 @@ import { LoadingService } from "./services/loading.service";
 import { KanbanColumnService } from "./services/kanban-column.service";
 import { LanguageSwitcherComponent } from "./components/language-switcher/language-switcher.component";
 import { ThemeSwitcherComponent } from "./components/theme-switcher/theme-switcher.component";
+import { TemplatePickerComponent } from "./components/template-picker/template-picker.component";
+import { TemplatePickerService } from "./services/template-picker.service";
+import { applyBoardTemplate } from "./utils/board-templates";
 
 interface TempBoard {
   id: null;
@@ -32,6 +35,7 @@ interface TempBoard {
     LoadingOverlayComponent,
     LanguageSwitcherComponent,
     ThemeSwitcherComponent,
+    TemplatePickerComponent,
   ],
 })
 export class AppComponent {
@@ -41,6 +45,7 @@ export class AppComponent {
   private readonly loading = inject(LoadingService);
   private readonly kanbanColumnService = inject(KanbanColumnService);
   private readonly i18n = inject(TranslocoService);
+  private readonly templatePicker = inject(TemplatePickerService);
 
   readonly boards = this.boardService.boards;
   readonly selectedBoardId = signal<number | null>(null);
@@ -103,8 +108,8 @@ export class AppComponent {
   }
 
   /**
-   * Save new board, then offer a simple Kanban template.
-   * If accepted, auto-create 3 columns (localized names).
+   * Save new board, then open the Template Picker.
+   * If a template is chosen, create its columns (localized) via the service.
    */
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
@@ -119,31 +124,18 @@ export class AppComponent {
         const newId = typeof board.id === "number" ? board.id : null;
         if (newId !== null) this.selectedBoardId.set(newId);
 
-        const todo = this.i18n.translate("boards.template.todo");
-        const inProgress = this.i18n.translate("boards.template.inProgress");
-        const done = this.i18n.translate("boards.template.done");
-
-        const title = this.i18n.translate("boards.template.title");
-        const msg = this.i18n.translate("boards.template.message", {
-          todo,
-          inProgress,
-          done,
-        });
-
-        const useTemplate = await this.confirmDialog.open(title, msg);
-
-        if (useTemplate && newId !== null) {
+        // ---- Open template picker ----
+        const chosenTemplate = await this.templatePicker.open();
+        if (chosenTemplate && newId !== null) {
           await this.loading.wrap(
-            (async () => {
-              await this.kanbanColumnService.createKanbanColumn(todo, newId);
-              await this.kanbanColumnService.createKanbanColumn(
-                inProgress,
-                newId
-              );
-              await this.kanbanColumnService.createKanbanColumn(done, newId);
-              this.kanbanColumnService.loadKanbanColumns(newId);
-            })()
+            applyBoardTemplate(
+              this.kanbanColumnService,
+              newId,
+              chosenTemplate,
+              this.i18n
+            )
           );
+          this.kanbanColumnService.loadKanbanColumns(newId);
         }
       },
       complete: () => this.cancelBoardEdit(),

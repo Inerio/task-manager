@@ -33,6 +33,32 @@
     "deleteAllTitle": "Board deletion",
     "deleteAllConfirm": "Are you sure you want to delete all tasks in this board?",
     "columnsAria": "Kanban columns",
+
+    "columns": {
+      "inbox": "Inbox",
+      "todo": "To do",
+      "inProgress": "In progress",
+      "done": "Done",
+      "today": "Today",
+      "thisWeek": "This Week",
+      "ideas": "Ideas",
+      "review": "Review"
+    },
+
+    "templates": {
+      "title": "Start with a template?",
+      "subtitle": "Pick a layout (1–5 columns). You can rename columns later.",
+      "use": "Use this",
+      "skip": "Skip",
+      "oneColumn": "1 column",
+      "nColumns": "{{count}} columns",
+      "t1Desc": "A single collection for quick capture.",
+      "t2Desc": "Simple flow from To do to Done.",
+      "t3Desc": "Classic Kanban: To do → In progress → Done.",
+      "t4Desc": "Inbox, Today, This Week, then Done.",
+      "t5Desc": "From Ideas to Review and Done."
+    },
+
     "template": {
       "title": "Start with a template?",
       "message": "Would you like a simple Kanban template with 3 columns:\n {{todo}} • {{inProgress}} • {{done}}",
@@ -40,6 +66,7 @@
       "inProgress": "In progress",
       "done": "Done"
     },
+
     "column": {
       "delete": "Delete column",
       "deleteConfirm": "Delete column “{{name}}” and all its tasks?",

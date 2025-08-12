@@ -1,0 +1,37 @@
+@if (visible()) {
+<div class="picker-backdrop" (click)="skip()">
+  <div
+    class="picker"
+    role="dialog"
+    aria-modal="true"
+    (click)="$event.stopPropagation()"
+    tabindex="0"
+  >
+    <h3 class="title">{{ "boards.templates.title" | transloco }}</h3>
+    <p class="subtitle">{{ "boards.templates.subtitle" | transloco }}</p>
+
+    <div class="cards">
+      @for (t of templates(); track t.id) {
+      <button class="card" type="button" (click)="choose(t.id)">
+        <div class="card-title">{{ t.title }}</div>
+        <div class="cols">
+          @for (c of t.cols; track c) {
+          <span class="col-pill">{{ c }}</span>
+          }
+        </div>
+        @if (t.desc) {
+        <div class="desc">{{ t.desc }}</div>
+        }
+        <div class="use">{{ "boards.templates.use" | transloco }}</div>
+      </button>
+      }
+    </div>
+
+    <div class="footer">
+      <button type="button" class="btn-skip" (click)="skip()">
+        {{ "boards.templates.skip" | transloco }}
+      </button>
+    </div>
+  </div>
+</div>
+}

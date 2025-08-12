@@ -1,0 +1,123 @@
+.picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 36, 49, 0.35);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.picker {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 24px #0002;
+  width: min(920px, 92vw);
+  padding: 1.4rem 1.6rem 1rem;
+  animation: popIn 0.17s cubic-bezier(0.5, 1.2, 0.5, 1.07);
+  text-align: center;
+}
+
+.title {
+  margin: 0.2rem 0 0.1rem;
+}
+
+.subtitle {
+  margin: 0 0 0.9rem;
+  color: #5b6476;
+  white-space: pre-line;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.7rem;
+
+  @media (max-width: 980px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.card {
+  border: 1px solid #e3e7f1;
+  background: #fafcff;
+  border-radius: 12px;
+  padding: 0.7rem 0.6rem;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border 0.14s ease;
+  box-shadow: 0 1px 4px #0001;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: #c6d4f4;
+    box-shadow: 0 4px 14px 2px #1976d21a;
+  }
+}
+
+.card-title {
+  font-weight: 700;
+  color: #192338;
+}
+
+.cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.col-pill {
+  background: #fff;
+  border: 1px solid #dbe1ee;
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.85rem;
+  color: #26324a;
+  box-shadow: 0 1px 2px #0001;
+}
+
+.desc {
+  font-size: 0.88rem;
+  color: #5c667a;
+  min-height: 1.2em;
+}
+
+.use {
+  margin-top: auto;
+  align-self: flex-start;
+  font-size: 0.9rem;
+  color: #1976d2;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.8rem;
+}
+
+.btn-skip {
+  background: #dadada;
+  border: none;
+  color: #333;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  transition: background 0.18s ease;
+  &:hover {
+    background: #c7c7c7;
+  }
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.93);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

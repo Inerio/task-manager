@@ -97,6 +97,12 @@
     "yes": "Yes",
     "no": "No"
   },
+  "theme": {
+    "switch": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "notImplemented": "Theme switch: not yet implemented."
+  },
   "errors": {
     "loadingTasks": "Error loading tasks.",
     "creatingTask": "Error creating task",

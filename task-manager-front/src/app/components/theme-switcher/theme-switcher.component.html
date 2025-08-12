@@ -1,0 +1,23 @@
+<div
+  class="theme-toggle"
+  role="group"
+  [attr.aria-label]="'theme.switch' | transloco"
+>
+  <button
+    type="button"
+    [class.active]="isLight()"
+    [attr.aria-pressed]="isLight()"
+    (click)="toggle()"
+  >
+    {{ "theme.light" | transloco }}
+  </button>
+
+  <button
+    type="button"
+    [class.active]="isDark()"
+    [attr.aria-pressed]="isDark()"
+    (click)="toggle()"
+  >
+    {{ "theme.dark" | transloco }}
+  </button>
+</div>

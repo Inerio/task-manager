@@ -97,6 +97,12 @@
     "yes": "Oui",
     "no": "Non"
   },
+  "theme": {
+    "switch": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "notImplemented": "Interrupteur de thème : pas encore implémenté."
+  },
   "errors": {
     "loadingTasks": "Erreur lors du chargement des tâches.",
     "creatingTask": "Erreur lors de la création de la tâche",

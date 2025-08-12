@@ -11,6 +11,7 @@ import { LoadingOverlayComponent } from "./components/loading-overlay/loading-ov
 import { LoadingService } from "./services/loading.service";
 import { KanbanColumnService } from "./services/kanban-column.service";
 import { LanguageSwitcherComponent } from "./components/language-switcher/language-switcher.component";
+import { ThemeSwitcherComponent } from "./components/theme-switcher/theme-switcher.component";
 
 interface TempBoard {
   id: null;
@@ -30,6 +31,7 @@ interface TempBoard {
     BoardComponent,
     LoadingOverlayComponent,
     LanguageSwitcherComponent,
+    ThemeSwitcherComponent,
   ],
 })
 export class AppComponent {
@@ -61,7 +63,6 @@ export class AppComponent {
       ...this.boards(),
       { id: null, name: this.editingBoardValue() } as TempBoard,
     ];
-    // Note: when id is null, this is a temporary inline "new board" row
   });
 
   constructor() {
@@ -228,7 +229,6 @@ export class AppComponent {
 
     this.taskService
       .deleteAllTasksByBoardId(selectedBoard.id)
-      // Force refresh to bypass the "already loaded" guard.
       .then(() => this.taskService.loadTasks({ force: true }))
       .catch(() =>
         alert(this.i18n.translate("errors.deletingAllTasksForBoard"))

@@ -3,9 +3,13 @@
 
 <div class="main-layout">
   <aside class="sidebar">
-    <!-- Language switcher sits above the brand, top-left -->
-    <div class="sidebar-lang" style="margin-bottom: 10px">
+    <!-- Switchers row (language + theme) -->
+    <div
+      class="sidebar-lang"
+      style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center"
+    >
       <app-language-switcher></app-language-switcher>
+      <app-theme-switcher></app-theme-switcher>
     </div>
 
     <h1 class="tasukeru-title">
@@ -108,7 +112,7 @@
   }
 </div>
 
-<!-- Fixed footer (does not push content, always visible) -->
+<!-- Fixed footer -->
 <footer class="app-footer">
   © {{ currentYear }} {{ "app.brand" | transloco }}.
   {{ "app.copyright" | transloco }}

@@ -2,6 +2,9 @@ import { Injectable, signal } from "@angular/core";
 
 /**
  * Global drag/drop context shared across components.
+ *
+ * Fix: auto-expire "pulse" markers (drop/create/save) to avoid
+ * re-triggering animations when boards reload or components remount.
  */
 @Injectable({ providedIn: "root" })
 export class DragDropGlobalService {
@@ -24,6 +27,17 @@ export class DragDropGlobalService {
   readonly lastCreatedTask = signal<{ id: number; token: number } | null>(null);
   readonly lastSavedTask = signal<{ id: number; token: number } | null>(null);
 
+  constructor() {
+    // Clear any stale pulses on service init so initial renders don't pulse.
+    setTimeout(() => {
+      this.lastDroppedTask.set(null);
+      this.lastDroppedColumn.set(null);
+      this.lastCreatedTask.set(null);
+      this.lastSavedTask.set(null);
+    }, 0);
+  }
+
+  // === Drag type control ===
   startTaskDrag(taskId: number, columnId: number): void {
     this.currentDragType.set("task");
     this.currentTaskDrag.set({ taskId, columnId });
@@ -62,19 +76,52 @@ export class DragDropGlobalService {
     return this.currentDragType() === "file" && this.currentFileDrag();
   }
 
-  /** Markers to trigger a pulse on the dropped element. */
+  // === Pulse markers (auto-expire to prevent stale pulses) ===
+
+  /** Markers to trigger a pulse on the dropped task. */
   markTaskDropped(id: number): void {
-    this.lastDroppedTask.set({ id, token: Date.now() });
+    const token = Date.now();
+    this.lastDroppedTask.set({ id, token });
+    // Auto-clear after the animation window so fresh mounts don't re-pulse.
+    setTimeout(() => {
+      const cur = this.lastDroppedTask();
+      if (cur && cur.id === id && cur.token === token) {
+        this.lastDroppedTask.set(null);
+      }
+    }, 1500);
   }
+
   markColumnDropped(id: number): void {
-    this.lastDroppedColumn.set({ id, token: Date.now() });
+    const token = Date.now();
+    this.lastDroppedColumn.set({ id, token });
+    setTimeout(() => {
+      const cur = this.lastDroppedColumn();
+      if (cur && cur.id === id && cur.token === token) {
+        this.lastDroppedColumn.set(null);
+      }
+    }, 1500);
   }
 
   /** Pulse helpers for create/save */
   markTaskCreated(id: number): void {
-    this.lastCreatedTask.set({ id, token: Date.now() });
+    const token = Date.now();
+    this.lastCreatedTask.set({ id, token });
+    setTimeout(() => {
+      const cur = this.lastCreatedTask();
+      if (cur && cur.id === id && cur.token === token) {
+        this.lastCreatedTask.set(null);
+      }
+    }, 1500);
   }
+
   markTaskSaved(id: number): void {
-    this.lastSavedTask.set({ id, token: Date.now() });
+    const token = Date.now();
+    this.lastSavedTask.set({ id, token });
+    setTimeout(() => {
+      const cur = this.lastSavedTask();
+      if (cur && cur.id === id && cur.token === token) {
+        this.lastSavedTask.set(null);
+      }
+    }, 1500);
   }
 }

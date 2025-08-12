@@ -10,15 +10,23 @@ import {
 import { provideUploadConfig } from "./tokens/upload.config";
 
 import { provideTransloco } from "@jsverse/transloco";
-import { provideTranslocoPersistLang } from "@jsverse/transloco-persist-lang";
 import { AppTranslocoLoader } from "./transloco.loader";
+
+// Read saved language early to avoid initial flicker on bootstrap.
+const savedLang =
+  (localStorage.getItem("translocoLang") as "en" | "fr") || "en";
 
 /**
  * Global application configuration:
  * - Centralizes HttpClient provider.
  * - Enables zone event/run coalescing for minor performance wins.
  * - Registers upload config token (defaults can be overridden).
- * - Provides Transloco i18n and persists the active language.
+ * - Provides Transloco i18n:
+ *    • defaultLang comes from localStorage (persistence handled by LanguageSwitcher)
+ *    • missingHandler silences "Missing translation for ..." console logs
+ *
+ * Note: We intentionally DO NOT use provideTranslocoPersistLang here,
+ * since LanguageSwitcher already persists the active language in localStorage.
  */
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -29,18 +37,16 @@ export const appConfig: ApplicationConfig = {
     provideTransloco({
       config: {
         availableLangs: ["en", "fr"],
-        defaultLang: "en",
+        defaultLang: savedLang,
         fallbackLang: "en",
         reRenderOnLangChange: true,
+        missingHandler: {
+          logMissingKey: false,
+          useFallbackTranslation: true,
+        },
         prodMode: !isDevMode(),
       },
       loader: AppTranslocoLoader,
-    }),
-
-    // Persist the active language using localStorage
-    provideTranslocoPersistLang({
-      storage: { useFactory: () => localStorage },
-      storageKey: "translocoLang",
     }),
   ],
 };

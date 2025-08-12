@@ -19,12 +19,18 @@
     </h1>
 
     <nav class="boards-list">
-      @for (board of displayedBoards(); track board.id) { @if (board.id !==
-      null) {
+      @for (board of displayedBoards(); track board.id; let i = $index) { @if
+      (board.id !== null) {
       <div
-        (click)="selectBoard(board.id)"
-        [class.selected]="selectedBoardId() === board.id"
         class="board-item"
+        [class.selected]="selectedBoardId() === board.id"
+        [class.drag-over]="dragOverBoardIndex() === i"
+        draggable="{{ editingBoardId() === null }}"
+        (click)="selectBoard(board.id)"
+        (dragstart)="onBoardDragStart($event, board.id!)"
+        (dragover)="onBoardDragOver($event, i)"
+        (dragleave)="onBoardDragLeave(i)"
+        (drop)="onBoardDrop($event, i)"
       >
         {{ board.name }}
       </div>
@@ -54,6 +60,16 @@
         {{ "boards.add" | transloco }}
       </button>
       }
+
+      <!-- End dropzone to allow dropping at the very end -->
+      <div
+        class="board-dropzone-end"
+        [class.drag-over]="dropEndOver()"
+        (dragover)="onBoardDragOverEnd($event)"
+        (dragleave)="onBoardDragLeaveEnd()"
+        (drop)="onBoardDropEnd($event)"
+        aria-hidden="true"
+      ></div>
     </nav>
   </aside>
 
@@ -115,9 +131,9 @@
           width="19"
           height="19"
         />
-        <span class="delete-all-label">{{
-          "boards.deleteAll" | transloco
-        }}</span>
+        <span class="delete-all-label">
+          {{ "boards.deleteAll" | transloco }}
+        </span>
       </button>
     </header>
 

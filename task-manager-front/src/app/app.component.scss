@@ -334,3 +334,26 @@ body {
   z-index: 200;
   pointer-events: none;
 }
+
+.board-item {
+  /* existing styles */
+
+  &.drag-over {
+    outline: 2px dashed #1976d2;
+    background: #e9f2ff;
+  }
+}
+
+/* End dropzone to allow "drop at the very end" of the list */
+.board-dropzone-end {
+  height: 10px;
+  margin-top: 8px;
+  border-radius: 6px;
+  border: 2px dashed transparent;
+  transition: background 0.18s, border-color 0.18s;
+
+  &.drag-over {
+    background: #e3f2fd;
+    border-color: #1976d2;
+  }
+}

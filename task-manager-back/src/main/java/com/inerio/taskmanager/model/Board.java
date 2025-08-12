@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Entity representing a Kanban board (multi-board support).
  * <p>
- * Each Board contains several KanbanColumns (lists), each with multiple Tasks.
+ * Each Board contains several KanbanColumns, each with multiple Tasks.
  * </p>
  */
 @Entity
@@ -21,6 +21,15 @@ public class Board {
     /** Board display name (must be unique per user in future). */
     @Column(nullable = false)
     private String name;
+
+    /**
+     * Zero-based order of this board in the sidebar.
+     * <p>
+     * Nullable for legacy rows; new boards are assigned the next available position.
+     * </p>
+     */
+    @Column
+    private Integer position;
 
     /**
      * Kanban columns contained in this board.
@@ -49,42 +58,24 @@ public class Board {
         this.name = name;
     }
 
-    /**
-     * Gets the unique board ID.
-     * @return Board ID.
-     */
+    /** Gets the unique board ID. */
     public Long getId() { return id; }
 
-    /**
-     * Gets the board name.
-     * @return Board name.
-     */
+    /** Gets the board name. */
     public String getName() { return name; }
 
-    /**
-     * Sets the board name.
-     * @param name Board name.
-     */
+    /** Sets the board name. */
     public void setName(String name) { this.name = name; }
 
-    /**
-     * Gets the list of Kanban columns for this board.
-     * @return List of KanbanColumn.
-     */
+    /** Gets the list of Kanban columns for this board. */
     public List<KanbanColumn> getKanbanColumns() { return kanbanColumns; }
 
-    /**
-     * Sets the list of Kanban columns for this board.
-     * @param kanbanColumns List of KanbanColumn.
-     */
+    /** Sets the list of Kanban columns for this board. */
     public void setKanbanColumns(List<KanbanColumn> kanbanColumns) {
         this.kanbanColumns = kanbanColumns != null ? kanbanColumns : new ArrayList<>();
     }
 
-    /**
-     * Adds a KanbanColumn to this board.
-     * @param column KanbanColumn to add.
-     */
+    /** Adds a KanbanColumn to this board. */
     public void addKanbanColumn(KanbanColumn column) {
         if (column != null) {
             kanbanColumns.add(column);
@@ -92,13 +83,16 @@ public class Board {
         }
     }
 
-    /**
-     * Removes a KanbanColumn from this board.
-     * @param column KanbanColumn to remove.
-     */
+    /** Removes a KanbanColumn from this board. */
     public void removeKanbanColumn(KanbanColumn column) {
         if (column != null && kanbanColumns.remove(column)) {
             column.setBoard(null);
         }
     }
+
+    /** Gets the zero-based position of this board. */
+    public Integer getPosition() { return position; }
+
+    /** Sets the zero-based position of this board. */
+    public void setPosition(Integer position) { this.position = position; }
 }

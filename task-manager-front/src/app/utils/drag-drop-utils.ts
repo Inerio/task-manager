@@ -1,12 +1,13 @@
-/* ==== DRAG & DROP UTILS — TASKS & COLUMNS ==== */
+/* ==== DRAG & DROP UTILS — TASKS, COLUMNS, BOARDS ==== */
 
 const DATA_KEYS = {
   type: "type",
   taskId: "task-id",
   columnId: "kanbanColumn-id",
+  boardId: "board-id",
 } as const;
 
-type DragKind = "task" | "column";
+type DragKind = "task" | "column" | "board";
 
 export interface TaskDragData {
   taskId: number;
@@ -15,6 +16,10 @@ export interface TaskDragData {
 
 export interface ColumnDragData {
   kanbanColumnId: number;
+}
+
+export interface BoardDragData {
+  boardId: number;
 }
 
 function set(dt: DataTransfer | null, key: string, value: string): void {
@@ -30,7 +35,7 @@ function getNumber(dt: DataTransfer | null, key: string): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-/** Attach task drag data to the event. */
+/** ===== TASK ===== */
 export function setTaskDragData(
   event: DragEvent,
   taskId: number,
@@ -42,7 +47,6 @@ export function setTaskDragData(
   set(dt, DATA_KEYS.columnId, String(kanbanColumnId));
 }
 
-/** Extract task drag data from the event, or null if invalid. */
 export function getTaskDragData(event: DragEvent): TaskDragData | null {
   const dt = event.dataTransfer ?? null;
   if (get(dt, DATA_KEYS.type) !== "task") return null;
@@ -54,14 +58,13 @@ export function getTaskDragData(event: DragEvent): TaskDragData | null {
   return { taskId, kanbanColumnId };
 }
 
-/** Is the drag event for a task? */
 export function isTaskDragEvent(event: DragEvent): boolean {
   return (
     !!event.dataTransfer && get(event.dataTransfer, DATA_KEYS.type) === "task"
   );
 }
 
-/** Attach column drag data to the event. */
+/** ===== COLUMN ===== */
 export function setColumnDragData(
   event: DragEvent,
   kanbanColumnId: number
@@ -71,7 +74,6 @@ export function setColumnDragData(
   set(dt, DATA_KEYS.columnId, String(kanbanColumnId));
 }
 
-/** Extract column drag data from the event, or null if invalid. */
 export function getColumnDragData(event: DragEvent): ColumnDragData | null {
   const dt = event.dataTransfer ?? null;
   if (get(dt, DATA_KEYS.type) !== "column") return null;
@@ -82,18 +84,38 @@ export function getColumnDragData(event: DragEvent): ColumnDragData | null {
   return { kanbanColumnId };
 }
 
-/** Is the drag event for a column? */
 export function isColumnDragEvent(event: DragEvent): boolean {
   return (
     !!event.dataTransfer && get(event.dataTransfer, DATA_KEYS.type) === "column"
   );
 }
 
+/** ===== BOARD ===== */
+export function setBoardDragData(event: DragEvent, boardId: number): void {
+  const dt = event.dataTransfer ?? null;
+  set(dt, DATA_KEYS.type, "board");
+  set(dt, DATA_KEYS.boardId, String(boardId));
+}
+
+export function getBoardDragData(event: DragEvent): BoardDragData | null {
+  const dt = event.dataTransfer ?? null;
+  if (get(dt, DATA_KEYS.type) !== "board") return null;
+
+  const boardId = getNumber(dt, DATA_KEYS.boardId);
+  if (boardId == null) return null;
+
+  return { boardId };
+}
+
+export function isBoardDragEvent(event: DragEvent): boolean {
+  return (
+    !!event.dataTransfer && get(event.dataTransfer, DATA_KEYS.type) === "board"
+  );
+}
+
 /* ==== DRAG & DROP UTILS — FILES ==== */
 
-/** Is the drag event a file drop? */
 export function isFileDragEvent(event: DragEvent): boolean {
-  // Cross-browser friendly: check case-insensitively
   return (
     !!event.dataTransfer &&
     Array.from(event.dataTransfer.types).some(

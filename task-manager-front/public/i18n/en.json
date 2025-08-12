@@ -144,6 +144,7 @@
     "deletingColumn": "Error deleting column.",
     "movingColumn": "Error moving column.",
     "loadingBoards": "Error loading boards.",
-    "deletingBoard": "Error while deleting board."
+    "deletingBoard": "Error while deleting board.",
+    "reorderingBoards": "Error reordering boards."
   }
 }

@@ -3,7 +3,7 @@ import { HttpClient } from "@angular/common/http";
 import { TranslocoService } from "@jsverse/transloco";
 import { type Board, type BoardId } from "../models/board.model";
 import { environment } from "../../environments/environment.local";
-import { Observable, tap } from "rxjs";
+import { Observable, tap, catchError, throwError } from "rxjs";
 import { AlertService } from "./alert.service";
 
 /** Boards CRUD + signal state. */
@@ -29,14 +29,14 @@ export class BoardService {
     });
   }
 
-  /** Create a board (optimistic append). */
+  /** Create a board. */
   createBoard(name: string): Observable<Board> {
     return this.http
       .post<Board>(this.apiUrl, { name })
       .pipe(tap((b) => this._boards.update((list) => [...list, b])));
   }
 
-  /** Delete a board (optimistic remove). */
+  /** Delete a board. */
   deleteBoard(id: BoardId): Observable<void> {
     return this.http
       .delete<void>(`${this.apiUrl}/${id}`)
@@ -47,7 +47,7 @@ export class BoardService {
       );
   }
 
-  /** Update a board's name (optimistic replace). */
+  /** Update a board's name. */
   updateBoard(id: BoardId, name: string): Observable<Board> {
     return this.http
       .put<Board>(`${this.apiUrl}/${id}`, { name })
@@ -58,5 +58,24 @@ export class BoardService {
           )
         )
       );
+  }
+
+  /** Optimistic reordering. */
+  reorderBoardsLocal(newOrder: Board[]): void {
+    const normalized = newOrder.map((b, idx) => ({ ...b, position: idx }));
+    this._boards.set(normalized);
+  }
+
+  /** Persist reordering to backend. */
+  reorderBoards(items: { id: number; position: number }[]): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/reorder`, items).pipe(
+      catchError((err) => {
+        this.alert.show(
+          "error",
+          this.i18n.translate("errors.reorderingBoards")
+        );
+        return throwError(() => err);
+      })
+    );
   }
 }

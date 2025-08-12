@@ -2,6 +2,7 @@ package com.inerio.taskmanager.controller;
 
 import com.inerio.taskmanager.dto.BoardDto;
 import com.inerio.taskmanager.dto.BoardMapperDto;
+import com.inerio.taskmanager.dto.BoardReorderDto;
 import com.inerio.taskmanager.model.Board;
 import com.inerio.taskmanager.service.BoardService;
 import org.springframework.http.ResponseEntity;
@@ -12,9 +13,6 @@ import java.util.List;
 
 /**
  * REST controller for managing Kanban boards.
- * <p>
- * Provides endpoints for board CRUD operations.
- * </p>
  */
 @RestController
 @RequestMapping("/api/v1/boards")
@@ -23,20 +21,11 @@ public class BoardController {
 
     private final BoardService boardService;
 
-    /**
-     * Constructor with dependency injection.
-     *
-     * @param boardService the service handling board logic
-     */
     public BoardController(BoardService boardService) {
         this.boardService = boardService;
     }
 
-    /**
-     * Get all boards, ordered by name.
-     *
-     * @return list of all boards as DTOs (no JPA cycles)
-     */
+    /** Get all boards, ordered by position (then name). */
     @GetMapping
     public ResponseEntity<List<BoardDto>> getAllBoards() {
         List<Board> boards = boardService.getAllBoards();
@@ -47,12 +36,6 @@ public class BoardController {
         return ResponseEntity.ok(boardDtos);
     }
 
-    /**
-     * Get a single board by its ID.
-     *
-     * @param id the board ID
-     * @return the board as DTO, or 404 if not found
-     */
     @GetMapping("/{id}")
     public ResponseEntity<BoardDto> getBoardById(@PathVariable Long id) {
         return boardService.getBoardById(id)
@@ -61,12 +44,6 @@ public class BoardController {
             .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Create a new board.
-     *
-     * @param board the board entity (only name required)
-     * @return the created board as DTO (201 Created)
-     */
     @PostMapping
     public ResponseEntity<BoardDto> createBoard(@RequestBody Board board) {
         Board created = boardService.createBoard(board);
@@ -74,13 +51,6 @@ public class BoardController {
         return ResponseEntity.created(URI.create("/api/v1/boards/" + created.getId())).body(dto);
     }
 
-    /**
-     * Update a board's name.
-     *
-     * @param id the board ID
-     * @param board the new board data (name)
-     * @return the updated board as DTO, or 404 if not found
-     */
     @PutMapping("/{id}")
     public ResponseEntity<BoardDto> updateBoard(@PathVariable Long id, @RequestBody Board board) {
         try {
@@ -93,11 +63,15 @@ public class BoardController {
     }
 
     /**
-     * Delete a board by ID.
-     *
-     * @param id the board ID
-     * @return 204 No Content if deleted, 404 if not found
+     * Reorder boards in bulk.
+     * Accepts a list of (id, position) and normalizes to 0..n-1.
      */
+    @PutMapping("/reorder")
+    public ResponseEntity<Void> reorderBoards(@RequestBody List<BoardReorderDto> items) {
+        boardService.reorderBoards(items);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBoard(@PathVariable Long id) {
         try {

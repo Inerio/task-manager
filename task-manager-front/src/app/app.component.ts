@@ -15,6 +15,8 @@ import { ThemeSwitcherComponent } from "./components/theme-switcher/theme-switch
 import { TemplatePickerComponent } from "./components/template-picker/template-picker.component";
 import { TemplatePickerService } from "./services/template-picker.service";
 import { applyBoardTemplate } from "./utils/board-templates";
+import { DragDropGlobalService } from "./services/drag-drop-global.service";
+import { getBoardDragData, setBoardDragData } from "./utils/drag-drop-utils";
 
 interface TempBoard {
   id: null;
@@ -46,6 +48,7 @@ export class AppComponent {
   private readonly kanbanColumnService = inject(KanbanColumnService);
   private readonly i18n = inject(TranslocoService);
   private readonly templatePicker = inject(TemplatePickerService);
+  private readonly dragDropGlobal = inject(DragDropGlobalService);
 
   readonly boards = this.boardService.boards;
   readonly selectedBoardId = signal<number | null>(null);
@@ -64,7 +67,11 @@ export class AppComponent {
   /** Footer year */
   readonly currentYear = new Date().getFullYear();
 
-  /** Displayed boards (computed: boards + temp new board if editing) */
+  /** DnD UI state for boards list */
+  readonly dragOverBoardIndex = signal<number | null>(null);
+  readonly dropEndOver = signal(false);
+
+  /** Displayed boards (boards + temp new board if editing) */
   readonly displayedBoards = computed(() => {
     if (this.editingBoardId() === null) return this.boards();
     return [
@@ -76,7 +83,6 @@ export class AppComponent {
   /**
    * Show "+ Add Board" only when under the limit.
    * Also hide it *during* the creation of the Nth board if N reaches the limit.
-   * (e.g., at 11 boards and creating one more -> hide while editing)
    */
   readonly canShowAdd = computed(() => {
     const count = this.boards().length;
@@ -126,7 +132,7 @@ export class AppComponent {
 
   /**
    * Save new board, then open the Template Picker.
-   * If a template is chosen, create its columns (localized) via the service.
+   * If a template is chosen, create its columns via the service.
    */
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
@@ -167,6 +173,87 @@ export class AppComponent {
   cancelBoardEdit(): void {
     this.editingBoardId.set(null);
     this.editingBoardValue.set("");
+  }
+
+  // ==== DnD: boards ====
+  onBoardDragStart(event: DragEvent, boardId: number): void {
+    if (this.editingBoardId() !== null) return;
+    setBoardDragData(event, boardId);
+    this.dragDropGlobal.startBoardDrag(boardId);
+  }
+
+  onBoardDragOver(event: DragEvent, targetIndex: number): void {
+    if (!this.dragDropGlobal.isBoardDrag()) return;
+    event.preventDefault();
+    if (this.dragOverBoardIndex() !== targetIndex) {
+      this.dragOverBoardIndex.set(targetIndex);
+    }
+  }
+
+  onBoardDragLeave(targetIndex?: number): void {
+    if (this.dragOverBoardIndex() === targetIndex) {
+      this.dragOverBoardIndex.set(null);
+    }
+  }
+
+  onBoardDrop(event: DragEvent, targetIndex: number): void {
+    if (!this.dragDropGlobal.isBoardDrag()) return;
+    const drag = getBoardDragData(event);
+    if (!drag) return;
+
+    event.preventDefault();
+    const current = [...this.boards()];
+    const fromIdx = current.findIndex((b) => b.id === drag.boardId);
+    if (fromIdx === -1) return;
+
+    const [moved] = current.splice(fromIdx, 1);
+    current.splice(targetIndex, 0, moved);
+
+    this.boardService.reorderBoardsLocal(current);
+
+    const payload = current.map((b, idx) => ({ id: b.id!, position: idx }));
+    this.boardService.reorderBoards(payload).subscribe({
+      error: () => this.boardService.loadBoards(),
+    });
+
+    this.dragOverBoardIndex.set(null);
+    this.dragDropGlobal.endDrag();
+  }
+
+  onBoardDragOverEnd(event: DragEvent): void {
+    if (!this.dragDropGlobal.isBoardDrag()) return;
+    event.preventDefault();
+    this.dropEndOver.set(true);
+  }
+
+  onBoardDragLeaveEnd(): void {
+    this.dropEndOver.set(false);
+  }
+
+  onBoardDropEnd(event: DragEvent): void {
+    if (!this.dragDropGlobal.isBoardDrag()) return;
+    const drag = getBoardDragData(event);
+    if (!drag) return;
+
+    event.preventDefault();
+    const current = [...this.boards()];
+    const fromIdx = current.findIndex((b) => b.id === drag.boardId);
+    if (fromIdx === -1) return;
+
+    const [moved] = current.splice(fromIdx, 1);
+    current.push(moved);
+
+    this.boardService.reorderBoardsLocal(current);
+    const payload = current.map((b, idx) => ({ id: b.id!, position: idx }));
+    this.boardService.reorderBoards(payload).subscribe({
+      complete: () => this.dropEndOver.set(false),
+      error: () => {
+        this.dropEndOver.set(false);
+        this.boardService.loadBoards();
+      },
+    });
+
+    this.dragDropGlobal.endDrag();
   }
 
   // ==== Board title main area ====

@@ -8,13 +8,16 @@ import { Injectable, signal } from "@angular/core";
  */
 @Injectable({ providedIn: "root" })
 export class DragDropGlobalService {
-  readonly currentDragType = signal<"task" | "column" | "file" | null>(null);
+  readonly currentDragType = signal<
+    "task" | "column" | "board" | "file" | null
+  >(null);
 
   readonly currentTaskDrag = signal<{
     taskId: number;
     columnId: number;
   } | null>(null);
   readonly currentColumnDrag = signal<{ columnId: number } | null>(null);
+  readonly currentBoardDrag = signal<{ boardId: number } | null>(null);
   readonly currentFileDrag = signal<boolean>(false);
 
   /** Last dropped elements (to trigger a visual pulse). */
@@ -28,7 +31,6 @@ export class DragDropGlobalService {
   readonly lastSavedTask = signal<{ id: number; token: number } | null>(null);
 
   constructor() {
-    // Clear any stale pulses on service init so initial renders don't pulse.
     setTimeout(() => {
       this.lastDroppedTask.set(null);
       this.lastDroppedColumn.set(null);
@@ -42,6 +44,7 @@ export class DragDropGlobalService {
     this.currentDragType.set("task");
     this.currentTaskDrag.set({ taskId, columnId });
     this.currentColumnDrag.set(null);
+    this.currentBoardDrag.set(null);
     this.currentFileDrag.set(false);
   }
 
@@ -49,6 +52,15 @@ export class DragDropGlobalService {
     this.currentDragType.set("column");
     this.currentColumnDrag.set({ columnId });
     this.currentTaskDrag.set(null);
+    this.currentBoardDrag.set(null);
+    this.currentFileDrag.set(false);
+  }
+
+  startBoardDrag(boardId: number): void {
+    this.currentDragType.set("board");
+    this.currentBoardDrag.set({ boardId });
+    this.currentTaskDrag.set(null);
+    this.currentColumnDrag.set(null);
     this.currentFileDrag.set(false);
   }
 
@@ -57,12 +69,14 @@ export class DragDropGlobalService {
     this.currentFileDrag.set(true);
     this.currentTaskDrag.set(null);
     this.currentColumnDrag.set(null);
+    this.currentBoardDrag.set(null);
   }
 
   endDrag(): void {
     this.currentDragType.set(null);
     this.currentTaskDrag.set(null);
     this.currentColumnDrag.set(null);
+    this.currentBoardDrag.set(null);
     this.currentFileDrag.set(false);
   }
 
@@ -72,17 +86,17 @@ export class DragDropGlobalService {
   isColumnDrag(): boolean {
     return this.currentDragType() === "column" && !!this.currentColumnDrag();
   }
+  isBoardDrag(): boolean {
+    return this.currentDragType() === "board" && !!this.currentBoardDrag();
+  }
   isFileDrag(): boolean {
     return this.currentDragType() === "file" && this.currentFileDrag();
   }
 
   // === Pulse markers (auto-expire to prevent stale pulses) ===
-
-  /** Markers to trigger a pulse on the dropped task. */
   markTaskDropped(id: number): void {
     const token = Date.now();
     this.lastDroppedTask.set({ id, token });
-    // Auto-clear after the animation window so fresh mounts don't re-pulse.
     setTimeout(() => {
       const cur = this.lastDroppedTask();
       if (cur && cur.id === id && cur.token === token) {
@@ -102,7 +116,6 @@ export class DragDropGlobalService {
     }, 1500);
   }
 
-  /** Pulse helpers for create/save */
   markTaskCreated(id: number): void {
     const token = Date.now();
     this.lastCreatedTask.set({ id, token });

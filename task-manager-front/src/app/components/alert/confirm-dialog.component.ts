@@ -34,4 +34,11 @@ export class ConfirmDialogComponent {
   onEsc(): void {
     if (this.visible()) this.cancel();
   }
+
+  @HostListener("document:keydown.enter", ["$event"])
+  onEnter(e: KeyboardEvent): void {
+    if (!this.visible()) return;
+    e.preventDefault();
+    this.confirm();
+  }
 }

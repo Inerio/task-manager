@@ -5,21 +5,7 @@
       + {{ "task.add" | transloco }}
     </button>
 
-    @if (showForm()) {
-    <div
-      class="task-form-wrapper"
-      (mousedown)="$event.stopPropagation()"
-      (click)="$event.stopPropagation()"
-    >
-      <app-task-form
-        [task]="{ kanbanColumnId: kanbanColumnId, title: '' }"
-        (save)="handleTaskFormSave($event)"
-        (cancel)="handleTaskFormCancel()"
-      ></app-task-form>
-    </div>
-    }
-
-    <!-- Always show a top dropzone when the board has any task -->
+    <!-- Top dropzone under the add button -->
     @if (hasAnyTask) {
     <div
       class="task-dropzone"
@@ -31,6 +17,18 @@
       aria-dropeffect="move"
     >
       <span>{{ "task.dropHere" | transloco }}</span>
+    </div>
+    } @if (showForm()) {
+    <div
+      class="task-form-wrapper"
+      (mousedown)="$event.stopPropagation()"
+      (click)="$event.stopPropagation()"
+    >
+      <app-task-form
+        [task]="{ kanbanColumnId: kanbanColumnId, title: '' }"
+        (save)="handleTaskFormSave($event)"
+        (cancel)="handleTaskFormCancel()"
+      ></app-task-form>
     </div>
     }
 

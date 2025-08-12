@@ -50,6 +50,9 @@ export class AppComponent {
   readonly boards = this.boardService.boards;
   readonly selectedBoardId = signal<number | null>(null);
 
+  /** Max number of boards allowed in the sidebar. */
+  readonly BOARD_LIMIT = 12;
+
   /** Inline add board state */
   readonly editingBoardId = signal<number | null>(null);
   readonly editingBoardValue = signal<string>("");
@@ -68,6 +71,18 @@ export class AppComponent {
       ...this.boards(),
       { id: null, name: this.editingBoardValue() } as TempBoard,
     ];
+  });
+
+  /**
+   * Show "+ Add Board" only when under the limit.
+   * Also hide it *during* the creation of the Nth board if N reaches the limit.
+   * (e.g., at 11 boards and creating one more -> hide while editing)
+   */
+  readonly canShowAdd = computed(() => {
+    const count = this.boards().length;
+    const isEditing = this.editingBoardId() !== null;
+    if (isEditing) return count + 1 < this.BOARD_LIMIT;
+    return count < this.BOARD_LIMIT;
   });
 
   constructor() {
@@ -91,6 +106,8 @@ export class AppComponent {
   }
 
   addBoard(): void {
+    if (this.boards().length >= this.BOARD_LIMIT) return;
+
     if (this.editingBoardId() === null) {
       this.editingBoardId.set(-1);
       this.editingBoardValue.set("");
@@ -114,6 +131,10 @@ export class AppComponent {
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
     if (!name) {
+      this.cancelBoardEdit();
+      return;
+    }
+    if (this.boards().length >= this.BOARD_LIMIT) {
       this.cancelBoardEdit();
       return;
     }

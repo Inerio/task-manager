@@ -44,6 +44,8 @@
       />
       } }
 
+      <!-- Keep the button visible while editing; hide only when limit reached -->
+      @if (canShowAdd()) {
       <button
         class="add-board-btn"
         (click)="addBoard()"
@@ -51,6 +53,7 @@
       >
         {{ "boards.add" | transloco }}
       </button>
+      }
     </nav>
   </aside>
 

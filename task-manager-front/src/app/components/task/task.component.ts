@@ -15,6 +15,7 @@ import {
   ElementRef,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
+import { toSignal } from "@angular/core/rxjs-interop";
 import { Task } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
 import { TaskService } from "../../services/task.service";
@@ -51,6 +52,11 @@ export class TaskComponent implements OnChanges {
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly uploadCfg = inject(UPLOAD_CONFIG);
   private readonly i18n = inject(TranslocoService);
+
+  /** React to Transloco language changes as a signal (hot reactivity). */
+  private readonly lang = toSignal(this.i18n.langChanges$, {
+    initialValue: this.i18n.getActiveLang(),
+  });
 
   readonly localTask: WritableSignal<Task> = signal({} as Task);
 
@@ -432,20 +438,59 @@ export class TaskComponent implements OnChanges {
     }
   }
 
-  /** Badge from due date (localized). */
+  // ===== DUE BADGE + DATE (language-reactive) =====
+
+  /** Parse YYYY-MM-DD as a *local* date (avoid TZ shifts). */
+  private parseLocalISO(iso: string): Date | null {
+    if (!iso) return null;
+    const [y, m, d] = iso.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    const dt = new Date(y, m - 1, d);
+    dt.setHours(0, 0, 0, 0);
+    return dt;
+  }
+
+  /** Localized badge text that recomputes when the language changes. */
   dueBadge = computed(() => {
-    const due = this.localTask().dueDate;
-    if (!due) return null;
-    const dueDate = new Date(due);
+    // Touch the language signal so this recomputes on language switch.
+    this.lang();
+
+    const dueRaw = this.localTask().dueDate;
+    if (!dueRaw) return null;
+
+    const dueDate = this.parseLocalISO(dueRaw);
+    if (!dueDate) return null;
+
     const now = new Date();
-    dueDate.setHours(0, 0, 0, 0);
     now.setHours(0, 0, 0, 0);
+
     const diffDays = Math.ceil(
       (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
+
     if (diffDays < 0) return this.i18n.translate("task.due.late");
     if (diffDays === 0) return this.i18n.translate("task.due.today");
     if (diffDays === 1) return this.i18n.translate("task.due.oneDay");
     return this.i18n.translate("task.due.nDays", { count: diffDays });
+  });
+
+  /** Localized due date text (en: month/day/year, fr: day/month/year). */
+  readonly formattedDueDate = computed(() => {
+    // Touch language so it recomputes on switch
+    const lang = (this.lang() as string) || "en";
+
+    const raw = this.localTask().dueDate;
+    if (!raw) return null;
+
+    const date = this.parseLocalISO(raw);
+    if (!date) return null;
+
+    const locale = lang.startsWith("fr") ? "fr-FR" : "en-US";
+    // Use short month + 2-digit day for compact badge row.
+    return new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    }).format(date);
   });
 }

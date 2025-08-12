@@ -50,8 +50,8 @@
       >
         {{ dueBadge() }}
       </span>
-      @if (localTask().dueDate) {
-      <span class="due-date">{{ localTask().dueDate }}</span>
+      @if (formattedDueDate()) {
+      <span class="due-date">{{ formattedDueDate() }}</span>
       }
     </div>
     <input

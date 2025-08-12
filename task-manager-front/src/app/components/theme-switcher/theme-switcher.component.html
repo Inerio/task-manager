@@ -8,8 +8,10 @@
     [class.active]="isLight()"
     [attr.aria-pressed]="isLight()"
     (click)="toggle()"
+    [attr.aria-label]="'theme.light' | transloco"
+    [attr.title]="'theme.light' | transloco"
   >
-    {{ "theme.light" | transloco }}
+    <span aria-hidden="true">☀️</span>
   </button>
 
   <button
@@ -17,7 +19,9 @@
     [class.active]="isDark()"
     [attr.aria-pressed]="isDark()"
     (click)="toggle()"
+    [attr.aria-label]="'theme.dark' | transloco"
+    [attr.title]="'theme.dark' | transloco"
   >
-    {{ "theme.dark" | transloco }}
+    <span aria-hidden="true">🌙</span>
   </button>
 </div>

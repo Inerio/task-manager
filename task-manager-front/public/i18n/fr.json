@@ -33,7 +33,6 @@
     "deleteAllTitle": "Suppression du tableau",
     "deleteAllConfirm": "Voulez-vous vraiment supprimer toutes les tâches de ce tableau ?",
     "columnsAria": "Colonnes Kanban",
-
     "columns": {
       "inbox": "Boîte de réception",
       "todo": "À faire",
@@ -44,7 +43,6 @@
       "ideas": "Idées",
       "review": "Relecture"
     },
-
     "templates": {
       "title": "Commencer avec un modèle ?",
       "subtitle": "Choisissez une disposition (1 à 5 colonnes). Vous pourrez renommer ensuite.",
@@ -58,7 +56,6 @@
       "t4Desc": "Boîte de réception, Aujourd’hui, Cette semaine puis Terminé.",
       "t5Desc": "Des Idées à Relecture puis Terminé."
     },
-
     "template": {
       "title": "Commencer avec un modèle ?",
       "message": "Souhaitez-vous un modèle simple avec 3 colonnes :\n {{todo}} • {{inProgress}} • {{done}}",
@@ -66,7 +63,6 @@
       "inProgress": "En cours",
       "done": "Terminé"
     },
-
     "column": {
       "delete": "Supprimer la colonne",
       "deleteConfirm": "Supprimer la colonne « {{name}} » et toutes ses tâches ?",
@@ -77,7 +73,8 @@
       "add": "Ajouter une colonne",
       "cancelAdd": "Annuler l’ajout",
       "editPlaceholder": "éditer"
-    }
+    },
+    "editTitleHint": "Cliquez pour modifier le titre du tableau"
   },
   "task": {
     "add": "Ajouter une tâche",

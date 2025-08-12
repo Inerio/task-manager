@@ -55,7 +55,12 @@
           aria-label="{{ 'boards.column.delete' | transloco }}"
           [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
         >
-          <img src="/svg/x.svg" alt="Close" width="17" height="17" />
+          <img
+            src="/svg/x.svg"
+            [attr.alt]="'boards.column.delete' | transloco"
+            width="17"
+            height="17"
+          />
         </button>
 
         @if (!isEditingTitle(kanbanColumn)) {
@@ -70,7 +75,11 @@
           @if (!kanbanColumn.name.trim()) {
           <span class="edit-title-placeholder">
             {{ "boards.column.editPlaceholder" | transloco }}
-            <img src="/svg/pencil.svg" alt="Edit" class="edit-icon" />
+            <img
+              src="/svg/pencil.svg"
+              [attr.alt]="'common.edit' | transloco"
+              class="edit-icon"
+            />
           </span>
           } @else {
           {{ kanbanColumn.name }}
@@ -99,7 +108,12 @@
           [attr.title]="'boards.column.deleteAll' | transloco"
           [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
         >
-          <img src="/svg/trash.svg" alt="Clear" width="19" height="19" />
+          <img
+            src="/svg/trash.svg"
+            [attr.alt]="'boards.column.deleteAll' | transloco"
+            width="19"
+            height="19"
+          />
         </button>
       </div>
 

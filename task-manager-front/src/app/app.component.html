@@ -65,7 +65,7 @@
           (click)="startSelectedBoardEdit()"
           (keydown.enter)="startSelectedBoardEdit()"
           (keydown.space)="startSelectedBoardEdit()"
-          title="Click to edit board title"
+          [attr.title]="'boards.editTitleHint' | transloco"
           style="cursor: pointer"
         >
           <span class="board-title-text">{{ selectedBoardName }}</span>
@@ -73,9 +73,14 @@
             class="styled-x-btn"
             [title]="'boards.delete' | transloco"
             (click)="deleteSelectedBoard(); $event.stopPropagation()"
-            aria-label="Delete board"
+            [attr.aria-label]="'boards.delete' | transloco"
           >
-            <img src="/svg/x.svg" alt="Delete" width="18" height="18" />
+            <img
+              src="/svg/x.svg"
+              [attr.alt]="'boards.delete' | transloco"
+              width="18"
+              height="18"
+            />
           </button>
         </h2>
         } @else {
@@ -101,7 +106,12 @@
         (click)="deleteAllTasks()"
         [title]="'boards.deleteAll' | transloco"
       >
-        <img src="/svg/trash.svg" alt="Delete all" width="19" height="19" />
+        <img
+          src="/svg/trash.svg"
+          [attr.alt]="'boards.deleteAll' | transloco"
+          width="19"
+          height="19"
+        />
         <span class="delete-all-label">{{
           "boards.deleteAll" | transloco
         }}</span>

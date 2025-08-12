@@ -21,6 +21,7 @@ import {
   setColumnDragData,
   isColumnDragEvent,
 } from "../../utils/drag-drop-utils";
+import { LoadingOverlayComponent } from "../loading-overlay/loading-overlay.component";
 
 /**
  * BoardComponent: top-level Kanban board with columns (drag/drop/order/edit).
@@ -30,7 +31,12 @@ import {
   standalone: true,
   templateUrl: "./board.component.html",
   styleUrls: ["./board.component.scss"],
-  imports: [CommonModule, TranslocoModule, KanbanColumnComponent],
+  imports: [
+    CommonModule,
+    TranslocoModule,
+    KanbanColumnComponent,
+    LoadingOverlayComponent,
+  ],
 })
 export class BoardComponent implements OnChanges {
   /** Board ID (signal-based, for reactivity). */

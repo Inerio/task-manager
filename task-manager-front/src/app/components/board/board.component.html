@@ -1,124 +1,129 @@
-<div
-  class="task-columns"
-  role="list"
-  [attr.aria-label]="'boards.columnsAria' | transloco"
-  [class.columns-reordering]="draggedKanbanColumnId() !== null"
->
-  @for (kanbanColumn of kanbanColumns(); track trackByColumnId($index,
-  kanbanColumn); let idx = $index) {
-  <div
-    class="column-draggable"
-    role="listitem"
-    [class.is-dragged]="draggedKanbanColumnId() === kanbanColumn.id"
-    [class.drag-over]="
-      dragOverIndex() === idx && draggedKanbanColumnId() !== null
-    "
-    [class.dropped-pulse]="columnPulseId() === kanbanColumn.id"
-    [class.editing]="isEditingTitle(kanbanColumn)"
-    (dragenter)="onColumnDragHover(idx, $event)"
-    (dragover)="onColumnDragHover(idx, $event)"
-    (drop)="onColumnDrop($event)"
-  >
-    @if (isEditingTitle(kanbanColumn) && isDraft(kanbanColumn)) {
-    <button
-      type="button"
-      class="cancel-edit-btn-top"
-      (mousedown)="cancelTitleEdit()"
-      [attr.title]="'boards.column.cancelAdd' | transloco"
-    >
-      ✖ {{ "boards.column.cancelAdd" | transloco }}
-    </button>
-    }
+<div class="board-scope">
+  <!-- Scoped spinner only for the board area -->
+  <app-loading-overlay [scope]="'board'"></app-loading-overlay>
 
+  <div
+    class="task-columns"
+    role="list"
+    [attr.aria-label]="'boards.columnsAria' | transloco"
+    [class.columns-reordering]="draggedKanbanColumnId() !== null"
+  >
+    @for (kanbanColumn of kanbanColumns(); track trackByColumnId($index,
+    kanbanColumn); let idx = $index) {
     <div
-      class="column-header"
-      [class.disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
-      draggable="true"
-      (dragstart)="onColumnDragStart(kanbanColumn.id!, idx, $event)"
+      class="column-draggable"
+      role="listitem"
+      [class.is-dragged]="draggedKanbanColumnId() === kanbanColumn.id"
+      [class.drag-over]="
+        dragOverIndex() === idx && draggedKanbanColumnId() !== null
+      "
+      [class.dropped-pulse]="columnPulseId() === kanbanColumn.id"
+      [class.editing]="isEditingTitle(kanbanColumn)"
       (dragenter)="onColumnDragHover(idx, $event)"
       (dragover)="onColumnDragHover(idx, $event)"
       (drop)="onColumnDrop($event)"
-      (dragend)="onColumnDragEnd()"
-      [attr.aria-grabbed]="
-        draggedKanbanColumnId() === kanbanColumn.id ? 'true' : 'false'
-      "
     >
+      @if (isEditingTitle(kanbanColumn) && isDraft(kanbanColumn)) {
       <button
         type="button"
-        class="btn-close-kanbanColumn styled-x-btn"
-        (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
-        [attr.title]="'boards.column.delete' | transloco"
-        aria-label="{{ 'boards.column.delete' | transloco }}"
-        [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
+        class="cancel-edit-btn-top"
+        (mousedown)="cancelTitleEdit()"
+        [attr.title]="'boards.column.cancelAdd' | transloco"
       >
-        <img src="/svg/x.svg" alt="Close" width="17" height="17" />
+        ✖ {{ "boards.column.cancelAdd" | transloco }}
       </button>
-
-      @if (!isEditingTitle(kanbanColumn)) {
-      <span
-        class="kanbanColumn-title"
-        (click)="startEditTitle(kanbanColumn)"
-        tabindex="0"
-        (keydown.enter)="startEditTitle(kanbanColumn)"
-        (keydown.space)="startEditTitle(kanbanColumn)"
-        [attr.title]="'boards.column.rename' | transloco"
-      >
-        @if (!kanbanColumn.name.trim()) {
-        <span class="edit-title-placeholder">
-          {{ "boards.column.editPlaceholder" | transloco }}
-          <img src="/svg/pencil.svg" alt="Edit" class="edit-icon" />
-        </span>
-        } @else {
-        {{ kanbanColumn.name }}
-        }
-      </span>
-      } @else {
-      <input
-        id="edit-kanbanColumn-title-{{ kanbanColumn.id ?? 'draft' }}"
-        class="kanbanColumn-title-input"
-        type="text"
-        [value]="editingTitleValue()"
-        (input)="onEditTitleInput($event)"
-        (blur)="saveTitleEdit(kanbanColumn)"
-        (keydown.enter)="saveTitleEdit(kanbanColumn)"
-        (keydown.escape)="cancelTitleEdit()"
-        maxlength="60"
-        required
-        [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
-      />
       }
 
-      <button
-        type="button"
-        class="btn-delete-column styled-trash-btn"
-        (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
-        [attr.title]="'boards.column.deleteAll' | transloco"
-        [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
+      <div
+        class="column-header"
+        [class.disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
+        draggable="true"
+        (dragstart)="onColumnDragStart(kanbanColumn.id!, idx, $event)"
+        (dragenter)="onColumnDragHover(idx, $event)"
+        (dragover)="onColumnDragHover(idx, $event)"
+        (drop)="onColumnDrop($event)"
+        (dragend)="onColumnDragEnd()"
+        [attr.aria-grabbed]="
+          draggedKanbanColumnId() === kanbanColumn.id ? 'true' : 'false'
+        "
       >
-        <img src="/svg/trash.svg" alt="Clear" width="19" height="19" />
-      </button>
+        <button
+          type="button"
+          class="btn-close-kanbanColumn styled-x-btn"
+          (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
+          [attr.title]="'boards.column.delete' | transloco"
+          aria-label="{{ 'boards.column.delete' | transloco }}"
+          [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
+        >
+          <img src="/svg/x.svg" alt="Close" width="17" height="17" />
+        </button>
+
+        @if (!isEditingTitle(kanbanColumn)) {
+        <span
+          class="kanbanColumn-title"
+          (click)="startEditTitle(kanbanColumn)"
+          tabindex="0"
+          (keydown.enter)="startEditTitle(kanbanColumn)"
+          (keydown.space)="startEditTitle(kanbanColumn)"
+          [attr.title]="'boards.column.rename' | transloco"
+        >
+          @if (!kanbanColumn.name.trim()) {
+          <span class="edit-title-placeholder">
+            {{ "boards.column.editPlaceholder" | transloco }}
+            <img src="/svg/pencil.svg" alt="Edit" class="edit-icon" />
+          </span>
+          } @else {
+          {{ kanbanColumn.name }}
+          }
+        </span>
+        } @else {
+        <input
+          id="edit-kanbanColumn-title-{{ kanbanColumn.id ?? 'draft' }}"
+          class="kanbanColumn-title-input"
+          type="text"
+          [value]="editingTitleValue()"
+          (input)="onEditTitleInput($event)"
+          (blur)="saveTitleEdit(kanbanColumn)"
+          (keydown.enter)="saveTitleEdit(kanbanColumn)"
+          (keydown.escape)="cancelTitleEdit()"
+          maxlength="60"
+          required
+          [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
+        />
+        }
+
+        <button
+          type="button"
+          class="btn-delete-column styled-trash-btn"
+          (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
+          [attr.title]="'boards.column.deleteAll' | transloco"
+          [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
+        >
+          <img src="/svg/trash.svg" alt="Clear" width="19" height="19" />
+        </button>
+      </div>
+
+      <app-kanban-column
+        [kanbanColumnId]="kanbanColumn.id!"
+        [title]="kanbanColumn.name"
+        [hasAnyTask]="hasAnyTask()"
+      ></app-kanban-column>
+
+      @if (!!editingColumn() && !isEditingTitle(kanbanColumn)) {
+      <div class="column-blocker"></div>
+      }
     </div>
-
-    <app-kanban-column
-      [kanbanColumnId]="kanbanColumn.id!"
-      [title]="kanbanColumn.name"
-      [hasAnyTask]="hasAnyTask()"
-    ></app-kanban-column>
-
-    @if (!!editingColumn() && !isEditingTitle(kanbanColumn)) {
-    <div class="column-blocker"></div>
+    } @if (kanbanColumns().length < MAX_KANBANCOLUMNS) {
+    <button
+      type="button"
+      class="add-kanbanColumn-fab-inline"
+      [disabled]="kanbanColumns().length >= MAX_KANBANCOLUMNS"
+      (click)="addKanbanColumnAndEdit()"
+      [attr.title]="'boards.column.add' | transloco"
+      aria-label="{{ 'boards.column.add' | transloco }}"
+    >
+      +
+    </button>
     }
   </div>
-  } @if (kanbanColumns().length < MAX_KANBANCOLUMNS) {
-  <button
-    type="button"
-    class="add-kanbanColumn-fab-inline"
-    [disabled]="kanbanColumns().length >= MAX_KANBANCOLUMNS"
-    (click)="addKanbanColumnAndEdit()"
-    [attr.title]="'boards.column.add' | transloco"
-    aria-label="{{ 'boards.column.add' | transloco }}"
-  >
-    +
-  </button>
-  }
 </div>

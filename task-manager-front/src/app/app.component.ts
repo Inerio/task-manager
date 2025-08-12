@@ -228,7 +228,8 @@ export class AppComponent {
 
     this.taskService
       .deleteAllTasksByBoardId(selectedBoard.id)
-      .then(() => this.taskService.loadTasks())
+      // Force refresh to bypass the "already loaded" guard.
+      .then(() => this.taskService.loadTasks({ force: true }))
       .catch(() =>
         alert(this.i18n.translate("errors.deletingAllTasksForBoard"))
       );

@@ -1,6 +1,7 @@
 @if (isLoading()) {
 <div
   class="loading-overlay"
+  [class.inline]="!!scope"
   role="status"
   aria-live="polite"
   [attr.aria-label]="'common.loading' | transloco"

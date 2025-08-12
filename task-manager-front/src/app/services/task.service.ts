@@ -20,20 +20,32 @@ export class TaskService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrl + "/tasks";
   private readonly alert = inject(AlertService);
-  private readonly loading = inject(LoadingService);
   private readonly i18n = inject(TranslocoService);
+  private readonly loading = inject(LoadingService);
 
-  /** All tasks loaded from backend (SSOT). */
+  /** All tasks loaded from backend. */
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
   /** Readonly tasks signal for consumers. */
   readonly tasks: Signal<Task[]> = computed(() => this.tasksSignal());
 
+  /** Load barrier to avoid refetching on every board switch. */
+  private readonly _loaded = signal(false);
+  readonly loaded = computed(() => this._loaded());
+
   // === Fetch ===
 
-  /** Load all tasks. Shown under the global loading overlay. */
-  loadTasks(): void {
-    this.loading.wrap$(this.http.get<Task[]>(this.apiUrl)).subscribe({
-      next: (data) => this.tasksSignal.set(data ?? []),
+  /**
+   * Load all tasks with a scoped overlay ("board").
+   * Pass { force: true } to bypass the "already loaded" guard.
+   */
+  loadTasks(options?: { force?: boolean }): void {
+    if (!options?.force && this._loaded()) return;
+
+    this.loading.wrap$(this.http.get<Task[]>(this.apiUrl), "board").subscribe({
+      next: (data) => {
+        this.tasksSignal.set(data ?? []);
+        this._loaded.set(true);
+      },
       error: () =>
         this.alert.show("error", this.i18n.translate("errors.loadingTasks")),
     });
@@ -42,7 +54,9 @@ export class TaskService {
   /** Derived signal of a column's tasks. */
   getTasksByKanbanColumnId(kanbanColumnId: number): Signal<Task[]> {
     return computed(() =>
-      this.tasksSignal().filter((t) => t.kanbanColumnId === kanbanColumnId)
+      this.tasksSignal().filter(
+        (task) => task.kanbanColumnId === kanbanColumnId
+      )
     );
   }
 
@@ -133,7 +147,8 @@ export class TaskService {
       await firstValueFrom(
         this.http.delete<void>(`${this.apiUrl}/board/${boardId}`)
       );
-      this.loadTasks();
+      // Force a refresh because we might have cached tasks.
+      this.loadTasks({ force: true });
     } catch (err) {
       this.alert.show(
         "error",

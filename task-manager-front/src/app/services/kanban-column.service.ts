@@ -15,9 +15,8 @@ import { LoadingService } from "./loading.service";
 export class KanbanColumnService {
   private readonly http = inject(HttpClient);
   private readonly alert = inject(AlertService);
-  /** Renamed to avoid clashing with the `loading` computed signal below. */
-  private readonly globalLoading = inject(LoadingService);
   private readonly i18n = inject(TranslocoService);
+  private readonly loadingSvc = inject(LoadingService);
 
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
   readonly kanbanColumns = computed(() => this._kanbanColumns());
@@ -26,7 +25,7 @@ export class KanbanColumnService {
   /** Local loading state used by components (e.g. to disable UI). */
   readonly loading = computed(() => this._loading());
 
-  /** Load columns for a board (drives both local loading + global overlay). */
+  /** Load columns for a board (scoped overlay: "board"). */
   loadKanbanColumns(boardId: number): void {
     if (!boardId) {
       this._kanbanColumns.set([]);
@@ -35,14 +34,19 @@ export class KanbanColumnService {
     this._loading.set(true);
 
     const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns`;
-    this.globalLoading.wrap$(this.http.get<KanbanColumn[]>(url)).subscribe({
-      next: (cols) => this._kanbanColumns.set(cols ?? []),
-      error: () => {
-        this._kanbanColumns.set([]);
-        this.alert.show("error", this.i18n.translate("errors.loadingColumns"));
-      },
-      complete: () => this._loading.set(false),
-    });
+    this.loadingSvc
+      .wrap$(this.http.get<KanbanColumn[]>(url), "board")
+      .subscribe({
+        next: (cols) => this._kanbanColumns.set(cols ?? []),
+        error: () => {
+          this._kanbanColumns.set([]);
+          this.alert.show(
+            "error",
+            this.i18n.translate("errors.loadingColumns")
+          );
+        },
+        complete: () => this._loading.set(false),
+      });
   }
 
   /** Create a column; updates local signal on success. */
@@ -141,7 +145,7 @@ export class KanbanColumnService {
     return draft;
   }
 
-  /** Replace a reference in the array (used to swap draft with created). */
+  /** Replace a reference in the array */
   replaceRef(from: KanbanColumn, to: KanbanColumn): void {
     this._kanbanColumns.update((arr) => {
       const idx = arr.indexOf(from);

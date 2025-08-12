@@ -1,3 +1,9 @@
+/* Container for the inline (scoped) loading overlay */
+.board-scope {
+  position: relative; /* required so the inline overlay can anchor here */
+  min-height: 220px; /* keep enough room to show the spinner between loads */
+}
+
 .task-columns {
   display: flex;
   align-items: flex-start;
@@ -235,7 +241,6 @@
   }
 }
 
-/* Apply the pulse on the column container for a light, consistent glow */
 .column-draggable.dropped-pulse .task-kanbanColumn {
   animation: dropPulseColumn 900ms ease-out;
 }

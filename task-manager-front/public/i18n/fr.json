@@ -35,7 +35,7 @@
     "columnsAria": "Colonnes Kanban",
     "template": {
       "title": "Commencer avec un modèle ?",
-      "message": "Souhaitez-vous un modèle simple avec 3 colonnes :\n• « {{todo}} »\n• « {{inProgress}} »\n• « {{done}} »",
+      "message": "Souhaitez-vous un modèle simple avec 3 colonnes :\n {{todo}} • {{inProgress}} • {{done}}",
       "todo": "À faire",
       "inProgress": "En cours",
       "done": "Terminé"

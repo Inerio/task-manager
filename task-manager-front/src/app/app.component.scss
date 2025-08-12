@@ -219,7 +219,8 @@ body {
     cursor: pointer;
     transition: background 0.16s, box-shadow 0.15s, color 0.16s;
     min-width: 188px;
-    max-width: 260px;
+    width: max-content;
+    max-width: none;
     white-space: nowrap;
 
     &:hover:enabled,

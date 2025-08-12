@@ -35,7 +35,7 @@
     "columnsAria": "Kanban columns",
     "template": {
       "title": "Start with a template?",
-      "message": "Would you like a simple Kanban template with 3 columns:\n• \"{{todo}}\"\n• \"{{inProgress}}\"\n• \"{{done}}\"",
+      "message": "Would you like a simple Kanban template with 3 columns:\n {{todo}} • {{inProgress}} • {{done}}",
       "todo": "To do",
       "inProgress": "In progress",
       "done": "Done"

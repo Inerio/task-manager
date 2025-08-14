@@ -7,6 +7,7 @@ import {
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
+import { toSignal } from "@angular/core/rxjs-interop";
 import { TemplatePickerService } from "../../services/template-picker.service";
 import {
   BOARD_TEMPLATES,
@@ -27,9 +28,15 @@ export class TemplatePickerComponent {
 
   readonly visible = computed(() => this.svc.state().visible);
 
+  // Make language changes a reactive dependency so the template cards re-translate
+  private readonly currentLang = toSignal(this.i18n.langChanges$, {
+    initialValue: this.i18n.getActiveLang(),
+  });
+
   /** Translate columns for preview on-the-fly when language changes. */
-  readonly templates = computed(() =>
-    BOARD_TEMPLATES.map((t) => {
+  readonly templates = computed(() => {
+    this.currentLang();
+    return BOARD_TEMPLATES.map((t) => {
       const cols = t.columns.map((key) =>
         this.i18n.translate(`boards.columns.${key}`)
       );
@@ -41,8 +48,8 @@ export class TemplatePickerComponent {
             });
       const desc = t.descKey ? this.i18n.translate(t.descKey) : "";
       return { id: t.id, title, cols, desc };
-    })
-  );
+    });
+  });
 
   choose(id: BoardTemplateId) {
     this.svc.choose(id);

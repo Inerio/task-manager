@@ -9,6 +9,7 @@ import {
   withInterceptorsFromDi,
 } from "@angular/common/http";
 import { provideUploadConfig } from "./tokens/upload.config";
+import { environment } from "../environments/environment.local";
 
 import { provideTransloco } from "@jsverse/transloco";
 import { AppTranslocoLoader } from "./transloco.loader";
@@ -17,6 +18,16 @@ import { anonIdInterceptor } from "./core/interceptors/anon-id.interceptor";
 // Read saved language early to avoid initial flicker on bootstrap.
 const savedLang =
   (localStorage.getItem("translocoLang") as "en" | "fr") || "en";
+
+/** Build per-env upload overrides only when defined. */
+const uploadOverrides = {
+  ...(environment.uploadAcceptTypes
+    ? { acceptTypes: environment.uploadAcceptTypes }
+    : {}),
+  ...(typeof environment.uploadMaxBytes === "number"
+    ? { maxSize: environment.uploadMaxBytes }
+    : {}),
+};
 
 /**
  * Global application configuration:
@@ -37,7 +48,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptorsFromDi()
     ),
     provideZoneChangeDetection({ eventCoalescing: true, runCoalescing: true }),
-    provideUploadConfig(),
+    provideUploadConfig(uploadOverrides),
 
     provideTransloco({
       config: {

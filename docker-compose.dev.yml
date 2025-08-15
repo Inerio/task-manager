@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: Inerio
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: TaskManagerDB
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Inerio -d TaskManagerDB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./task-manager-back
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/TaskManagerDB
+      SPRING_DATASOURCE_USERNAME: Inerio
+      SPRING_DATASOURCE_PASSWORD: 1234
+      APP_UPLOAD_DIR: /data/uploads
+      CORS_ALLOWED_ORIGINS: http://localhost:8081,http://localhost:4200
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - api_uploads:/data/uploads
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: ./task-manager-front
+      dockerfile: Dockerfile
+      args:
+        BUILD_CONFIG: development # environment.local.ts, servi via Nginx (prod-like)
+    depends_on:
+      - api
+    ports:
+      - "8081:80"
+
+volumes:
+  db_data:
+  api_uploads:

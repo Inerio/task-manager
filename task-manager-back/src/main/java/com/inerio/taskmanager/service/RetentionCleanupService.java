@@ -42,7 +42,7 @@ public class RetentionCleanupService {
      * deletes all their boards (including attachment folders) and then removes the account.
      * </p>
      */
-    @Scheduled(cron = "0 0 3 * * *")
+    @Scheduled(cron = "0 0 3 * * *", zone = "Europe/Paris")
     public void cleanupInactiveAccounts() {
         Instant cutoff = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
         List<UserAccount> stale = userAccountRepository.findByLastActiveAtBefore(cutoff);

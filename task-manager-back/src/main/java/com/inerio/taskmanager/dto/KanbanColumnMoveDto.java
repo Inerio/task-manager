@@ -1,33 +1,28 @@
 package com.inerio.taskmanager.dto;
 
 /**
- * Data Transfer Object for moving (reordering) a Kanban column.
+ * DTO representing a Kanban column move (reorder) request.
  * <p>
- * Used in the drag &amp; drop operation for columns, typically via /api/v1/columns/move.
+ * Used by the API to perform drag-and-drop reordering, e.g.
+ * <code>PUT /api/v1/boards/{boardId}/kanbanColumns/move</code>.
  * </p>
  */
 public class KanbanColumnMoveDto {
 
-    /**
-     * The ID of the column  to move.
-     */
+    /** Identifier of the column to move. */
     private Long kanbanColumnId;
 
-    /**
-     * The new position (index) for the column after moving (1-based or 0-based, according to your backend logic).
-     */
+    /** Target position for the column (1-based index). */
     private int targetPosition;
 
-    /**
-     * Default constructor required for Jackson deserialization.
-     */
-    public KanbanColumnMoveDto() {}
+    /** Default constructor for serialization/deserialization. */
+    public KanbanColumnMoveDto() { }
 
     /**
-     * All-args constructor for explicit instantiation.
+     * Creates a new move request.
      *
-     * @param kanbanColumnId         the ID of the column to move
-     * @param targetPosition the target position to move the column to
+     * @param kanbanColumnId the ID of the column to move
+     * @param targetPosition the 1-based position to move the column to
      */
     public KanbanColumnMoveDto(Long kanbanColumnId, int targetPosition) {
         this.kanbanColumnId = kanbanColumnId;
@@ -35,7 +30,7 @@ public class KanbanColumnMoveDto {
     }
 
     /**
-     * Gets the ID of the column to move.
+     * Returns the ID of the column to move.
      *
      * @return the column ID
      */
@@ -53,18 +48,18 @@ public class KanbanColumnMoveDto {
     }
 
     /**
-     * Gets the target position for the column.
+     * Returns the target position (1-based).
      *
-     * @return the target position (index)
+     * @return the target position
      */
     public int getTargetPosition() {
         return targetPosition;
     }
 
     /**
-     * Sets the target position for the column.
+     * Sets the target position (1-based).
      *
-     * @param targetPosition the target position (index)
+     * @param targetPosition the position to move the column to
      */
     public void setTargetPosition(int targetPosition) {
         this.targetPosition = targetPosition;

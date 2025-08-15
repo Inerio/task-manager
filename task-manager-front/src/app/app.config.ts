@@ -5,12 +5,14 @@ import {
 } from "@angular/core";
 import {
   provideHttpClient,
+  withInterceptors,
   withInterceptorsFromDi,
 } from "@angular/common/http";
 import { provideUploadConfig } from "./tokens/upload.config";
 
 import { provideTransloco } from "@jsverse/transloco";
 import { AppTranslocoLoader } from "./transloco.loader";
+import { anonIdInterceptor } from "./core/interceptors/anon-id.interceptor";
 
 // Read saved language early to avoid initial flicker on bootstrap.
 const savedLang =
@@ -30,7 +32,10 @@ const savedLang =
  */
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClient(
+      withInterceptors([anonIdInterceptor]),
+      withInterceptorsFromDi()
+    ),
     provideZoneChangeDetection({ eventCoalescing: true, runCoalescing: true }),
     provideUploadConfig(),
 

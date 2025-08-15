@@ -5,198 +5,201 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Data Transfer Object for Task.
- * <p>
- * Used for exchanging Task data between frontend (Angular) and backend (Spring Boot) via the API.
- * Contains all fields relevant for Kanban board display and logic.
- * </p>
- *
- * <ul>
- *   <li>Immutable ID (nullable on create, filled on update/fetch)</li>
- *   <li>Column position management for drag &amp; drop (position)</li>
- *   <li>Reference to parent column by ID (kanbanColumnId)</li>
- *   <li>Attachment filenames for file upload/download</li>
- *   <li>Timestamps for auditing/UX</li>
- * </ul>
- *
- * <p>
- * This class is pure DTO: no business logic, only data structure.
- * </p>
+ * DTO representing a Task used in API requests and responses.
+ * Carries core fields for Kanban display, editing, and attachment handling.
  */
 public class TaskDto {
 
-	/**
-	 * Default constructor.
-	 * <p>
-	 * Required for frameworks and serialization.
-	 * </p>
-	 */
-	public TaskDto() {}
-	
-    /**
-     * Task unique identifier.
-     * <p>
-     * May be null for creation requests.
-     * </p>
-     */
+    /** Unique identifier; may be {@code null} on creation. */
     private Long id;
 
-    /**
-     * Title of the task (required, not blank).
-     */
+    /** Task title. */
     private String title;
 
-    /**
-     * Optional description for the task.
-     */
+    /** Optional task description. */
     private String description;
 
-    /**
-     * Completion status (true if completed).
-     */
+    /** Completion flag. */
     private boolean completed;
 
-    /**
-     * ID of the parent KanbanColumn (Kanban column).
-     * <p>
-     * Required for all create/update requests.
-     * </p>
-     */
+    /** ID of the parent Kanban column. */
     private Long kanbanColumnId;
 
-    /**
-     * Persistent index/position of this task in its column (for drag &amp; drop).
-     * <p>
-     * Lower values are higher in the column.
-     * </p>
-     */
+    /** Zero-based position within the column. */
     private int position;
 
-    /**
-     * Timestamp for when the task was created (set by backend).
-     */
+    /** Creation timestamp (set by the backend). */
     private LocalDateTime creationDate;
 
-    /**
-     * Optional due date for the task.
-     */
+    /** Optional due date. */
     private LocalDate dueDate;
 
-    /**
-     * List of filenames for attachments (uploaded files).
-     */
+    /** Attachment filenames associated with the task. */
     private List<String> attachments;
 
-    // ===========================
-    //   GETTERS & SETTERS
-    // ===========================
+    /** Default constructor required for serialization frameworks. */
+    public TaskDto() {
+    }
 
     /**
-     * Gets the task ID.
-     * @return the task ID, or null if not yet persisted
+     * Returns the task ID.
+     *
+     * @return task ID, or {@code null} if not yet persisted
      */
-    public Long getId() { return id; }
+    public Long getId() {
+        return id;
+    }
 
     /**
      * Sets the task ID.
-     * @param id the unique identifier, can be null for new tasks
+     *
+     * @param id unique identifier; may be {@code null} on creation
      */
-    public void setId(Long id) { this.id = id; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     /**
-     * Gets the task title.
-     * @return the title (never null)
+     * Returns the task title.
+     *
+     * @return title
      */
-    public String getTitle() { return title; }
+    public String getTitle() {
+        return title;
+    }
 
     /**
      * Sets the task title.
-     * @param title the new task title (must not be null)
+     *
+     * @param title task title
      */
-    public void setTitle(String title) { this.title = title; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
     /**
-     * Gets the task description.
-     * @return the description (nullable)
+     * Returns the task description.
+     *
+     * @return description, or {@code null} if not set
      */
-    public String getDescription() { return description; }
+    public String getDescription() {
+        return description;
+    }
 
     /**
      * Sets the task description.
-     * @param description the new description (optional)
+     *
+     * @param description task description (nullable)
      */
-    public void setDescription(String description) { this.description = description; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
     /**
-     * Gets the completion status.
-     * @return true if the task is completed
+     * Indicates whether the task is completed.
+     *
+     * @return {@code true} if completed; otherwise {@code false}
      */
-    public boolean isCompleted() { return completed; }
+    public boolean isCompleted() {
+        return completed;
+    }
 
     /**
-     * Sets the completion status.
-     * @param completed true if the task is completed, false otherwise
+     * Sets the completion flag.
+     *
+     * @param completed {@code true} if completed; otherwise {@code false}
      */
-    public void setCompleted(boolean completed) { this.completed = completed; }
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
+    }
 
     /**
-     * Gets the parent column ID.
-     * @return the KanbanColumn (column) ID
+     * Returns the parent column ID.
+     *
+     * @return Kanban column ID
      */
-    public Long getKanbanColumnId() { return kanbanColumnId; }
+    public Long getKanbanColumnId() {
+        return kanbanColumnId;
+    }
 
     /**
      * Sets the parent column ID.
-     * @param kanbanColumnId the ID of the parent KanbanColumn (column)
+     *
+     * @param kanbanColumnId ID of the parent Kanban column
      */
-    public void setKanbanColumnId(Long kanbanColumnId) { this.kanbanColumnId = kanbanColumnId; }
+    public void setKanbanColumnId(Long kanbanColumnId) {
+        this.kanbanColumnId = kanbanColumnId;
+    }
 
     /**
-     * Gets the position of the task in its column.
-     * @return the position (index)
+     * Returns the task position within its column.
+     *
+     * @return zero-based position
      */
-    public int getPosition() { return position; }
+    public int getPosition() {
+        return position;
+    }
 
     /**
-     * Sets the position of the task in its column.
-     * @param position the index/position for drag &amp; drop
+     * Sets the task position within its column.
+     *
+     * @param position zero-based position
      */
-    public void setPosition(int position) { this.position = position; }
+    public void setPosition(int position) {
+        this.position = position;
+    }
 
     /**
-     * Gets the creation timestamp.
-     * @return the creation date/time
+     * Returns the creation timestamp.
+     *
+     * @return creation date/time
      */
-    public LocalDateTime getCreationDate() { return creationDate; }
+    public LocalDateTime getCreationDate() {
+        return creationDate;
+    }
 
     /**
      * Sets the creation timestamp.
-     * @param creationDate the creation date/time (set by backend)
+     *
+     * @param creationDate creation date/time (backend-managed)
      */
-    public void setCreationDate(LocalDateTime creationDate) { this.creationDate = creationDate; }
+    public void setCreationDate(LocalDateTime creationDate) {
+        this.creationDate = creationDate;
+    }
 
     /**
-     * Gets the optional due date.
-     * @return the due date, or null if not set
+     * Returns the due date.
+     *
+     * @return due date, or {@code null} if not set
      */
-    public LocalDate getDueDate() { return dueDate; }
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
 
     /**
-     * Sets the optional due date.
-     * @param dueDate the due date (nullable)
+     * Sets the due date.
+     *
+     * @param dueDate due date (nullable)
      */
-    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
 
     /**
-     * Gets the list of attachment filenames.
-     * @return list of filenames, can be empty but never null
+     * Returns attachment filenames.
+     *
+     * @return list of filenames; may be empty
      */
-    public List<String> getAttachments() { return attachments; }
+    public List<String> getAttachments() {
+        return attachments;
+    }
 
     /**
-     * Sets the list of attachment filenames.
-     * @param attachments list of filenames for uploaded files
+     * Sets attachment filenames.
+     *
+     * @param attachments list of filenames
      */
-    public void setAttachments(List<String> attachments) { this.attachments = attachments; }
-
+    public void setAttachments(List<String> attachments) {
+        this.attachments = attachments;
+    }
 }

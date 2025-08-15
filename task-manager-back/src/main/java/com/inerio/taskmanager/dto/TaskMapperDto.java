@@ -1,31 +1,20 @@
 package com.inerio.taskmanager.dto;
 
-import com.inerio.taskmanager.model.Task;
 import com.inerio.taskmanager.model.KanbanColumn;
+import com.inerio.taskmanager.model.Task;
 
 /**
- * Utility class for converting between {@link Task} entity and {@link TaskDto}.
- * <p>
- * This class contains only static mapping methods (Entity &lt;-&gt; DTO) to ensure clean
- * separation between database models and objects exchanged with the frontend (Angular).
- * </p>
- *
- * <ul>
- *     <li>toDto: Converts an entity to its DTO for API responses</li>
- *     <li>toEntity: Creates a Task entity from a DTO and its parent column</li>
- * </ul>
- *
- * <p>
- * No state or business logic should be added here.
- * </p>
+ * Mapper for converting between {@link Task} entities and {@link TaskDto} objects.
+ * Provides static methods only and is not intended to be instantiated.
  */
-public class TaskMapperDto {
+public final class TaskMapperDto {
 
     /**
-     * Converts a {@link Task} entity to a {@link TaskDto} for API exchange.
+     * Converts a {@link Task} entity to a {@link TaskDto}.
      *
-     * @param task The entity to convert (must not be null)
-     * @return The corresponding TaskDto (never null)
+     * @param task the entity to convert; must not be {@code null}
+     * @return the corresponding DTO
+     * @throws IllegalArgumentException if {@code task} is {@code null}
      */
     public static TaskDto toDto(Task task) {
         if (task == null) {
@@ -45,14 +34,15 @@ public class TaskMapperDto {
     }
 
     /**
-     * Converts a {@link TaskDto} and its parent {@link KanbanColumn} to a new {@link Task} entity.
+     * Creates a new {@link Task} entity from a {@link TaskDto} and its parent {@link KanbanColumn}.
      * <p>
-     * <b>Note:</b> creationDate and attachments are managed elsewhere (not set here).
+     * Note: {@code creationDate} and {@code attachments} are managed elsewhere and are not set here.
      * </p>
      *
-     * @param dto  The TaskDto to convert (must not be null)
-     * @param kanbanColumn The parent KanbanColumn entity (must not be null)
-     * @return A new Task entity populated from the DTO
+     * @param dto the source DTO; must not be {@code null}
+     * @param kanbanColumn the parent column; must not be {@code null}
+     * @return a new {@link Task} populated from the DTO
+     * @throws IllegalArgumentException if {@code dto} or {@code kanbanColumn} is {@code null}
      */
     public static Task toEntity(TaskDto dto, KanbanColumn kanbanColumn) {
         if (dto == null) {
@@ -71,6 +61,7 @@ public class TaskMapperDto {
         return task;
     }
 
-    // Private constructor to prevent instantiation (utility class)
-    private TaskMapperDto() {}
+    private TaskMapperDto() {
+        // Utility class; prevent instantiation.
+    }
 }

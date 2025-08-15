@@ -2,62 +2,64 @@ package com.inerio.taskmanager.repository;
 
 import com.inerio.taskmanager.model.Board;
 import com.inerio.taskmanager.model.KanbanColumn;
-import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
  * Spring Data JPA repository for {@link KanbanColumn} entities.
  * <p>
- * Used for CRUD operations and custom queries on Kanban board columns (KanbanColumns).
+ * Provides position-aware lookups within a board and a fast ownership check
+ * used to enforce per-user data scoping.
  * </p>
- *
- * <ul>
- *   <li>Extends JpaRepository: provides all basic CRUD operations.</li>
- *   <li>Defines specific queries for name lookup and position-based ordering.</li>
- * </ul>
  */
 public interface KanbanColumnRepository extends JpaRepository<KanbanColumn, Long> {
+
     /**
-     * Finds all columns for a given board.
-     * @param boardId the board id
+     * Returns all columns for the given board id (unordered).
+     *
+     * @param boardId board identifier
      * @return list of columns
      */
     List<KanbanColumn> findByBoardId(Long boardId);
 
     /**
-     * Retrieves all KanbanColumns ordered by their persistent position (for stable board rendering).
-     * <p>
-     * Lower position = further left.
-     * </p>
+     * Returns all columns ordered by their persistent position (ascending).
      *
-     * @return a list of all KanbanColumns ordered by their position field (ascending)
+     * @return ordered list of columns
      */
     List<KanbanColumn> findAllByOrderByPositionAsc();
 
     /**
-     * Finds all columns belonging to a given board, ordered by position (by board ID).
-     * <p>
-     * Used for legacy or direct ID-based access.
-     * </p>
-     * @param boardId ID of the parent board
-     * @return List of columns for the board
+     * Returns all columns for the given board id ordered by position (ascending).
+     *
+     * @param boardId board identifier
+     * @return ordered list of columns
      */
     List<KanbanColumn> findByBoardIdOrderByPositionAsc(Long boardId);
 
     /**
-     * Finds all columns belonging to a given board, ordered by position (by Board object).
-     * <p>
-     * Preferred in service/business logic.
-     * </p>
-     * @param board the parent Board entity
-     * @return List of columns for the board
+     * Returns all columns for the given board ordered by position (ascending).
+     *
+     * @param board board entity
+     * @return ordered list of columns
      */
     List<KanbanColumn> findByBoardOrderByPositionAsc(Board board);
 
     /**
-     * Counts columns belonging to a given board.
-     * @param board the parent Board entity
-     * @return count of columns in the board
+     * Counts the number of columns for the given board.
+     *
+     * @param board board entity
+     * @return number of columns
      */
     long countByBoard(Board board);
+
+    /**
+     * Fast ownership guard used by controllers/services:
+     * checks whether a column id belongs to a board owned by the specified UID.
+     *
+     * @param id  column id
+     * @param uid owner UID
+     * @return {@code true} if the column belongs to a board owned by the UID, otherwise {@code false}
+     */
+    boolean existsByIdAndBoardOwnerUid(Long id, String uid);
 }

@@ -1,21 +1,10 @@
 package com.inerio.taskmanager.dto;
 
 /**
- * Data Transfer Object for KanbanColumn (Kanban column).
+ * DTO for a Kanban column.
  * <p>
- * Used for exchanging Kanban column data between frontend (Angular) and backend (Spring Boot) via the API.
- * Contains essential properties for board display and logic.
- * </p>
- *
- * <ul>
- *     <li>Immutable ID (null for creation, set after persistence)</li>
- *     <li>Display name (required)</li>
- *     <li>Stable position for drag and drop ordering</li>
- *     <li>Reference to parent board by ID (boardId)</li>
- * </ul>
- *
- * <p>
- * This class is a pure DTO: no business logic, only field structure.
+ * Carries the minimal data needed by the API/UI: identifier, display name,
+ * stable position for ordering, and the parent board identifier.
  * </p>
  */
 public class KanbanColumnDto {
@@ -26,26 +15,22 @@ public class KanbanColumnDto {
     /** Display name of the column. */
     private String name;
 
-    /** Persistent display position (for ordering columns on board). */
+    /** Stable display position within the board (lower = further left). */
     private int position;
 
-    /** Reference to the parent board by ID. */
+    /** Identifier of the parent board. */
     private Long boardId;
 
-    // =========================
-    //      CONSTRUCTORS
-    // =========================
-
-    /** Default no-args constructor (required for frameworks). */
-    public KanbanColumnDto() {}
+    /** Default constructor for serialization frameworks. */
+    public KanbanColumnDto() { }
 
     /**
-     * Full constructor for KanbanColumnDto.
+     * Creates a new {@code KanbanColumnDto}.
      *
-     * @param id       Column unique ID
-     * @param name     Display name
-     * @param position Persistent position/index (for ordering)
-     * @param boardId  ID of the parent board
+     * @param id       the column ID
+     * @param name     the display name
+     * @param position the stable position within the board
+     * @param boardId  the parent board ID
      */
     public KanbanColumnDto(Long id, String name, int position, Long boardId) {
         this.id = id;
@@ -54,51 +39,43 @@ public class KanbanColumnDto {
         this.boardId = boardId;
     }
 
-    /**
-     * Gets the column ID.
-     * @return Column ID.
-     */
-    public Long getId() { return id; }
+    /** @return the column ID (nullable on create) */
+    public Long getId() {
+        return id;
+    }
 
-    /**
-     * Gets the column name.
-     * @return Column name.
-     */
-    public String getName() { return name; }
+    /** @param id the column ID to set */
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    /**
-     * Gets the position of the column.
-     * @return Position index.
-     */
-    public int getPosition() { return position; }
+    /** @return the column display name */
+    public String getName() {
+        return name;
+    }
 
-    /**
-     * Gets the parent board ID.
-     * @return Board ID.
-     */
-    public Long getBoardId() { return boardId; }
+    /** @param name the column display name to set */
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    /**
-     * Sets the column ID.
-     * @param id Column ID.
-     */
-    public void setId(Long id) { this.id = id; }
+    /** @return the stable position within the board */
+    public int getPosition() {
+        return position;
+    }
 
-    /**
-     * Sets the column name.
-     * @param name Column name.
-     */
-    public void setName(String name) { this.name = name; }
+    /** @param position the stable position to set */
+    public void setPosition(int position) {
+        this.position = position;
+    }
 
-    /**
-     * Sets the column position.
-     * @param position Position index.
-     */
-    public void setPosition(int position) { this.position = position; }
+    /** @return the parent board ID */
+    public Long getBoardId() {
+        return boardId;
+    }
 
-    /**
-     * Sets the board ID.
-     * @param boardId Board ID.
-     */
-    public void setBoardId(Long boardId) { this.boardId = boardId; }
+    /** @param boardId the parent board ID to set */
+    public void setBoardId(Long boardId) {
+        this.boardId = boardId;
+    }
 }

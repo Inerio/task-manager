@@ -1,65 +1,51 @@
 package com.inerio.taskmanager;
 
+import com.inerio.taskmanager.config.AppProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.lang.NonNull;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Main class and entry point for the TaskManager Spring Boot application.
- * <p>
- * This class configures global CORS settings to allow the Angular frontend
- * (typically running on http://localhost:4200) to communicate with the backend.
- * </p>
- * <p>
- * <b>PRODUCTION WARNING:</b> Do not use wildcard origins or broad CORS rules in production!
- * Adapt the allowed origins before deployment for security.
- * </p>
+ * Spring Boot entry point for the Task Manager application.
+ * Enables scheduling, binds {@code app.*} properties, and configures global CORS.
  */
+@EnableScheduling
+@EnableConfigurationProperties(AppProperties.class)
 @SpringBootApplication
 public class TaskManagerApplication {
 
-    /**
-     * Default constructor.
-     * <p>
-     * Required by Spring Boot.
-     * </p>
-     */
-    public TaskManagerApplication() {}
+    /** Default constructor (required by Spring). */
+    public TaskManagerApplication() { }
 
     /**
      * Application entry point.
      *
-     * @param args command-line arguments (unused)
+     * @param args command-line arguments
      */
     public static void main(String[] args) {
         SpringApplication.run(TaskManagerApplication.class, args);
     }
 
     /**
-     * Configures global CORS policy for all endpoints.
-     * Allows requests from the Angular development server.
-     * 
-     * @return the CORS configuration bean
+     * Defines a global CORS policy allowing requests from the Angular development server.
+     * Adjust allowed origins for production deployments.
+     *
+     * @return MVC configuration bean with CORS mappings
      */
     @Bean
     WebMvcConfigurer corsConfigurer() {
-        // Anonymous inner class implementing WebMvcConfigurer
         return new WebMvcConfigurer() {
-            /**
-             * Add mappings to allow CORS requests for all endpoints.
-             * Adjust allowed origins in production!
-             *
-             * @param registry the CORS registry to configure
-             */
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
                 registry.addMapping("/**")
-                    .allowedOrigins("http://localhost:4200")
-                    .allowedMethods("GET", "POST", "PUT","PATCH", "DELETE", "OPTIONS")
-                    .allowedHeaders("*");
+                        .allowedOrigins("http://localhost:4200")
+                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                        .allowedHeaders("*");
             }
         };
     }

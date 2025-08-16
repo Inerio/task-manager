@@ -7,7 +7,8 @@ import { firstValueFrom } from "rxjs";
 import { AlertService } from "./alert.service";
 
 /**
- * File attachment operations for tasks (upload / download / delete).
+ * File attachment operations for tasks (upload / download / delete / preview).
+ * Important: all HTTP calls passent par HttpClient -> l'interceptor ajoute X-Client-Id.
  */
 @Injectable({ providedIn: "root" })
 export class AttachmentService {
@@ -16,11 +17,25 @@ export class AttachmentService {
   private readonly i18n = inject(TranslocoService);
   private readonly apiUrl = environment.apiUrl;
 
-  /** Build the download/preview URL for a given attachment. */
+  /** Build the API URL for a given attachment. */
   buildAttachmentUrl(taskId: TaskId, filename: string): string {
     return `${this.apiUrl}/tasks/${taskId}/attachments/${encodeURIComponent(
       filename
     )}`;
+  }
+
+  /** Return a Blob for preview; wrapped as an object URL by the caller. */
+  async getPreviewObjectUrl(taskId: TaskId, filename: string): Promise<string> {
+    const blob = await firstValueFrom(
+      this.http.get(this.buildAttachmentUrl(taskId, filename), {
+        responseType: "blob",
+      })
+    );
+    // Preserve server-provided type if any; otherwise browser will still sniff for images.
+    const typedBlob = blob.type
+      ? blob
+      : new Blob([blob], { type: this.guessMime(filename) });
+    return URL.createObjectURL(typedBlob);
   }
 
   /** Upload an attachment; returns the updated Task or null on failure. */
@@ -49,8 +64,10 @@ export class AttachmentService {
       .get(this.buildAttachmentUrl(taskId, filename), { responseType: "blob" })
       .subscribe({
         next: (blob) => {
+          const type = blob.type || this.guessMime(filename);
+          const typed = type ? new Blob([blob], { type }) : blob;
           const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
+          link.href = URL.createObjectURL(typed);
           link.download = filename;
           link.click();
           URL.revokeObjectURL(link.href);
@@ -79,5 +96,18 @@ export class AttachmentService {
       );
       return null;
     }
+  }
+
+  /** Minimal MIME guess by extension (fallback if server doesn't set Content-Type). */
+  private guessMime(filename: string): string {
+    const f = filename.toLowerCase();
+    if (f.endsWith(".png")) return "image/png";
+    if (f.endsWith(".jpg") || f.endsWith(".jpeg")) return "image/jpeg";
+    if (f.endsWith(".gif")) return "image/gif";
+    if (f.endsWith(".webp")) return "image/webp";
+    if (f.endsWith(".bmp")) return "image/bmp";
+    if (f.endsWith(".svg")) return "image/svg+xml";
+    if (f.endsWith(".pdf")) return "application/pdf";
+    return "";
   }
 }

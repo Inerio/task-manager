@@ -8,6 +8,7 @@ import {
   ViewChild,
   inject,
   signal,
+  OnDestroy,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertService } from "../../services/alert.service";
@@ -19,9 +20,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
  * and deferred/buffered uploads in creation mode.
  *
- * When available (Chromium + secure context), uses the File System Access API
- * to open files (no native <input> side-effects). Falls back to hidden
- * <input type="file"> on unsupported browsers.
+ * Fix preview: fetch blob via HttpClient (header X-Client-Id present) and use object URL.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -31,7 +30,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslocoModule],
 })
-export class AttachmentZoneComponent {
+export class AttachmentZoneComponent implements OnDestroy {
   @Input({ required: true }) attachments!: ReadonlyArray<string>;
   @Input({ required: true }) taskId!: number;
   @Input() acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
@@ -56,11 +55,16 @@ export class AttachmentZoneComponent {
   @Output() filesUploaded = new EventEmitter<File[]>();
   @Output() fileDeleted = new EventEmitter<string>();
   @Output() fileDownloaded = new EventEmitter<string>();
-  /**
-   * Emitted only for the <input> fallback to let parent know a native dialog opens.
-   * (The FS Access path does not emit to avoid ghost events/guards.)
-   */
   @Output() dialogOpen = new EventEmitter<boolean>();
+
+  /** garde-fou pour éviter de remplacer la preview par une réponse obsolète */
+  private previewToken = 0;
+  /** dernier object URL pour cleanup */
+  private lastObjectUrl: string | null = null;
+
+  ngOnDestroy(): void {
+    this.revokePreviewUrl();
+  }
 
   // ===== Track helpers =====
   trackByFilename(_index: number, filename: string): string {
@@ -240,26 +244,66 @@ export class AttachmentZoneComponent {
     this.fileDeleted.emit(filename);
   }
 
-  // ===== Preview helpers =====
+  // ===== Preview helpers (fixed: uses HttpClient -> blob -> object URL) =====
   isImage(filename: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
   }
 
+  /** Build URL is kept for downloads, but NOT used directly by <img> anymore. */
   buildAttachmentUrl(filename: string): string {
     return this.attachmentService.buildAttachmentUrl(this.taskId, filename);
   }
 
-  showPreview(filename: string, event: MouseEvent): void {
+  async showPreview(filename: string, event: MouseEvent): Promise<void> {
     if (!this.isImage(filename)) return;
-    this.previewFilename.set(filename);
-    this.previewUrl.set(this.buildAttachmentUrl(filename));
+
+    // update position live
     this.previewTop.set(event.clientY + 14);
     this.previewLeft.set(event.clientX + 18);
+
+    // if same file already shown, just move the popover
+    if (this.previewFilename() === filename && this.previewUrl()) return;
+
+    // new file: fetch blob via HttpClient (header present), create object URL
+    this.previewFilename.set(filename);
+    const token = ++this.previewToken;
+
+    try {
+      const objectUrl = await this.attachmentService.getPreviewObjectUrl(
+        this.taskId,
+        filename
+      );
+
+      // ignore late responses if another preview started meanwhile
+      if (this.previewToken !== token) {
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
+
+      // cleanup previous object URL
+      this.revokePreviewUrl();
+
+      this.lastObjectUrl = objectUrl;
+      this.previewUrl.set(objectUrl);
+    } catch {
+      // on error, ensure no stale preview stays
+      this.hidePreview();
+    }
   }
 
   hidePreview(): void {
+    this.revokePreviewUrl();
     this.previewUrl.set(null);
     this.previewFilename.set(null);
+  }
+
+  private revokePreviewUrl(): void {
+    if (this.lastObjectUrl) {
+      try {
+        URL.revokeObjectURL(this.lastObjectUrl);
+      } catch {}
+      this.lastObjectUrl = null;
+    }
   }
 
   /** Returns a deduplicated list of attached files, preserving order. */

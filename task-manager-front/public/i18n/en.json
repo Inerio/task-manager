@@ -104,7 +104,9 @@
       "today": "Due today!",
       "oneDay": "1 day left",
       "nDays": "{{count}} days left"
-    }
+    },
+    "deleteConfirmTitle": "Delete task",
+    "deleteConfirmMessage": "Delete the task “{{title}}”? This action cannot be undone."
   },
   "attachments": {
     "downloadConfirmTitle": "Download file",

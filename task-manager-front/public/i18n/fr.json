@@ -104,7 +104,9 @@
       "today": "Échéance aujourd’hui !",
       "oneDay": "Plus qu’un jour",
       "nDays": "Plus que {{count}} jours"
-    }
+    },
+    "deleteConfirmTitle": "Supprimer la tâche",
+    "deleteConfirmMessage": "Supprimer la tâche « {{title}} » ? Cette action est irréversible."
   },
   "attachments": {
     "downloadConfirmTitle": "Télécharger le fichier",

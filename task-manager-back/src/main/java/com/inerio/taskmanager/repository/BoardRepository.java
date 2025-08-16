@@ -45,7 +45,7 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     /**
      * Returns the maximum position value among the boards owned by the given UID.
      *
-      * @param uid owner UID
+     * @param uid owner UID
      * @return highest position, or {@code null} if the owner has no boards
      */
     @Query("SELECT MAX(b.position) FROM Board b WHERE b.owner.uid = :uid")
@@ -53,11 +53,15 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
 
     /**
      * Finds a board by id scoped to an owner UID.
+     * <p>
+     * Columns are fetched eagerly to avoid lazy-loading outside the session when mapping to DTOs.
+     * </p>
      *
      * @param id  board id
      * @param uid owner UID
      * @return optional board if it belongs to the owner
      */
+    @EntityGraph(attributePaths = "kanbanColumns")
     Optional<Board> findByIdAndOwnerUid(Long id, String uid);
 
     /**

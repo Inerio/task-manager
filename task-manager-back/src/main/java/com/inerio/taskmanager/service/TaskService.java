@@ -56,10 +56,13 @@ public class TaskService {
     }
 
     // ==============================
-    //   TASK CRUD OPERATIONS
+    //   TASK READ OPERATIONS
     // ==============================
 
-    public List<Task> getAllTasks() { return taskRepository.findAll(); }
+    /** Return all tasks scoped to an owner UID, in a stable order for the UI. */
+    public List<Task> getAllTasksForOwner(String uid) {
+        return taskRepository.findAllForOwnerOrdered(uid);
+    }
 
     public Optional<Task> getTaskById(Long id) { return taskRepository.findById(id); }
 
@@ -68,6 +71,10 @@ public class TaskService {
             .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + kanbanColumnId));
         return taskRepository.findByKanbanColumnOrderByPositionAsc(kanbanColumn);
     }
+
+    // ==============================
+    //   TASK WRITE OPERATIONS
+    // ==============================
 
     @Transactional
     public Task createTaskFromDto(TaskDto dto, KanbanColumn kanbanColumn) {
@@ -163,9 +170,7 @@ public class TaskService {
     //   ATTACHMENT MANAGEMENT
     // ==============================
 
-    /**
-     * Uploads an attachment to a task, ensuring a non-empty and unique filename per task.
-     */
+    /** Uploads an attachment to a task, ensuring a non-empty and unique filename per task. */
     public Task uploadAttachment(Long taskId, MultipartFile file) throws Exception {
         Path uploadPath = baseUploadDir.resolve(taskId.toString()).normalize();
         Files.createDirectories(uploadPath);

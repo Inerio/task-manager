@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+    container_name: task-manager-api
+    depends_on:
+      - db
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/TaskManagerDB
+      DB_USER: Inerio
+      DB_PASSWORD: 1234
+      CORS_ALLOWED_ORIGINS: http://localhost:4200
+      APP_UPLOAD_DIR: /app/uploads
+    volumes:
+      - ./uploads:/app/uploads
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: backend

@@ -1,27 +1,15 @@
-version: "3.9"
-
 services:
   api:
     build:
       context: ./task-manager-back
-    env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      APP_UPLOAD_DIR: /data/uploads
-    volumes:
-      - uploads:/data/uploads
     ports:
       - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_UPLOAD_DIR: /data/uploads
+    volumes:
+      - ./task-manager-back/uploads:/data/uploads
     restart: unless-stopped
-
-  web:
-    build:
-      context: ./task-manager-front
-    depends_on:
-      - api
-    ports:
-      - "80:80"
-    restart: unless-stopped
-
-volumes:
-  uploads:

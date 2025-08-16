@@ -1,39 +1,17 @@
 version: "3.9"
 
 services:
-  db:
-    image: postgres:15
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: Inerio
-      POSTGRES_PASSWORD: 1234 # change en prod réelle
-      POSTGRES_DB: TaskManagerDB
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U Inerio -d TaskManagerDB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   api:
     build:
       context: ./task-manager-back
-    depends_on:
-      db:
-        condition: service_healthy
+    env_file: .env
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/TaskManagerDB
-      SPRING_DATASOURCE_USERNAME: Inerio
-      SPRING_DATASOURCE_PASSWORD: 1234
       APP_UPLOAD_DIR: /data/uploads
-      # CORS pas nécessaire ici (même origine via Nginx)
     volumes:
       - uploads:/data/uploads
-    expose:
-      - "8080"
+    ports:
+      - "8080:8080"
     restart: unless-stopped
 
   web:
@@ -42,9 +20,8 @@ services:
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "80:80"
     restart: unless-stopped
 
 volumes:
-  db_data:
   uploads:

@@ -8,6 +8,7 @@ import {
   ViewChild,
   inject,
   signal,
+  OnDestroy,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertService } from "../../services/alert.service";
@@ -15,13 +16,18 @@ import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { AttachmentService } from "../../services/attachment.service";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
+/** Minimal local types to avoid `any` for FS Access while remaining framework-agnostic. */
+type FSFileHandle = { getFile(): Promise<File> };
+type OpenFilePickerOptions = {
+  multiple?: boolean;
+  excludeAcceptAllOption?: boolean;
+};
+
 /**
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
  * and deferred/buffered uploads in creation mode.
  *
- * When available (Chromium + secure context), uses the File System Access API
- * to open files (no native <input> side-effects). Falls back to hidden
- * <input type="file"> on unsupported browsers.
+ * Preview strategy: fetch blob via HttpClient (header X-Client-Id present) and use an object URL.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -31,7 +37,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslocoModule],
 })
-export class AttachmentZoneComponent {
+export class AttachmentZoneComponent implements OnDestroy {
   @Input({ required: true }) attachments!: ReadonlyArray<string>;
   @Input({ required: true }) taskId!: number;
   @Input() acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
@@ -53,14 +59,17 @@ export class AttachmentZoneComponent {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly i18n = inject(TranslocoService);
 
-  @Output() filesUploaded = new EventEmitter<File[]>();
-  @Output() fileDeleted = new EventEmitter<string>();
-  @Output() fileDownloaded = new EventEmitter<string>();
-  /**
-   * Emitted only for the <input> fallback to let parent know a native dialog opens.
-   * (The FS Access path does not emit to avoid ghost events/guards.)
-   */
-  @Output() dialogOpen = new EventEmitter<boolean>();
+  @Output() readonly filesUploaded = new EventEmitter<File[]>();
+  @Output() readonly fileDeleted = new EventEmitter<string>();
+  @Output() readonly fileDownloaded = new EventEmitter<string>();
+  @Output() readonly dialogOpen = new EventEmitter<boolean>();
+
+  private previewToken = 0;
+  private lastObjectUrl: string | null = null;
+
+  ngOnDestroy(): void {
+    this.revokePreviewUrl();
+  }
 
   // ===== Track helpers =====
   trackByFilename(_index: number, filename: string): string {
@@ -71,7 +80,7 @@ export class AttachmentZoneComponent {
   }
 
   // ===== Event suppression inside the zone =====
-  stop(e: Event): void {
+  public stop(e: Event): void {
     e.stopPropagation();
   }
   onZonePointerDown(e: PointerEvent): void {
@@ -96,44 +105,43 @@ export class AttachmentZoneComponent {
       await this.openViaFSAccess();
       return;
     }
-    // Fallback to the hidden input (keeps your existing behavior).
+    // Fallback to the hidden input (keeps existing behavior).
     this.dialogOpen.emit(true);
-    this.fileInput?.nativeElement.click();
+    const input = this.fileInput?.nativeElement;
+    if (input) input.click();
   }
 
   /** FS Access support check. */
   private canUseFSAccess(): boolean {
-    return (
-      typeof (window as any).showOpenFilePicker === "function" &&
-      window.isSecureContext
-    );
+    return "showOpenFilePicker" in window && isSecureContext === true;
   }
 
   /**
    * Open using File System Access API.
-   * We don't emit dialogOpen here to avoid triggering "native picker" guards upstream.
+   * We do not emit `dialogOpen` here to avoid triggering upstream native picker guards.
    */
   private async openViaFSAccess(): Promise<void> {
     try {
-      const handles: any[] = await (window as any).showOpenFilePicker({
+      const picker = (
+        window as unknown as {
+          showOpenFilePicker: (
+            options: OpenFilePickerOptions
+          ) => Promise<FSFileHandle[]>;
+        }
+      ).showOpenFilePicker;
+      if (!picker) return;
+
+      const handles = await picker({
         multiple: true,
         excludeAcceptAllOption: false,
       });
-      const files = await Promise.all(handles.map((h: any) => h.getFile()));
+      const files = await Promise.all(handles.map((h) => h.getFile()));
       const accepted = files.filter((f) => this.matchesAccept(f));
       if (!accepted.length) return;
 
-      const sized = accepted.filter((f) => f.size <= this.maxSize);
-      if (sized.length < accepted.length) {
-        this.alertService.show(
-          "error",
-          this.i18n.translate("attachments.errors.tooLarge")
-        );
-      }
-
-      this.handleFileSelection(sized);
+      this.handleSelectionWithAlerts(accepted);
     } catch {
-      // User cancelled or API blocked: do nothing.
+      // User cancelled or API blocked: no-op.
     }
   }
 
@@ -165,16 +173,7 @@ export class AttachmentZoneComponent {
       this.dialogOpen.emit(false);
       return;
     }
-    const list = Array.from(files);
-    const sized = list.filter((f) => f.size <= this.maxSize);
-    if (sized.length < list.length) {
-      this.alertService.show(
-        "error",
-        this.i18n.translate("attachments.errors.tooLarge")
-      );
-    }
-
-    this.handleFileSelection(sized);
+    this.handleSelectionWithAlerts(Array.from(files));
     input.value = "";
     this.dialogOpen.emit(false);
   }
@@ -193,20 +192,36 @@ export class AttachmentZoneComponent {
     event.preventDefault();
     const files = event.dataTransfer?.files;
     if (files?.length) {
-      const list = Array.from(files);
-      const sized = list.filter((f) => f.size <= this.maxSize);
-      if (sized.length < list.length) {
-        this.alertService.show(
-          "error",
-          this.i18n.translate("attachments.errors.tooLarge")
-        );
-      }
-      this.handleFileSelection(sized);
+      this.handleSelectionWithAlerts(Array.from(files));
     }
     this.isDragging.set(false);
   }
 
   // ===== Common selection handling =====
+  private handleSelectionWithAlerts(selectedFiles: File[]): void {
+    const sized = this.filterBySize(selectedFiles);
+    if (sized.rejectedCount > 0) {
+      this.alertService.show(
+        "error",
+        this.i18n.translate("attachments.errors.tooLarge")
+      );
+    }
+    this.handleFileSelection(sized.accepted);
+  }
+
+  private filterBySize(files: File[]): {
+    accepted: File[];
+    rejectedCount: number;
+  } {
+    let rejectedCount = 0;
+    const accepted = files.filter((f) => {
+      const ok = f.size <= this.maxSize;
+      if (!ok) rejectedCount++;
+      return ok;
+    });
+    return { accepted, rejectedCount };
+  }
+
   private handleFileSelection(selectedFiles: File[]) {
     const already = new Set([
       ...this.attachments,
@@ -240,26 +255,68 @@ export class AttachmentZoneComponent {
     this.fileDeleted.emit(filename);
   }
 
-  // ===== Preview helpers =====
+  // ===== Preview helpers (uses HttpClient -> blob -> object URL) =====
   isImage(filename: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
   }
 
+  /** Build URL is kept for downloads, but NOT used directly by <img> anymore. */
   buildAttachmentUrl(filename: string): string {
     return this.attachmentService.buildAttachmentUrl(this.taskId, filename);
   }
 
-  showPreview(filename: string, event: MouseEvent): void {
+  async showPreview(filename: string, event: MouseEvent): Promise<void> {
     if (!this.isImage(filename)) return;
-    this.previewFilename.set(filename);
-    this.previewUrl.set(this.buildAttachmentUrl(filename));
+
+    // Update position live
     this.previewTop.set(event.clientY + 14);
     this.previewLeft.set(event.clientX + 18);
+
+    // If same file already shown, just move the popover
+    if (this.previewFilename() === filename && this.previewUrl()) return;
+
+    // New file: fetch blob via HttpClient (header present), create object URL
+    this.previewFilename.set(filename);
+    const token = ++this.previewToken;
+
+    try {
+      const objectUrl = await this.attachmentService.getPreviewObjectUrl(
+        this.taskId,
+        filename
+      );
+
+      // Ignore late responses if another preview started meanwhile
+      if (this.previewToken !== token) {
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
+
+      // Cleanup previous object URL
+      this.revokePreviewUrl();
+
+      this.lastObjectUrl = objectUrl;
+      this.previewUrl.set(objectUrl);
+    } catch {
+      // On error, ensure no stale preview stays
+      this.hidePreview();
+    }
   }
 
   hidePreview(): void {
+    this.revokePreviewUrl();
     this.previewUrl.set(null);
     this.previewFilename.set(null);
+  }
+
+  private revokePreviewUrl(): void {
+    if (this.lastObjectUrl) {
+      try {
+        URL.revokeObjectURL(this.lastObjectUrl);
+      } catch {
+        // Ignore revoke errors
+      }
+      this.lastObjectUrl = null;
+    }
   }
 
   /** Returns a deduplicated list of attached files, preserving order. */

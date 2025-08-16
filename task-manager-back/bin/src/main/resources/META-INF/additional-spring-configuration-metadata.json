@@ -1,0 +1,46 @@
+{
+  "groups": [
+    {
+      "name": "app",
+      "type": "com.inerio.taskmanager.config.AppProperties",
+      "sourceType": "com.inerio.taskmanager.config.AppProperties"
+    },
+    {
+      "name": "app.cors",
+      "type": "com.inerio.taskmanager.config.CorsProperties",
+      "sourceType": "com.inerio.taskmanager.config.CorsProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "app.retention-days",
+      "type": "java.lang.Integer",
+      "sourceType": "com.inerio.taskmanager.config.AppProperties",
+      "description": "Number of days of inactivity before an anonymous user is purged."
+    },
+    {
+      "name": "app.upload-dir",
+      "type": "java.lang.String",
+      "sourceType": "com.inerio.taskmanager.config.AppProperties",
+      "description": "Base directory where task attachments are stored."
+    },
+    {
+      "name": "app.cors.allowed-origins",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "com.inerio.taskmanager.config.CorsProperties",
+      "description": "Allowed origins for CORS."
+    },
+    {
+      "name": "app.cors.allowed-methods",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "com.inerio.taskmanager.config.CorsProperties",
+      "description": "Allowed HTTP methods for CORS."
+    },
+    {
+      "name": "app.cors.allowed-headers",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "com.inerio.taskmanager.config.CorsProperties",
+      "description": "Allowed HTTP headers for CORS."
+    }
+  ]
+}

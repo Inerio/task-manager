@@ -1,0 +1,10 @@
+# Ne jamais versionner les envs
+.env
+*.env
+
+# Ignorer tout dossier "uploads" où qu'il soit
+**/uploads/**
+
+# Mac/Windows/IDE
+.DS_Store
+Thumbs.db

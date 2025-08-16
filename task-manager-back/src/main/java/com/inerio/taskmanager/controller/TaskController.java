@@ -82,10 +82,15 @@ public class TaskController {
         }
     }
 
+    /** ✅ Return all tasks for this UID (used by the front on refresh). */
     @GetMapping
     public ResponseEntity<List<TaskDto>> getAllTasks(@RequestHeader("X-Client-Id") String uid) {
         userAccountService.touch(uid);
-        return ResponseEntity.noContent().build();
+        List<TaskDto> tasks = taskService.getAllTasksForOwner(uid).stream()
+                .map(TaskMapperDto::toDto)
+                .toList();
+        if (tasks.isEmpty()) return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(tasks);
     }
 
     @GetMapping("/kanbanColumn/{kanbanColumnId}")

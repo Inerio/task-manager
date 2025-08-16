@@ -1,13 +1,14 @@
 import { Injectable, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
+import { firstValueFrom } from "rxjs";
 import { TranslocoService } from "@jsverse/transloco";
 import { environment } from "../../environments/environment.local";
 import { type Task, type TaskId } from "../models/task.model";
-import { firstValueFrom } from "rxjs";
 import { AlertService } from "./alert.service";
 
 /**
- * File attachment operations for tasks (upload / download / delete).
+ * File attachment operations for tasks (upload / download / delete / preview).
+ * Important: all HTTP calls go through HttpClient; the interceptor adds X-Client-Id.
  */
 @Injectable({ providedIn: "root" })
 export class AttachmentService {
@@ -16,11 +17,28 @@ export class AttachmentService {
   private readonly i18n = inject(TranslocoService);
   private readonly apiUrl = environment.apiUrl;
 
-  /** Build the download/preview URL for a given attachment. */
+  /** Build the API URL for a given attachment. */
   buildAttachmentUrl(taskId: TaskId, filename: string): string {
     return `${this.apiUrl}/tasks/${taskId}/attachments/${encodeURIComponent(
       filename
     )}`;
+  }
+
+  /**
+   * Returns an object URL for preview.
+   * The caller is responsible for revoking it with URL.revokeObjectURL(...) when no longer needed.
+   */
+  async getPreviewObjectUrl(taskId: TaskId, filename: string): Promise<string> {
+    const blob = await firstValueFrom(
+      this.http.get(this.buildAttachmentUrl(taskId, filename), {
+        responseType: "blob",
+      })
+    );
+    // Preserve server-provided type if any; otherwise provide a reasonable fallback.
+    const typedBlob = blob.type
+      ? blob
+      : new Blob([blob], { type: this.guessMime(filename) });
+    return URL.createObjectURL(typedBlob);
   }
 
   /** Upload an attachment; returns the updated Task or null on failure. */
@@ -49,11 +67,9 @@ export class AttachmentService {
       .get(this.buildAttachmentUrl(taskId, filename), { responseType: "blob" })
       .subscribe({
         next: (blob) => {
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = filename;
-          link.click();
-          URL.revokeObjectURL(link.href);
+          const type = blob.type || this.guessMime(filename);
+          const typed = type ? new Blob([blob], { type }) : blob;
+          this.triggerBrowserDownload(typed, filename);
         },
         error: () =>
           this.alert.show(
@@ -79,5 +95,34 @@ export class AttachmentService {
       );
       return null;
     }
+  }
+
+  /** Create a temporary link, click it, then clean up and revoke the URL. */
+  private triggerBrowserDownload(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    try {
+      link.click();
+    } finally {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  /** Minimal MIME guess by extension (fallback if server doesn't set Content-Type). */
+  private guessMime(filename: string): string {
+    const f = filename.toLowerCase();
+    if (f.endsWith(".png")) return "image/png";
+    if (f.endsWith(".jpg") || f.endsWith(".jpeg")) return "image/jpeg";
+    if (f.endsWith(".gif")) return "image/gif";
+    if (f.endsWith(".webp")) return "image/webp";
+    if (f.endsWith(".bmp")) return "image/bmp";
+    if (f.endsWith(".svg")) return "image/svg+xml";
+    if (f.endsWith(".pdf")) return "application/pdf";
+    return "";
   }
 }

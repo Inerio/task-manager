@@ -4,6 +4,8 @@ import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.model.Task;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Spring Data JPA repository for {@link Task} entities.
@@ -17,7 +19,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     /**
      * Returns all tasks for the given column ordered by their persistent position (ascending).
      *
-      * @param kanbanColumn column entity
+     * @param kanbanColumn column entity
      * @return ordered list of tasks
      */
     List<Task> findByKanbanColumnOrderByPositionAsc(KanbanColumn kanbanColumn);
@@ -89,4 +91,18 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * @return {@code true} if the task belongs to a board owned by the UID, otherwise {@code false}
      */
     boolean existsByIdAndKanbanColumnBoardOwnerUid(Long id, String uid);
+
+    /**
+     * Returns all tasks that belong to boards owned by the given UID.
+     * Results are ordered to be stable for UI rendering: by board -> column -> task position.
+     */
+    @Query("""
+           SELECT t
+           FROM Task t
+           WHERE t.kanbanColumn.board.owner.uid = :uid
+           ORDER BY t.kanbanColumn.board.id ASC,
+                    t.kanbanColumn.position ASC,
+                    t.position ASC
+           """)
+    List<Task> findAllForOwnerOrdered(@Param("uid") String uid);
 }

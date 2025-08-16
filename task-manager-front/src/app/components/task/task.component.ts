@@ -26,6 +26,7 @@ import { DragDropGlobalService } from "../../services/drag-drop-global.service";
 import { setTaskDragData } from "../../utils/drag-drop-utils";
 import { TaskFormComponent } from "../task-form/task-form.component";
 import { UPLOAD_CONFIG } from "../../tokens/upload.config";
+import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
 @Component({
   selector: "app-task",
@@ -52,6 +53,7 @@ export class TaskComponent implements OnChanges {
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly uploadCfg = inject(UPLOAD_CONFIG);
   private readonly i18n = inject(TranslocoService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
   /** React to Transloco language changes as a signal (hot reactivity). */
   private readonly lang = toSignal(this.i18n.langChanges$, {
@@ -171,10 +173,6 @@ export class TaskComponent implements OnChanges {
   }
 
   // ==== Ensure the edit form is fully visible ====
-  /**
-   * Scroll the window just enough so that the card is not clipped.
-   * We keep extra space at the bottom to guarantee date/attachments/buttons are visible.
-   */
   private ensureCardFullyVisible(): void {
     const el = this.cardEl?.nativeElement;
     if (!el) return;
@@ -182,7 +180,6 @@ export class TaskComponent implements OnChanges {
     const rect = el.getBoundingClientRect();
     const vpH = window.innerHeight || document.documentElement.clientHeight;
 
-    // Tunables:
     const TOP_MARGIN = 8;
     const BOTTOM_SAFE = 0;
 
@@ -198,7 +195,6 @@ export class TaskComponent implements OnChanges {
     }
   }
 
-  /** Re-run visibility checks a few times while the card expands in edit mode. */
   private scheduleEnsureCardVisible(): void {
     const runs = [0, 80, 160, 260, 360]; // ms
     runs.forEach((t) => setTimeout(() => this.ensureCardFullyVisible(), t));
@@ -362,9 +358,20 @@ export class TaskComponent implements OnChanges {
     else this.patchLocalTask({ isEditing: false });
   }
 
-  deleteTask(): void {
+  /** Ask confirmation before deleting the task. */
+  async confirmDelete(): Promise<void> {
     const id = this.localTask().id;
-    if (id) this.taskService.deleteTask(id);
+    if (!id) return;
+
+    const title =
+      this.localTask().title || this.i18n.translate("task.titlePlaceholder");
+    const ok = await this.confirmDialog.open(
+      this.i18n.translate("task.deleteConfirmTitle"),
+      this.i18n.translate("task.deleteConfirmMessage", { title })
+    );
+    if (!ok) return;
+
+    await this.taskService.deleteTask(id);
   }
 
   toggleCompleted(): void {

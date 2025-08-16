@@ -1,7 +1,7 @@
 package com.inerio.taskmanager.dto;
 
 /**
- * DTO used to move a task (drag & drop) between columns.
+ * DTO used to move a task (drag and drop) between columns.
  * <p>
  * Consumed by the <b>POST</b> {@code /api/v1/tasks/move} endpoint.
  * </p>

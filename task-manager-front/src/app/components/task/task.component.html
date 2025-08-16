@@ -108,9 +108,8 @@
       </button>
       <button
         class="btn btn-secondary"
-        (click)="(deleteTask)"
         [attr.title]="'common.delete' | transloco"
-        (click)="deleteTask()"
+        (click)="confirmDelete()"
       >
         {{ "common.delete" | transloco }}
       </button>

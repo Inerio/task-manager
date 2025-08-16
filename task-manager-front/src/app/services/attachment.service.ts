@@ -1,14 +1,14 @@
 import { Injectable, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
+import { firstValueFrom } from "rxjs";
 import { TranslocoService } from "@jsverse/transloco";
 import { environment } from "../../environments/environment.local";
 import { type Task, type TaskId } from "../models/task.model";
-import { firstValueFrom } from "rxjs";
 import { AlertService } from "./alert.service";
 
 /**
  * File attachment operations for tasks (upload / download / delete / preview).
- * Important: all HTTP calls passent par HttpClient -> l'interceptor ajoute X-Client-Id.
+ * Important: all HTTP calls go through HttpClient; the interceptor adds X-Client-Id.
  */
 @Injectable({ providedIn: "root" })
 export class AttachmentService {
@@ -24,14 +24,17 @@ export class AttachmentService {
     )}`;
   }
 
-  /** Return a Blob for preview; wrapped as an object URL by the caller. */
+  /**
+   * Returns an object URL for preview.
+   * The caller is responsible for revoking it with URL.revokeObjectURL(...) when no longer needed.
+   */
   async getPreviewObjectUrl(taskId: TaskId, filename: string): Promise<string> {
     const blob = await firstValueFrom(
       this.http.get(this.buildAttachmentUrl(taskId, filename), {
         responseType: "blob",
       })
     );
-    // Preserve server-provided type if any; otherwise browser will still sniff for images.
+    // Preserve server-provided type if any; otherwise provide a reasonable fallback.
     const typedBlob = blob.type
       ? blob
       : new Blob([blob], { type: this.guessMime(filename) });
@@ -66,11 +69,7 @@ export class AttachmentService {
         next: (blob) => {
           const type = blob.type || this.guessMime(filename);
           const typed = type ? new Blob([blob], { type }) : blob;
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(typed);
-          link.download = filename;
-          link.click();
-          URL.revokeObjectURL(link.href);
+          this.triggerBrowserDownload(typed, filename);
         },
         error: () =>
           this.alert.show(
@@ -95,6 +94,22 @@ export class AttachmentService {
         this.i18n.translate("attachments.errors.delete")
       );
       return null;
+    }
+  }
+
+  /** Create a temporary link, click it, then clean up and revoke the URL. */
+  private triggerBrowserDownload(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    try {
+      link.click();
+    } finally {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
   }
 

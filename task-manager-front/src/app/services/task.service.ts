@@ -9,7 +9,7 @@ import {
 } from "@angular/core";
 import { TranslocoService } from "@jsverse/transloco";
 import { firstValueFrom } from "rxjs";
-import { environment } from "../../environments/environment.local";
+import { environment } from "../../environments/environment";
 import { type Task, type TaskId } from "../models/task.model";
 import { AlertService } from "./alert.service";
 import { LoadingService } from "./loading.service";

@@ -5,7 +5,7 @@ import {
   type KanbanColumn,
   type KanbanColumnId,
 } from "../models/kanban-column.model";
-import { environment } from "../../environments/environment.local";
+import { environment } from "../../environments/environment";
 import { firstValueFrom } from "rxjs";
 import { AlertService } from "./alert.service";
 import { LoadingService } from "./loading.service";

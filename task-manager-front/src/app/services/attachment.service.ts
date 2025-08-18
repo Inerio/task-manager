@@ -2,7 +2,7 @@ import { Injectable, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { firstValueFrom } from "rxjs";
 import { TranslocoService } from "@jsverse/transloco";
-import { environment } from "../../environments/environment.local";
+import { environment } from "../../environments/environment";
 import { type Task, type TaskId } from "../models/task.model";
 import { AlertService } from "./alert.service";
 

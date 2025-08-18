@@ -2,7 +2,7 @@ import { Injectable, signal, computed, inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { TranslocoService } from "@jsverse/transloco";
 import { type Board, type BoardId } from "../models/board.model";
-import { environment } from "../../environments/environment.local";
+import { environment } from "../../environments/environment";
 import { Observable, tap, catchError, throwError } from "rxjs";
 import { AlertService } from "./alert.service";
 

@@ -9,7 +9,7 @@ import {
   withInterceptorsFromDi,
 } from "@angular/common/http";
 import { provideUploadConfig } from "./tokens/upload.config";
-import { environment } from "../environments/environment.local";
+import { environment } from "../environments/environment";
 
 import { provideTransloco } from "@jsverse/transloco";
 import { AppTranslocoLoader } from "./transloco.loader";

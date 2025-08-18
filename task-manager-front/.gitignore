@@ -8,6 +8,3 @@ dist/
 # IDE & editor config
 .vscode/
 *.log
-
-# Environment files
-src/environments/environment.local.ts

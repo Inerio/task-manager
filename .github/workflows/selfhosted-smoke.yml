@@ -1,0 +1,11 @@
+name: Self-hosted smoke
+on: { workflow_dispatch: {} }
+jobs:
+  ping:
+    runs-on: [self-hosted, Linux, ARM64]
+    steps:
+      - run: |
+          echo "Runner: $(hostname) — $(whoami)"
+          docker ps
+          node -v
+          nginx -v

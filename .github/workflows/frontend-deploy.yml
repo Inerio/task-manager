@@ -1,0 +1,43 @@
+name: Frontend CI & Deploy
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "task-manager-front/**"
+      - ".github/workflows/frontend-deploy.yml"
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "task-manager-front/**"
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: task-manager-front/package-lock.json
+      - name: npm ci + build
+        working-directory: task-manager-front
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm run build -- --configuration production
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    name: Deploy frontend on self-hosted runner
+    runs-on: [self-hosted, Linux, ARM64]
+    needs: ci
+    steps:
+      - name: Run server-side deploy script
+        run: /usr/local/bin/deploy_frontend.sh

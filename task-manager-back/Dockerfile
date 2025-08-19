@@ -7,6 +7,7 @@ RUN mvn -q -DskipTests package
 
 # --- Runtime stage
 FROM eclipse-temurin:21-jre
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 ENV SPRING_PROFILES_ACTIVE=prod
 WORKDIR /app
 COPY --from=build /workspace/target/*.jar /app/app.jar

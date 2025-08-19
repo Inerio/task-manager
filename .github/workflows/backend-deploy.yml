@@ -31,10 +31,11 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Set up Maven 3.9.9
-        uses: s4u/setup-maven-action@v1.13.0
-        with:
-          maven-version: "3.9.9"
+      - name: Install Maven
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y maven
+          mvn -v
 
       - name: mvn -DskipTests package
         working-directory: task-manager-back

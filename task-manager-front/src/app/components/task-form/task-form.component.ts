@@ -100,9 +100,13 @@ export class TaskFormComponent
   readonly nativeDialogOpen = signal(false);
   private unlisteners: Array<() => void> = [];
 
+  /** True when the browser is Brave (used to hide attachment zone in edit/create). */
+  readonly isBrave = signal(false);
+
   // ===== Lifecycle =====
   ngOnInit(): void {
     this.applyTaskToState(this.task);
+    void this.detectBrave();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -178,6 +182,34 @@ export class TaskFormComponent
     this.unlisteners = [];
   }
 
+  // ===== Brave detection =====
+  /**
+   * Detect Brave browser.
+   * Primary signal: navigator.brave.isBrave() when available (official).
+   * Fallback: userAgent / brands hint that may contain "Brave".
+   */
+  private async detectBrave(): Promise<void> {
+    try {
+      const nav: any = navigator as any;
+      if (nav?.brave && typeof nav.brave.isBrave === "function") {
+        const res = await nav.brave.isBrave();
+        this.isBrave.set(!!res);
+        return;
+      }
+    } catch {}
+    try {
+      const brands =
+        (navigator as any)?.userAgentData?.brands?.map((b: any) => b.brand) ??
+        [];
+      const hay = `${brands.join(" ")} ${(
+        navigator.userAgent || ""
+      ).toLowerCase()}`;
+      this.isBrave.set(hay.includes("brave"));
+    } catch {
+      this.isBrave.set(false);
+    }
+  }
+
   // ===== UI actions =====
   onDialogOpen(open: boolean): void {
     this.nativeDialogOpen.set(open);
@@ -250,8 +282,8 @@ export class TaskFormComponent
     }
     ta.focus();
     const prevScroll = ta.scrollTop;
-    const start = ta.selectionStart ?? ta.value.length;
-    const end = ta.selectionEnd ?? start;
+    const start = (ta.selectionStart ?? ta.value.length) as number;
+    const end = (ta.selectionEnd ?? start) as number;
     if (typeof ta.setRangeText === "function") {
       ta.setRangeText(emoji, start, end, "end");
     } else {

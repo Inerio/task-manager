@@ -57,6 +57,9 @@
     [placeholder]="'task.dueDatePlaceholder' | transloco"
     autocomplete="off"
   />
+
+  <!-- Hide attachments zone ONLY on Brave (both create & edit use this form) -->
+  @if (!isBrave()) {
   <app-attachment-zone
     [attachments]="localTask().attachments ?? []"
     [taskId]="localTask().id ?? -1"
@@ -69,6 +72,7 @@
     [pendingFiles]="pendingFiles()"
     (dialogOpen)="onDialogOpen($event)"
   ></app-attachment-zone>
+  }
 
   <div class="btn-group">
     <button class="btn btn-success" type="button" (click)="handleSave()">

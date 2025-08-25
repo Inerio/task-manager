@@ -1,6 +1,6 @@
 .alert-stack {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-dialog);
   left: 50%;
   top: 24px;
   transform: translateX(-50%);
@@ -9,19 +9,19 @@
   align-items: center;
   gap: 10px;
   width: auto;
-  pointer-events: none; // so clicks pass through except close btn
+  pointer-events: none;
 }
 
 .alert-box {
   min-width: 220px;
   max-width: 80vw;
   padding: 1rem 2.2rem 1rem 1.5rem;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   font-size: 1.06rem;
-  box-shadow: 0 4px 32px #0002;
+  box-shadow: var(--shadow-3);
   opacity: 0.97;
   transition: opacity 0.2s, transform 0.15s;
-  pointer-events: auto; // allow close btn to be clickable
+  pointer-events: auto;
   position: relative;
   display: flex;
   align-items: center;
@@ -29,19 +29,19 @@
   gap: 1.2rem;
 
   &.success {
-    background: #e8f5e9;
-    color: #388e3c;
-    border: 1px solid #43a047;
+    background: color-mix(in oklab, var(--success) 12%, var(--surface-1));
+    color: color-mix(in oklab, var(--success) 45%, #000);
+    border: 1px solid color-mix(in oklab, var(--success) 55%, transparent);
   }
   &.error {
-    background: #ffebee;
-    color: #c62828;
-    border: 1px solid #c62828;
+    background: color-mix(in oklab, var(--danger) 10%, var(--surface-1));
+    color: color-mix(in oklab, var(--danger) 60%, #000);
+    border: 1px solid color-mix(in oklab, var(--danger) 60%, transparent);
   }
   &.info {
-    background: #e3f2fd;
-    color: #1976d2;
-    border: 1px solid #1976d2;
+    background: color-mix(in oklab, var(--brand) 10%, var(--surface-1));
+    color: color-mix(in oklab, var(--brand) 55%, #000);
+    border: 1px solid color-mix(in oklab, var(--brand) 60%, transparent);
   }
 }
 
@@ -53,13 +53,13 @@
   cursor: pointer;
   padding: 0 0.2em;
   margin-left: 0.25em;
-  border-radius: 4px;
+  border-radius: var(--radius-1);
   transition: background 0.12s, color 0.12s;
-  pointer-events: auto;
+
   &:hover,
   &:focus {
-    background: #eee;
-    color: #333;
+    background: var(--surface-2);
+    color: var(--text-1);
     outline: none;
   }
 }

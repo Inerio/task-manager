@@ -1,67 +1,106 @@
-/* Container for the inline (scoped) loading overlay */
+@use "../../../styles/_breakpoints" as bp;
+
 .board-scope {
-  position: relative; /* required so the inline overlay can anchor here */
-  min-height: 220px; /* keep enough room to show the spinner between loads */
+  position: relative;
+  min-height: 220px;
 }
 
+/* ===== Grid Kanban ===== */
 .task-columns {
   display: flex;
   align-items: flex-start;
   width: 100%;
-  max-width: 1380px;
-  padding: 1rem;
+  max-width: var(--content-max);
+  margin-left: 0;
+  margin-right: auto;
+  --gap: var(--space-6);
+  gap: var(--gap);
+  padding: var(--space-4);
+  --fab: 62px;
+  flex-wrap: wrap;
 
-  &:has(.column-draggable:nth-child(2)):not(
-      :has(.column-draggable:nth-child(3))
-    ),
-  &:has(.column-draggable:nth-child(3)):not(
-      :has(.column-draggable:nth-child(4))
-    ),
-  &:has(.column-draggable:nth-child(4)):not(
-      :has(.column-draggable:nth-child(5))
-    ),
-  &:has(.column-draggable:nth-child(5)):not(
-      :has(.column-draggable:nth-child(6))
+  /* -------- 1 column -------- */
+  --col-max: 640px;
+  --col-min: 280px;
+  --col-w: min(var(--col-max), 100%);
+
+  /* -------- 2 columns -------- */
+  &:has(.column-draggable:nth-of-type(2)):not(
+      :has(.column-draggable:nth-of-type(3))
     ) {
-    justify-content: space-between;
-    gap: 2rem;
+    --col-max: 520px; /* réduction */
+    --col-w: min(var(--col-max), calc((100% - var(--gap)) / 2));
   }
-  &:has(.column-draggable:nth-child(6)) {
-    justify-content: flex-start;
-    gap: 2rem;
+
+  /* -------- 3 columns -------- */
+  &:has(.column-draggable:nth-of-type(3)):not(
+      :has(.column-draggable:nth-of-type(4))
+    ) {
+    --col-max: 360px;
+    --col-w: calc((100% - 2 * var(--gap)) / 3);
+  }
+
+  /* -------- 4 columns -------- */
+  &:has(.column-draggable:nth-of-type(4)):not(
+      :has(.column-draggable:nth-of-type(5))
+    ) {
+    --col-min: 0px;
+    --col-max: 9999px;
+    --col-w: calc((100% - 4 * var(--gap) - var(--fab)) / 4);
+  }
+
+  /* -------- 5 columns -------- */
+  &:has(.column-draggable:nth-of-type(5)) {
+    --col-min: 0px;
+    --col-max: 9999px;
+    --col-w: calc((100% - 4 * var(--gap)) / 5);
+  }
+
+  @include bp.lg-down {
+    --gap: var(--space-5);
+  }
+  @include bp.md-down {
+    padding: var(--space-4) var(--space-3);
+    gap: var(--space-4);
+    --col-w: min(100%, var(--col-max));
   }
 }
 
+/* === Column wrapper === */
 .column-draggable {
-  transition: box-shadow 0.2s, background 0.2s, transform 0.2s;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px 0 #0001;
-  min-width: 260px;
-  max-width: 260px;
-  width: 260px;
-  margin-bottom: 1rem;
   position: relative;
+  background: var(--surface-1);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-2);
+  flex: 0 0 var(--col-w);
+  width: var(--col-w);
+  min-width: var(--col-min);
+  max-width: var(--col-max);
+
+  @include bp.sm-down {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
 }
 
 .column-draggable.drag-over {
-  box-shadow: 0 0 0 3px #1976d2aa, 0 2px 12px 0 #0001;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 70%, #0000),
+    var(--shadow-2);
   background: #e3f2fd;
   z-index: 2;
   transform: scale(1.03);
 }
-
 .column-draggable.is-dragged {
   opacity: 0.3;
   z-index: 3;
 }
 
 .add-kanbanColumn-error {
-  color: #b1001e;
+  color: var(--danger);
   font-size: 0.9em;
   margin-top: 0.25em;
 }
-
 .add-kanbanColumn-max-warning {
   color: #6c757d;
   font-size: 0.9em;
@@ -70,27 +109,21 @@
 }
 
 .column-header {
-  background: #f7f9fc;
-  border-bottom: 1px solid #eee;
-  border-radius: 12px 12px 0 0;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-1);
+  border-radius: var(--radius-3) var(--radius-3) 0 0;
   padding: 0.7rem 1rem;
   font-weight: bold;
   cursor: grab;
   user-select: none;
-  transition: background 0.15s;
   min-height: 40px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-width: 0;
-
-  .cancel-edit-btn {
-    display: none;
-  }
+  color: var(--text-1);
 }
 
 .cancel-edit-btn-top {
-  display: block;
   position: absolute;
   top: -34px;
   left: 50%;
@@ -99,20 +132,16 @@
   background: #fff7f7;
   color: #d32f2f;
   border: 1.5px solid #f5c2c2;
-  border-radius: 9px;
+  border-radius: var(--radius-2);
   font-size: 1.1em;
   font-weight: 500;
   padding: 0.33em 1.15em 0.33em 0.85em;
   box-shadow: 0 4px 12px #c0392b23, 0 2px 8px #0001;
   cursor: pointer;
-  margin-bottom: 0.14rem;
-  outline: none;
-  transition: background 0.18s, color 0.18s, border 0.17s;
   white-space: nowrap;
-
   &:hover {
     background: #fee;
-    color: #b1001e;
+    color: var(--danger);
     border-color: #d32f2f;
   }
 }
@@ -122,7 +151,6 @@
   flex: 1 1 0%;
   min-width: 0;
   max-width: 100%;
-  box-sizing: border-box;
 }
 
 .kanbanColumn-title {
@@ -130,51 +158,44 @@
   text-align: center;
   cursor: pointer;
   font-size: 1.08rem;
-  outline: none;
   padding: 0.3rem 1.3rem;
-  border-radius: 8px;
-  background: transparent;
-  border: none;
+  border-radius: var(--radius-1);
+  color: var(--text-1);
 }
-
 .kanbanColumn-title-input {
   font-weight: bold;
   text-align: center;
   border: 2px solid #222;
-  border-radius: 8px;
+  border-radius: var(--radius-1);
   padding: 0.3rem 1.3rem;
   font-size: 1.08rem;
-  background: #fff;
-  outline: none;
-  margin: 0 0.1rem;
+  background: var(--surface-1);
   transition: border 0.15s;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-.kanbanColumn-title-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px #3b82f633;
+  &:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 32%, #0000);
+  }
 }
 
 .add-kanbanColumn-fab-inline {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: 2.2rem;
+  margin-left: 0;
   margin-top: 0.5rem;
-  width: 62px;
-  height: 62px;
+  width: var(--fab);
+  height: var(--fab);
   border-radius: 50%;
-  background: #1976d2;
+  background: var(--brand);
   color: #fff;
   font-size: 2.4rem;
   font-weight: bold;
   border: none;
-  box-shadow: 0 3px 18px #1976d233, 0 1px 6px #0002;
+  box-shadow: 0 3px 18px color-mix(in oklab, var(--brand) 25%, #0000),
+    0 1px 6px #0002;
   cursor: pointer;
   transition: background 0.17s, box-shadow 0.17s, transform 0.15s;
-  outline: none;
+  flex: 0 0 var(--fab);
 
   &:hover:enabled {
     background: #1559b3;
@@ -186,49 +207,43 @@
     cursor: not-allowed;
     opacity: 0.9;
   }
+
+  @include bp.sm-down {
+    margin-left: 0;
+  }
 }
 
 .column-blocker {
   position: absolute;
+  inset: 0;
   z-index: 50;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: transparent;
   cursor: not-allowed;
 }
 
 .edit-title-placeholder {
   color: #b1b9d2;
   font-size: 1rem;
-  font-family: inherit;
   display: inline-flex;
   align-items: center;
   gap: 0.13em;
-  cursor: pointer;
   opacity: 0.85;
-  letter-spacing: 0.02em;
-
   .edit-icon {
     width: 1.1em;
     height: 1.1em;
     margin-left: 0.18em;
-    vertical-align: middle;
     filter: grayscale(1) brightness(1.2);
     opacity: 0.75;
   }
 }
-
 .kanbanColumn-title:hover .edit-title-placeholder {
-  color: #1976d2;
+  color: var(--brand);
   .edit-icon {
     opacity: 1;
     filter: none;
   }
 }
 
-/* === DROP PULSE (column) === */
+/* Drop pulse */
 @keyframes dropPulseColumn {
   0% {
     box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.22);
@@ -240,18 +255,14 @@
     box-shadow: none;
   }
 }
-
 .column-draggable.dropped-pulse .task-kanbanColumn {
   animation: dropPulseColumn 900ms ease-out;
 }
-
 @media (prefers-reduced-motion: reduce) {
   .column-draggable.dropped-pulse .task-kanbanColumn {
     animation: none;
   }
 }
-
-/* When reordering columns, ignore inner elements so drop hits the wrapper */
 .columns-reordering .task-kanbanColumn {
   pointer-events: none;
 }

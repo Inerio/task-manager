@@ -1,112 +1,183 @@
-// === SHARED: Generic styles and round buttons ===
+/* =========================================================
+   SHARED
+   - Buttons (.btn) + variants
+   - Round icon buttons (.icon-btn)
+   - Form fields (.form-control)
+   - Simple badges/labels (.chip)
+   - Compatibility: keep .btn-success/.btn-secondary and
+                    .styled-trash-btn/.styled-x-btn
+   ========================================================= */
 
-// Round buttons (trash, cross)
-.styled-trash-btn,
-.styled-x-btn {
-  display: flex;
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #ececec;
-  border: none;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px 0 #0001;
-  transition: background 0.2s, box-shadow 0.2s;
+  gap: 0.5rem;
+  padding: 0.44rem 0.8rem;
+  border: 0;
+  border-radius: var(--radius-1);
+  font: 500 1rem/1 var(--font-sans);
   cursor: pointer;
-  padding: 0;
-}
-.styled-trash-btn {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  max-width: 44px;
-  gap: 0.35em;
-  font-size: 1rem;
-  font-family: "Poppins", Arial, sans-serif;
-  font-weight: 500;
+  box-shadow: 0 1px 2px #0001;
+  transition: background 0.18s, color 0.18s, opacity 0.12s, transform 0.06s;
 
-  &:hover {
-    background: #ffd6d6;
-    box-shadow: 0 0 0 3px #f36c6c33;
+  &:active {
+    transform: translateY(1px);
   }
 }
+.btn--primary {
+  background: var(--brand);
+  color: #fff;
+}
+.btn--success {
+  background: var(--success);
+  color: #fff;
+}
+.btn--secondary {
+  background: #dadada;
+  color: #333;
+}
+.btn--danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn--primary:hover {
+  background: color-mix(in oklab, var(--brand) 88%, #000);
+}
+.btn--success:hover {
+  background: color-mix(in oklab, var(--success) 82%, #000);
+}
+.btn--secondary:hover {
+  background: #bbb;
+}
+.btn--danger:hover {
+  background: color-mix(in oklab, var(--danger) 85%, #000);
+}
+
+/* Button group */
+.btn-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ---------- Compatibility for existing buttons ---------- */
+/* Avoid touching templates for now */
+.btn.btn--success,
+.btn-success {
+  background: var(--success);
+  color: #fff;
+}
+.btn.btn--secondary,
+.btn-secondary {
+  background: #dadada;
+  color: #333;
+}
+.btn-success:hover {
+  background: color-mix(in oklab, var(--success) 82%, #000);
+}
+.btn-secondary:hover {
+  background: #bbb;
+}
+
+/* ---------- Round icon buttons ---------- */
+.icon-btn,
+.styled-trash-btn, /* compat */
+.styled-x-btn      /* compat */ {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--surface-2);
+  color: inherit;
+  border-radius: 50%;
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.06s;
+  padding: 0;
+
+  &:hover {
+    background: color-mix(in oklab, var(--brand) 10%, var(--surface-2));
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 20%, transparent);
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+
+  /* SVGs inherit the text color */
+  svg {
+    stroke: currentColor;
+    fill: none;
+  }
+}
+
+/* Sizes */
+.icon-btn--sm,
 .styled-x-btn {
   width: 32px;
   height: 32px;
-  margin-right: 0.4rem;
-  flex-shrink: 0;
-  &:hover {
-    background: #ffd6d6;
-    box-shadow: 0 0 0 3px #f36c6c33;
-  }
+}
+.icon-btn--md,
+.styled-trash-btn {
+  width: 36px;
+  height: 36px;
 }
 
+/* ---------- Special label already used ---------- */
 .delete-all-label {
-  color: #b1001e;
+  color: var(--danger);
   margin-left: 0.5em;
-  font-size: 1rem;
-  font-weight: 600;
+  font: 600 1rem/1.15 var(--font-sans);
   letter-spacing: 0.01em;
   user-select: none;
   pointer-events: none;
 }
 
-// === Generic buttons ===
-.btn-group {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.3rem;
-
-  .btn {
-    flex: 1;
-    padding: 0.44rem 0.2rem;
-    border-radius: 7px;
-    font-size: 1.04rem;
-    font-family: "Poppins", Arial, sans-serif;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .btn-success {
-    background: #45b959;
-    color: #fff;
-    &:hover {
-      background: #269d3c;
-    }
-  }
-  .btn-secondary {
-    background: #dadada;
-    color: #333;
-    &:hover {
-      background: #bbb;
-    }
-  }
-}
-
-// === Form fields ===
+/* ---------- Form fields ---------- */
 .form-control {
   width: 100%;
-  font-family: "Poppins", "Roboto", Arial, sans-serif;
-  font-size: 0.99rem;
+  font: 400 0.99rem/1.35 var(--font-sans);
   padding: 0.44rem 0.7rem;
-  border-radius: 8px;
+  border-radius: var(--radius-1);
   border: 1.8px solid #bfc2ce;
-  background: #fff;
+  background: var(--surface-1);
   margin-bottom: 0.46rem;
   outline: none;
-  box-shadow: none;
   transition: border 0.18s, box-shadow 0.18s;
   resize: vertical;
+
+  &:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 35%, transparent);
+  }
 }
 .form-control.textarea {
   min-height: 54px;
   max-height: 180px;
 }
-.form-control:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px #3b82f633;
+
+/* ---------- Simple badges/labels ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: var(--radius-round);
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  font: 500 0.9rem/1.2 var(--font-sans);
 }
-.textarea {
-  min-height: 54px;
-  max-height: 180px;
-  resize: vertical;
+
+/* ---------- Utilities ---------- */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+  white-space: nowrap;
 }

@@ -1,16 +1,14 @@
+@use "../../../styles/_breakpoints" as bp;
+
 .task-card {
   position: relative;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px 0 #0001;
+  background: var(--surface-1);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-1);
   margin-bottom: 1rem;
   padding: 1.9rem 1rem 0.32rem 1rem;
-  min-width: 0;
-  max-width: 100%;
   transition: background-color 0.3s, box-shadow 0.2s;
-
-  /* leave room when scrolled into view under the header */
-  scroll-margin-top: 72px;
+  color: var(--text-1);
 
   &:not(.has-badge) {
     padding-top: 0.7rem;
@@ -19,18 +17,15 @@
   &.completed {
     background-color: #e0ffe0;
     border-left: 4px solid #4caf50;
-    transition: background-color 0.18s, border-color 0.18s;
   }
 
   &.dragging {
     opacity: 0.7;
     box-shadow: 0 0 15px 3px rgba(0, 123, 255, 0.7);
     transform: scale(1.05);
-    transition: transform 0.2s;
     cursor: grabbing;
   }
 
-  /* Due badge & date row */
   .due-row {
     display: flex;
     align-items: center;
@@ -39,21 +34,21 @@
     top: 0.5rem;
     left: 0.5rem;
     z-index: 11;
-    padding-right: 2.6rem; // avoid overlap with checkbox
+    padding-right: 2.6rem;
   }
 
   .due-badge {
-    position: static;
-    background: #f7f9fc;
+    background: var(--surface-2);
     color: #1a283d;
     font-size: 0.73rem;
     font-weight: 600;
     padding: 0.09em 0.6em;
     border-radius: 10px;
     box-shadow: 0 0 2px #bbb;
+    border: 1px solid #e2e6f3;
     pointer-events: none;
     line-height: 1.5;
-    border: 1px solid #e2e6f3;
+
     &.late {
       background: #ffeaea;
       color: #d32f2f;
@@ -70,40 +65,30 @@
     margin-left: 0.18em;
     user-select: text;
     letter-spacing: 0.01em;
-    padding: 0 0.15em;
-    font-family: inherit;
+  }
+
+  .task-checkbox-icon,
+  .task-checkbox-icon-inline {
+    cursor: pointer;
+    accent-color: #4caf50;
+    background: var(--surface-1);
+    box-shadow: 0 0 2px #ccc;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    padding: 2px;
+    width: 18px;
+    height: 18px;
   }
 
   .task-checkbox-icon {
     position: absolute;
     top: 0.5rem;
     right: 1rem;
-    cursor: pointer;
-    accent-color: #4caf50;
     z-index: 12;
-    background: white;
-    box-shadow: 0 0 2px #ccc;
-    border-radius: 3px;
-    border: 1px solid #ccc;
-    padding: 2px;
-    width: 18px;
-    height: 18px;
   }
-
   .task-checkbox-icon-inline {
     margin-left: 0.7rem;
     align-self: flex-start;
-    cursor: pointer;
-    accent-color: #4caf50;
-    z-index: 2;
-    background: white;
-    box-shadow: 0 0 2px #ccc;
-    border-radius: 3px;
-    border: 1px solid #ccc;
-    padding: 2px;
-    width: 18px;
-    height: 18px;
-    position: static;
   }
 
   &.editing {
@@ -122,21 +107,16 @@
         font-size: 1.08rem;
         font-weight: 700;
         margin: 0;
-        background: none;
-        border: none;
-        padding: 0rem 0 0 0;
-        color: #232323;
-        word-break: break-word;
+        padding: 0;
+        color: var(--text-1);
         flex: 1 1 0;
         min-width: 0;
-        transition: margin-top 0.14s;
+
         &.truncated {
-          display: -webkit-box;
-          -webkit-box-orient: vertical;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          color: #1976d2;
+          color: var(--brand);
           cursor: pointer;
           user-select: none;
         }
@@ -146,44 +126,36 @@
     h4 {
       font-size: 1.08rem;
       font-weight: 700;
-      margin: 0 0 0rem 0;
-      background: none;
-      border: none;
+      margin: 0;
       padding: 0.2rem 0;
-      color: #232323;
-      word-break: break-word;
-      transition: margin-top 0.14s;
+      color: var(--text-1);
       &.truncated {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        color: #1976d2;
+        color: var(--brand);
         cursor: pointer;
         user-select: none;
       }
     }
+
     p {
-      background: #f7f9fc;
-      border-radius: 7px;
+      background: var(--surface-2);
+      border-radius: var(--radius-1);
       color: #444;
       font-size: 0.99rem;
       margin: 0 0 0.5rem 0;
       padding: 0.44rem 0.7rem;
-      border: none;
-      box-shadow: none;
       word-break: break-word;
       overflow-wrap: anywhere;
       white-space: pre-line;
       min-height: 24px;
+
       &.truncated {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
         overflow: hidden;
         text-overflow: ellipsis;
         cursor: pointer;
-        color: #1976d2;
+        color: var(--brand);
         user-select: none;
         transition: background 0.14s;
         &:hover {
@@ -194,94 +166,34 @@
   }
 }
 
-/* Compact buttons inside card */
+/* Compact buttons */
 .btn-group .btn {
   padding: 0.12rem 0.2rem !important;
   font-size: 0.97rem !important;
   min-height: 24px !important;
 }
 
-/* ==== EDIT MODE: textarea, emoji position ==== */
-.task-card.editing .desc-row-edit {
-  position: relative;
+/* Edit mode harmonization */
+.task-card.editing {
+  padding: 0 !important;
+  box-shadow: none !important;
+  background: var(--surface-1) !important;
 }
-
-.task-card.editing .desc-row-edit .form-control.textarea {
-  background: #f7f9fc;
-  border-radius: 8px;
-  border: 1.3px solid #bfc2ce;
-  font-size: 1rem;
-  padding: 0.35rem 2.5em 0.85em 0.7em;
-  box-shadow: none;
-  margin-bottom: 0.65rem;
-  outline: none;
-  min-height: 54px;
-  height: 180px;
-  max-height: 360px;
-  resize: vertical;
-}
-
-/* Emoji icon at bottom-right of textarea */
-.emoji-trigger-bottom {
-  position: absolute;
-  right: 0.6em;
-  bottom: 1em;
-  z-index: 20;
-  font-size: 1.36em;
-  cursor: pointer;
-  user-select: none;
-  padding: 0;
-  background: none;
-  border: none;
-  transition: filter 0.1s;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  &:hover {
-    filter: brightness(1.18);
-  }
-  img {
-    display: block;
-    pointer-events: none;
-  }
-}
-
-.task-card.editing .form-control:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px #3b82f633;
+.task-card.editing .task-form.editing-task-form {
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-2);
+  padding: 0.7rem 1rem 0.32rem 1rem;
 }
 
 /* DnD highlight */
 .task-card.drag-over-card {
   background: #f4faff;
-  border: 2.5px solid #1976d2;
+  border: 2.5px solid var(--brand);
   box-shadow: 0 4px 20px 0 #1976d21a, 0 1.5px 10px 0 #0001;
   transform: scale(1.035) !important;
-  z-index: 999;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s,
-    transform 0.15s;
 }
 
-/* Unify styling with task-form when editing */
-.task-card.editing {
-  padding: 0 !important;
-  box-shadow: none !important;
-  background: #fff !important;
-}
-
-.task-card.editing .task-form.editing-task-form {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px 0 #0001;
-  padding: 0.7rem 1rem 0.32rem 1rem;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  margin: 0;
-  font-family: "Poppins", "Roboto", "Helvetica Neue", Arial, sans-serif;
-  background: #fff;
-}
-
-/* === DROP PULSE (task) === */
+/* Drop pulse */
 @keyframes dropPulseTask {
   0% {
     box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.32), 0 2px 8px 0 #0001;
@@ -290,14 +202,12 @@
     box-shadow: 0 0 0 12px rgba(25, 118, 210, 0), 0 2px 8px 0 #0001;
   }
   100% {
-    box-shadow: 0 2px 8px 0 #0001;
+    box-shadow: var(--shadow-1);
   }
 }
-
 .task-card.dropped-pulse {
   animation: dropPulseTask 950ms ease-out;
 }
-
 @media (prefers-reduced-motion: reduce) {
   .task-card.dropped-pulse {
     animation: none;

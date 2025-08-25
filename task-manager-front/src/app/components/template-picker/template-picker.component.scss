@@ -1,20 +1,17 @@
-@use "../../../styles/_breakpoints" as bp;
-
 .picker-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(30, 36, 49, 0.35);
-  z-index: var(--z-dialog);
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .picker {
-  background: var(--surface-1);
-  color: var(--text-1);
+  background: #fff;
   border-radius: 14px;
-  box-shadow: var(--shadow-3);
+  box-shadow: 0 2px 24px #0002;
   width: min(920px, 92vw);
   padding: 1.4rem 1.6rem 1rem;
   animation: popIn 0.17s cubic-bezier(0.5, 1.2, 0.5, 1.07);
@@ -27,7 +24,7 @@
 
 .subtitle {
   margin: 0 0 0.9rem;
-  color: color-mix(in oklab, var(--text-2) 92%, #0000);
+  color: #5b6476;
   white-space: pre-line;
 }
 
@@ -36,15 +33,15 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.7rem;
 
-  @include bp.down(980px) {
+  @media (max-width: 980px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 .card {
-  border: 1px solid var(--border-1);
-  background: var(--surface-3);
-  border-radius: var(--radius-3);
+  border: 1px solid #e3e7f1;
+  background: #fafcff;
+  border-radius: 12px;
   padding: 0.7rem 0.6rem;
   text-align: left;
   cursor: pointer;
@@ -56,15 +53,14 @@
 
   &:hover {
     transform: translateY(-1px);
-    border-color: color-mix(in oklab, var(--brand) 35%, var(--border-1));
-    box-shadow: 0 4px 14px 2px
-      color-mix(in oklab, var(--brand) 15%, transparent);
+    border-color: #c6d4f4;
+    box-shadow: 0 4px 14px 2px #1976d21a;
   }
 }
 
 .card-title {
   font-weight: 700;
-  color: var(--text-1);
+  color: #192338;
 }
 
 .cols {
@@ -74,25 +70,26 @@
 }
 
 .col-pill {
-  background: var(--surface-1);
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius-round);
+  background: #fff;
+  border: 1px solid #dbe1ee;
+  border-radius: 999px;
   padding: 0.18rem 0.55rem;
   font-size: 0.85rem;
-  color: color-mix(in oklab, var(--text-1) 82%, #0000);
+  color: #26324a;
   box-shadow: 0 1px 2px #0001;
 }
 
 .desc {
   font-size: 0.88rem;
-  color: color-mix(in oklab, var(--text-2) 92%, #0000);
+  color: #5c667a;
   min-height: 1.2em;
 }
+
 .use {
   margin-top: auto;
   align-self: flex-start;
   font-size: 0.9rem;
-  color: var(--brand);
+  color: #1976d2;
 }
 
 .footer {
@@ -105,7 +102,7 @@
   background: #dadada;
   border: none;
   color: #333;
-  border-radius: var(--radius-2);
+  border-radius: 8px;
   padding: 0.4rem 0.8rem;
   cursor: pointer;
   transition: background 0.18s ease;
@@ -122,11 +119,5 @@
   to {
     transform: scale(1);
     opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .picker {
-    animation: none;
   }
 }

@@ -4,19 +4,19 @@ import {
   OnDestroy,
   OnInit,
   computed,
-  inject,
   signal,
+  inject,
 } from "@angular/core";
-import { TranslocoModule } from "@jsverse/transloco";
+import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
+import { AlertService } from "../../services/alert.service";
 
 type Theme = "light" | "dark";
 
 /**
- * Theme Switcher
- * - Toggles [data-theme] on <html> to avoid FOUC.
- * - Persists to localStorage.
- * - Respects prefers-color-scheme on first load (index.html inline script).
- * - Listens to 'storage' so multiple tabs stay in sync.
+ * Simple theme switcher (UI-only for now).
+ * - Clicking either button toggles the active theme (like the language switcher UX).
+ * - Shows an info alert: "not yet implemented".
+ * - Persists the last choice in localStorage (cosmetic).
  */
 @Component({
   selector: "app-theme-switcher",
@@ -27,39 +27,27 @@ type Theme = "light" | "dark";
   imports: [TranslocoModule],
 })
 export class ThemeSwitcherComponent implements OnInit, OnDestroy {
-  private readonly LS_KEY = "appTheme";
+  private readonly i18n = inject(TranslocoService);
+  private readonly alert = inject(AlertService);
+
   readonly active = signal<Theme>("light");
 
-  private onStorage = (e: StorageEvent) => {
-    if (
-      e.key === this.LS_KEY &&
-      (e.newValue === "light" || e.newValue === "dark")
-    ) {
-      this.setTheme(e.newValue as Theme, /*persist*/ false);
-    }
-  };
-
   ngOnInit(): void {
-    const saved = (localStorage.getItem(this.LS_KEY) as Theme) || "light";
-    this.setTheme(saved, false);
-    window.addEventListener("storage", this.onStorage);
+    const saved = (localStorage.getItem("appTheme") as Theme) || "light";
+    this.active.set(saved);
   }
 
-  ngOnDestroy(): void {
-    window.removeEventListener("storage", this.onStorage);
-  }
+  ngOnDestroy(): void {}
 
+  /** Toggle theme on ANY button click to mimic the language switcher UX. */
   toggle(): void {
     const next: Theme = this.active() === "light" ? "dark" : "light";
-    this.setTheme(next, true);
-  }
+    this.active.set(next);
+    localStorage.setItem("appTheme", next);
 
-  private setTheme(theme: Theme, persist: boolean): void {
-    this.active.set(theme);
-    document.documentElement.setAttribute("data-theme", theme);
-    if (persist) localStorage.setItem(this.LS_KEY, theme);
+    // Inform the user this is UI-only for now.
+    this.alert.show("info", this.i18n.translate("theme.notImplemented"));
   }
-
   isLight = computed(() => this.active() === "light");
   isDark = computed(() => this.active() === "dark");
 }

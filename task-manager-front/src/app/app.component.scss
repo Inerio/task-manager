@@ -1,37 +1,33 @@
-@use "../styles/_breakpoints" as bp;
+body {
+  background: #fafbfc;
+  font-family: "Poppins", Arial, sans-serif;
+}
 
 .main-layout {
   display: flex;
   min-height: 100vh;
   position: relative;
 
-  /* Decorative watermark (kept) */
+  // Decorative watermark on the right, fixed so it doesn't create scroll
   &::after {
     content: "";
     position: fixed;
-    left: var(--sidebar-w);
+    left: 230px;
     top: 0;
-    width: calc(100vw - var(--sidebar-w));
+    width: calc(100vw - 230px);
     height: 100vh;
     background: url("/svg/tasukeru-bg.svg") center center no-repeat;
     background-size: 110% auto;
     z-index: 0;
     pointer-events: none;
-    opacity: 0.25;
-  }
-
-  @include bp.md-down {
-    &::after {
-      display: none;
-    } /* avoid overlap on small screens */
   }
 }
 
 .sidebar {
-  background: var(--surface-1);
-  width: var(--sidebar-w);
-  padding: 2rem 1.3rem 1.5rem;
-  border-right: 1.5px solid var(--border-1);
+  background: #fff;
+  width: 230px;
+  padding: 2rem 1.3rem 1.5rem 1.3rem;
+  border-right: 1.5px solid #eee;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -39,22 +35,14 @@
   position: sticky;
   top: 0;
   height: 100vh;
-  z-index: var(--z-sidebar);
-  color: var(--text-1);
+  z-index: 100;
 
-  @include bp.md-down {
-    position: static;
-    width: 100%;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--border-1);
-  }
-
+  // Header row for language + theme toggles
   .sidebar-header {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    justify-content: space-between;
     margin-bottom: 10px;
   }
 
@@ -63,7 +51,6 @@
     font-weight: 800;
     margin-bottom: 2.2rem;
     margin-left: 0.1em;
-    color: var(--text-1);
   }
 }
 
@@ -76,7 +63,7 @@
 
 .board-item {
   padding: 0.7em 1.2em;
-  border-radius: var(--radius-1);
+  border-radius: 8px;
   cursor: pointer;
   background: #f5f7fa;
   font-weight: 500;
@@ -86,20 +73,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  box-sizing: border-box;
 
   &:hover {
     background: #e0edfa;
-    color: var(--brand);
+    color: #1976d2;
   }
   &.selected {
-    background: var(--brand);
+    background: #1976d2;
     color: #fff;
     font-weight: 700;
-  }
-
-  &.drag-over {
-    outline: 2px dashed var(--brand);
-    background: #e9f2ff;
   }
 }
 
@@ -107,31 +90,36 @@
   padding: 0.7em 1.2em;
   font-weight: 500;
   font-size: 1rem;
-  border: 2px solid var(--brand);
-  border-radius: var(--radius-1);
-  background: #f5f7fa;
+  border: 2px solid #1976d2;
+  outline: none;
+  background: #fff;
+  min-width: 0;
   width: 100%;
+  max-width: 100%;
+  border-radius: 8px;
+  box-sizing: border-box;
+  margin: 0;
   transition: border 0.15s, box-shadow 0.15s, background 0.16s;
-
-  &:focus {
-    border-color: color-mix(in oklab, var(--brand) 80%, #0000);
-    box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 30%, #0000);
-    background: #fff;
-  }
+  background: #f5f7fa;
+}
+.board-edit-input:focus {
+  border: 2px solid #1651a3;
+  box-shadow: 0 0 0 2px #1976d244;
+  background: #fff;
 }
 
 .add-board-btn {
   margin-top: 1.6em;
-  background: var(--brand);
+  background: #1976d2;
   color: #fff;
   font-weight: 600;
   border: none;
-  border-radius: var(--radius-2);
+  border-radius: 9px;
   padding: 0.7em 1.1em;
   font-size: 1.1em;
   cursor: pointer;
   transition: background 0.15s, box-shadow 0.15s;
-  box-shadow: 0 1px 4px color-mix(in oklab, var(--brand) 27%, transparent);
+  box-shadow: 0 1px 4px #1976d244;
 
   &:hover {
     background: #1651a3;
@@ -140,17 +128,14 @@
 
 .board-area {
   flex: 1 1 auto;
-  padding: 2.5rem 3.5rem 2rem;
+  padding: 2.5rem 3.5rem 2rem 3.5rem;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
-
-  @include bp.md-down {
-    padding: var(--space-5) var(--space-4);
-  }
 }
 
+/* ===== BOARD HEADER ===== */
 .board-header {
   display: flex;
   justify-content: space-between;
@@ -158,22 +143,12 @@
   margin-bottom: 2.4rem;
   gap: 1.2rem;
 
-  @include bp.sm-down {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-4);
-  }
-
   .board-title-wrapper {
     flex: 1 1 auto;
     display: flex;
     align-items: center;
     min-width: 0;
     max-width: 45vw;
-
-    @include bp.md-down {
-      max-width: 100%;
-    }
   }
 
   .selected-board-title {
@@ -188,7 +163,6 @@
     user-select: none;
     min-width: 0;
     max-width: 100%;
-    color: var(--text-1);
 
     & > span.board-title-text {
       flex: 1 1 auto;
@@ -197,28 +171,35 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-
-      @include bp.md-down {
-        max-width: 100%;
-      }
+      display: block;
     }
 
     &:hover,
     &:focus {
       background: #f5f5f9;
-      border-radius: var(--radius-1);
+      border-radius: 7px;
       transition: background 0.14s;
+    }
+
+    .styled-x-btn {
+      flex-shrink: 0;
+      margin-left: 0.05em;
+      margin-right: 0.07em;
+      vertical-align: middle;
     }
   }
 
   .selected-board-title-edit {
     font-size: 2rem;
     font-weight: 700;
-    border-radius: var(--radius-2);
-    border: 2px solid var(--brand);
+    border-radius: 9px;
+    border: 2px solid #1976d2;
     width: 320px;
     max-width: 100%;
-    background: var(--surface-1);
+    outline: none;
+    box-sizing: border-box;
+    background: #fff;
+    margin-left: -0.15em;
     min-height: 48px;
     line-height: 1.2;
     display: flex;
@@ -227,7 +208,7 @@
 
     &:focus {
       border-color: #1651a3;
-      box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 36%, #0000);
+      box-shadow: 0 0 0 2px #1976d266;
     }
   }
 
@@ -237,34 +218,76 @@
     align-items: center;
     gap: 0.6em;
     padding: 0.52em 1.3em 0.52em 1.07em;
-    background: var(--surface-1);
+    background: #fff;
     border: none;
-    border-radius: var(--radius-2);
+    border-radius: 9px;
     box-shadow: 0 2px 12px #0001;
     font-weight: 700;
     font-size: 1.04rem;
-    color: var(--danger);
+    color: #b1001e;
     cursor: pointer;
     transition: background 0.16s, box-shadow 0.15s, color 0.16s;
     min-width: 188px;
+    width: max-content;
+    max-width: none;
+    white-space: nowrap;
 
     &:hover:enabled,
     &:focus:enabled {
       background: #fff3f3;
-      color: color-mix(in oklab, var(--danger) 90%, #0000);
+      color: #c70027;
+      outline: none;
+    }
+
+    img {
+      margin-right: 0.36em;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .delete-all-label {
+      white-space: nowrap;
+      font-weight: 700;
+      font-size: 1.05em;
+      line-height: 1.15;
+      padding-left: 0.08em;
+      padding-right: 0.07em;
+      letter-spacing: -0.5px;
+      display: inline-block;
     }
   }
+}
 
-  .delete-all-btn.styled-trash-btn {
-    width: auto !important;
-    height: auto !important;
-    min-height: 44px;
-    border-radius: var(--radius-2) !important;
-    background: var(--surface-1) !important;
-    padding: 0.52em 1.3em 0.52em 1.07em !important;
-    line-height: 1.15;
-    box-shadow: 0 2px 12px #0001;
+.selected-board-title-edit {
+  font-size: 2rem;
+  font-weight: 700;
+  border-radius: 9px;
+  border: 2px solid #1976d2;
+  width: 320px;
+  max-width: 100%;
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+  margin: 0 0.15em;
+  min-height: 48px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  transition: border 0.17s, box-shadow 0.16s;
+
+  &:focus {
+    border-color: #1651a3;
+    box-shadow: 0 0 0 2px #1976d266;
   }
+}
+
+// Keep content above the watermark
+.board-area,
+.board-header,
+.boards-list,
+.board-item {
+  position: relative;
+  z-index: 1;
 }
 
 .tasukeru-title {
@@ -281,19 +304,25 @@
   .tasukeru-main {
     font-size: 2.35rem;
     font-weight: 900;
-    color: var(--brand);
+    color: #1976d2;
     letter-spacing: -1px;
     margin-bottom: 0.07em;
+    line-height: 1.1;
   }
 
   .tasukeru-sub {
     font-size: 1.2rem;
     font-weight: 700;
-    color: var(--text-2);
-    opacity: 0.9;
+    color: #555;
+    opacity: 0.8;
+    letter-spacing: 0;
+    margin-top: -0.27em;
+    margin-left: 0.06em;
+    line-height: 1.07;
   }
 }
 
+/* ===== Footer =====*/
 .app-footer {
   position: fixed;
   left: 0;
@@ -302,16 +331,20 @@
   text-align: center;
   font-size: 12.5px;
   color: #7b8aa1;
-  z-index: var(--z-footer);
+  z-index: 200;
   pointer-events: none;
+}
 
-  @include bp.md-down {
-    position: static;
-    margin-top: var(--space-6);
-    padding-bottom: var(--space-4);
+.board-item {
+  /* existing styles */
+
+  &.drag-over {
+    outline: 2px dashed #1976d2;
+    background: #e9f2ff;
   }
 }
 
+/* End dropzone to allow "drop at the very end" of the list */
 .board-dropzone-end {
   height: 10px;
   margin-top: 8px;
@@ -321,15 +354,6 @@
 
   &.drag-over {
     background: #e3f2fd;
-    border-color: var(--brand);
+    border-color: #1976d2;
   }
-}
-
-/* Keep content above the watermark */
-.board-area,
-.board-header,
-.boards-list,
-.board-item {
-  position: relative;
-  z-index: 1;
 }

@@ -4,8 +4,11 @@
 
 <div class="main-layout">
   <aside class="sidebar">
-    <!-- Switchers row -->
-    <div class="sidebar-header">
+    <!-- Switchers row (language + theme) -->
+    <div
+      class="sidebar-lang"
+      style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center"
+    >
       <app-language-switcher></app-language-switcher>
       <app-theme-switcher></app-theme-switcher>
     </div>
@@ -45,7 +48,10 @@
         autofocus
         placeholder="{{ 'boards.namePlaceholder' | transloco }}"
       />
-      } } @if (canShowAdd()) {
+      } }
+
+      <!-- Keep the button visible while editing; hide only when limit reached -->
+      @if (canShowAdd()) {
       <button
         class="add-board-btn"
         (click)="addBoard()"
@@ -55,6 +61,7 @@
       </button>
       }
 
+      <!-- End dropzone to allow dropping at the very end -->
       <div
         class="board-dropzone-end"
         [class.drag-over]="dropEndOver()"
@@ -78,6 +85,7 @@
           (keydown.enter)="startSelectedBoardEdit()"
           (keydown.space)="startSelectedBoardEdit()"
           [attr.title]="'boards.editTitleHint' | transloco"
+          style="cursor: pointer"
         >
           <span class="board-title-text">{{ selectedBoardName }}</span>
           <button
@@ -134,6 +142,7 @@
   }
 </div>
 
+<!-- Fixed footer -->
 <footer class="app-footer">
   © {{ currentYear }} {{ "app.brand" | transloco }}.
   {{ "app.copyright" | transloco }}

@@ -1,20 +1,18 @@
 .confirm-dialog-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(30, 36, 49, 0.35);
-  z-index: 2000;
+  z-index: var(--z-dialog);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .confirm-dialog {
-  background: #fff;
+  background: var(--surface-1);
+  color: var(--text-1);
   border-radius: 14px;
-  box-shadow: 0 2px 24px #0002;
+  box-shadow: var(--shadow-3);
   padding: 2rem 2.5rem 1.5rem 2.5rem;
   min-width: 320px;
   max-width: 700px;
@@ -28,18 +26,13 @@
   margin-top: 0;
   word-break: break-word;
   max-width: 90%;
-  margin-left: auto;
-  margin-right: auto;
+  margin-inline: auto;
 }
 
-/* Render \n as real line breaks and keep spacing tidy */
-.confirm-dialog p,
 .confirm-dialog .message {
   max-width: 90%;
-  margin-left: auto;
-  margin-right: auto;
+  margin-inline: auto;
   word-break: break-word;
-  overflow-wrap: break-word;
   white-space: pre-line;
   font-size: 1.1em;
   max-height: 7em;
@@ -64,6 +57,9 @@
     opacity: 1;
   }
 }
-.confirm-dialog-backdrop {
-  z-index: 9999 !important;
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-dialog {
+    animation: none;
+  }
 }

@@ -1,0 +1,22 @@
+/* Dark theme overrides */
+[data-theme="dark"] {
+  --text-1: #e6eaf1;
+  --text-2: #b7c0d0;
+
+  --bg-body: #0f1420;
+  --surface-1: #151b28;
+  --surface-2: #1a2131;
+  --surface-3: #0f1522;
+
+  --border-1: #263044;
+  --border-2: #2f3b53;
+
+  --brand: #7db7ff;
+  --success: #6fdd86;
+  --danger: #ff6b81;
+  --warning: #ffd166;
+
+  --shadow-1: 0 2px 8px 0 rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 2px 12px 0 rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 4px 24px 0 rgba(0, 0, 0, 0.6);
+}

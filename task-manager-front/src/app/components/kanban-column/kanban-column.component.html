@@ -24,17 +24,11 @@
     </div>
     }
 
-    <!-- ===== TOP ZONE: slice + placeholder wrapped together ===== -->
-    <div
-      class="head-zone"
-      [style.height.px]="
-        dragOverIndex() === 0
-          ? placeholderHeight()
-          : isTaskDragActive()
-          ? 32
-          : 0
-      "
-    >
+    <!-- ===== TOP ZONE: persistent spacer + slice + optional placeholder ===== -->
+    <div class="head-zone">
+      <!-- Persistent spacer so the top gap exists before any drag -->
+      <div class="head-spacer" aria-hidden="true"></div>
+
       <div
         class="drop-slice head-slice"
         [class.active]="sliceIsActive(0)"

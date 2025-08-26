@@ -1,6 +1,9 @@
 @use "../../../styles/_breakpoints" as bp;
 
 .task-kanbanColumn {
+  /* Single source of truth for vertical gaps between tasks */
+  --task-gap: 0.8rem;
+
   position: relative;
   display: flex;
   flex-direction: column;
@@ -37,15 +40,20 @@
   position: relative;
 }
 
-/* Head zone wraps the top slice + its placeholder */
+/* Head zone wraps a persistent spacer + the top slice + optional placeholder */
 .head-zone {
   position: relative;
+
+  /* Persistent spacer to keep the same gap as between two tasks, even before drag */
+  .head-spacer {
+    height: var(--task-gap);
+  }
 }
 
-/* Row wrapper */
+/* Row wrapper; one row per card */
 .task-row {
   position: relative;
-  margin-bottom: 0.8rem;
+  margin-bottom: var(--task-gap);
 
   app-task {
     display: block;
@@ -68,7 +76,7 @@
   }
 }
 
-/* Head slice overlays the whole head-zone (incl. its placeholder) */
+/* Head slice overlays the whole head-zone (spacer + placeholder area) */
 .head-slice {
   inset: 0;
   top: 0;
@@ -88,7 +96,7 @@
 .tail-slice {
   position: relative;
   height: 48px;
-  margin-top: 0.2rem;
+  margin-top: calc(var(--task-gap) * 0.25);
   pointer-events: none;
 }
 .task-drag-active .tail-slice {
@@ -120,7 +128,7 @@
 .task-placeholder {
   --ph: 72px; /* fallback */
   height: 0;
-  margin: 0 0 0.8rem 0;
+  margin: 0 0 var(--task-gap) 0; /* same gap as between two tasks */
   border-radius: var(--radius-3);
   background: transparent;
   border: 0;

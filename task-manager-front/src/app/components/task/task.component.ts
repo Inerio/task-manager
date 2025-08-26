@@ -43,7 +43,14 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 })
 export class TaskComponent implements OnChanges {
   @Input({ required: true }) task!: Task;
+
+  /** Ghost mode: visual-only clone (used in placeholder). */
+  @Input() ghost = false;
+
+  /** Emits the native drop event to the parent column. */
   @Output() taskDropped = new EventEmitter<DragEvent>();
+  /** Emits dragover to the parent column so it can compute live preview index. */
+  @Output() taskDragOver = new EventEmitter<DragEvent>();
 
   @ViewChild("cardEl") private cardEl?: ElementRef<HTMLElement>;
 
@@ -202,6 +209,10 @@ export class TaskComponent implements OnChanges {
 
   // --- Drag & drop handlers (card only) ---
   onTaskDragStart(event: DragEvent): void {
+    if (this.ghost) {
+      event.preventDefault();
+      return;
+    }
     if (this.localTask().isEditing) {
       event.preventDefault();
       return;
@@ -218,10 +229,21 @@ export class TaskComponent implements OnChanges {
       this.localTask().kanbanColumnId!
     );
 
+    // Capture card size to size the placeholder accurately.
+    const cardSize = this.cardEl?.nativeElement.getBoundingClientRect();
+    if (cardSize) {
+      this.dragDropGlobal.setDragPreviewSize(cardSize.width, cardSize.height);
+    }
+
     const card = (event.target as HTMLElement).closest(".task-card");
     if (card && card instanceof HTMLElement) {
       const clone = card.cloneNode(true) as HTMLElement;
-      clone.classList.remove("dragging", "drag-over-card");
+      clone.classList.remove(
+        "dragging",
+        "drag-over-card",
+        "dropped-pulse",
+        "ghost"
+      );
       clone.querySelectorAll("button, input[type='checkbox']").forEach((el) => {
         (el as HTMLElement).setAttribute("disabled", "true");
         (el as HTMLElement).style.pointerEvents = "none";
@@ -256,32 +278,56 @@ export class TaskComponent implements OnChanges {
   }
 
   onTaskDragEnd(): void {
+    if (this.ghost) return;
     this.dragging.set(false);
     this.dragDropGlobal.endDrag();
   }
 
   onTaskDragOver(event: DragEvent): void {
+    if (this.ghost) return;
     event.preventDefault();
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (ctx && ctx.taskId === this.localTask().id) {
+      return;
+    }
+    this.taskDragOver.emit(event);
   }
 
   onTaskDragEnter(_event?: DragEvent): void {
+    if (this.ghost) return;
     if (!this.localTask().isEditing && this.dragDropGlobal.isTaskDrag()) {
+      const ctx = this.dragDropGlobal.currentTaskDrag();
+      if (ctx && ctx.taskId === this.localTask().id) {
+        return;
+      }
       this.dragEnterCount++;
       this.dragOver.set(true);
     }
   }
 
   onTaskDragLeave(_event?: DragEvent): void {
+    if (this.ghost) return;
     if (!this.localTask().isEditing && this.dragDropGlobal.isTaskDrag()) {
+      const ctx = this.dragDropGlobal.currentTaskDrag();
+      if (ctx && ctx.taskId === this.localTask().id) {
+        return;
+      }
       this.dragEnterCount = Math.max(0, this.dragEnterCount - 1);
       if (this.dragEnterCount === 0) this.dragOver.set(false);
     }
   }
 
   onTaskDrop(event: DragEvent): void {
+    if (this.ghost) return;
     if (this.localTask().isEditing) return;
     if (!event.dataTransfer || event.dataTransfer.getData("type") !== "task")
       return;
+
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (ctx && ctx.taskId === this.localTask().id) {
+      return;
+    }
+
     event.preventDefault();
     this.dragEnterCount = 0;
     this.dragOver.set(false);
@@ -315,7 +361,6 @@ export class TaskComponent implements OnChanges {
     if (fullTask.id) {
       await this.taskService.updateTask(fullTask.id, fullTask);
       await this.refreshFromBackend(fullTask.id);
-      // Pulse on save
       this.dragDropGlobal.markTaskSaved(fullTask.id);
     } else {
       try {
@@ -357,8 +402,6 @@ export class TaskComponent implements OnChanges {
     if (id) await this.refreshFromBackend(id);
     else this.patchLocalTask({ isEditing: false });
   }
-
-  /** Ask confirmation before deleting the task. */
   async confirmDelete(): Promise<void> {
     const id = this.localTask().id;
     if (!id) return;
@@ -459,7 +502,6 @@ export class TaskComponent implements OnChanges {
 
   /** Localized badge text that recomputes when the language changes. */
   dueBadge = computed(() => {
-    // Touch the language signal so this recomputes on language switch.
     this.lang();
 
     const dueRaw = this.localTask().dueDate;
@@ -483,7 +525,6 @@ export class TaskComponent implements OnChanges {
 
   /** Localized due date text (en: month/day/year, fr: day/month/year). */
   readonly formattedDueDate = computed(() => {
-    // Touch language so it recomputes on switch
     const lang = (this.lang() as string) || "en";
 
     const raw = this.localTask().dueDate;

@@ -2,9 +2,6 @@ import { Injectable, signal } from "@angular/core";
 
 /**
  * Global drag/drop context shared across components.
- *
- * Fix: auto-expire "pulse" markers (drop/create/save) to avoid
- * re-triggering animations when boards reload or components remount.
  */
 @Injectable({ providedIn: "root" })
 export class DragDropGlobalService {
@@ -19,6 +16,12 @@ export class DragDropGlobalService {
   readonly currentColumnDrag = signal<{ columnId: number } | null>(null);
   readonly currentBoardDrag = signal<{ boardId: number } | null>(null);
   readonly currentFileDrag = signal<boolean>(false);
+
+  /** Dragged task visual size (used to size the placeholder). */
+  readonly taskDragPreviewSize = signal<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   /** Last dropped elements (to trigger a visual pulse). */
   readonly lastDroppedTask = signal<{ id: number; token: number } | null>(null);
@@ -78,6 +81,7 @@ export class DragDropGlobalService {
     this.currentColumnDrag.set(null);
     this.currentBoardDrag.set(null);
     this.currentFileDrag.set(false);
+    this.clearDragPreviewSize();
   }
 
   isTaskDrag(): boolean {
@@ -91,6 +95,16 @@ export class DragDropGlobalService {
   }
   isFileDrag(): boolean {
     return this.currentDragType() === "file" && this.currentFileDrag();
+  }
+
+  // === Drag preview sizing ===
+  /** Set the visual size of the dragged task to size the placeholder. */
+  setDragPreviewSize(width: number, height: number): void {
+    this.taskDragPreviewSize.set({ width, height });
+  }
+  /** Clear stored preview size (on drag end). */
+  clearDragPreviewSize(): void {
+    this.taskDragPreviewSize.set(null);
   }
 
   // === Pulse markers (auto-expire to prevent stale pulses) ===

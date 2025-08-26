@@ -1,24 +1,16 @@
-<div class="task-kanbanColumn">
+<div
+  class="task-kanbanColumn"
+  [class.task-drag-active]="isTaskDragActive()"
+  (dragenter)="onColumnDragEnter($event)"
+  (dragleave)="onColumnDragLeave($event)"
+>
   <div class="task-dropzone-column">
     <!-- Add button always on top -->
     <button type="button" (click)="openForm()" class="add-btn">
       + {{ "task.add" | transloco }}
     </button>
 
-    <!-- Top dropzone under the add button -->
-    @if (hasAnyTask) {
-    <div
-      class="task-dropzone"
-      [class.drag-over]="dropzoneDragOver()"
-      (dragenter)="onDropzoneDragEnter($event)"
-      (dragover)="onDropzoneDragOver($event)"
-      (dragleave)="onDropzoneDragLeave($event)"
-      (drop)="onDropzoneDrop($event)"
-      aria-dropeffect="move"
-    >
-      <span>{{ "task.dropHere" | transloco }}</span>
-    </div>
-    } @if (showForm()) {
+    @if (showForm()) {
     <div
       class="task-form-wrapper"
       (mousedown)="$event.stopPropagation()"
@@ -32,13 +24,97 @@
     </div>
     }
 
-    <!-- Tasks list -->
+    <!-- ===== TOP ZONE: slice + placeholder wrapped together ===== -->
+    <div
+      class="head-zone"
+      [style.height.px]="
+        dragOverIndex() === 0
+          ? placeholderHeight()
+          : isTaskDragActive()
+          ? 32
+          : 0
+      "
+    >
+      <div
+        class="drop-slice head-slice"
+        [class.active]="sliceIsActive(0)"
+        (dragover)="onSliceDragOver($event, 0)"
+        (drop)="onSliceDrop($event, 0)"
+        aria-dropeffect="move"
+      ></div>
+
+      @if (dragOverIndex() === 0) {
+      <div
+        class="task-placeholder open"
+        [style.--ph.px]="placeholderHeight()"
+        aria-hidden="true"
+      >
+        <!-- Render the actual dragged card as ghost -->
+        @if (ghostTask()) {
+        <app-task [task]="ghostTask()!"></app-task>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- ===== Inter-task slices + live placeholder ===== -->
     @for (task of filteredTasks(); track trackById($index, task); let idx =
     $index) {
-    <app-task
-      [task]="task"
-      (taskDropped)="onTaskItemDrop($event, idx)"
-    ></app-task>
+    <div class="task-row">
+      <!-- Slice before current card (index = idx) -->
+      <div
+        class="drop-slice slice-before"
+        [class.active]="sliceIsActive(idx)"
+        (dragover)="onSliceDragOver($event, idx)"
+        (drop)="onSliceDrop($event, idx)"
+        aria-dropeffect="move"
+      ></div>
+
+      <app-task [task]="task"></app-task>
+
+      <!-- Live placeholder AFTER this card (index = idx + 1) -->
+      @if (dragOverIndex() === idx + 1) {
+      <div
+        class="task-placeholder open"
+        [style.--ph.px]="placeholderHeight()"
+        aria-hidden="true"
+      >
+        @if (ghostTask()) {
+        <app-task [task]="ghostTask()!"></app-task>
+        }
+      </div>
+      }
+
+      <!-- Slice after current card (index = idx + 1) -->
+      <div
+        class="drop-slice slice-after"
+        [class.active]="sliceIsActive(idx + 1)"
+        (dragover)="onSliceDragOver($event, idx + 1)"
+        (drop)="onSliceDrop($event, idx + 1)"
+        aria-dropeffect="move"
+      ></div>
+    </div>
+    }
+
+    <!-- Tail slice to allow "append" under the last card (index = length) -->
+    <div
+      class="drop-slice tail-slice"
+      [class.active]="sliceIsActive(filteredTasks().length)"
+      (dragover)="onSliceDragOver($event, filteredTasks().length)"
+      (drop)="onSliceDrop($event, filteredTasks().length)"
+      aria-dropeffect="move"
+    ></div>
+
+    <!-- Empty state: allow dropping into an empty column -->
+    @if (filteredTasks().length === 0) {
+    <div
+      class="empty-column-drop"
+      (dragover)="onSliceDragOver($event, 0)"
+      (drop)="onSliceDrop($event, 0)"
+      aria-dropeffect="move"
+    >
+      {{ "task.dropHere" | transloco }}
+    </div>
     }
   </div>
 </div>

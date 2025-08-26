@@ -7,8 +7,11 @@
   box-shadow: var(--shadow-1);
   margin-bottom: 1rem;
   padding: 1.9rem 1rem 0.32rem 1rem;
-  transition: background-color 0.3s, box-shadow 0.2s;
+  /* animate collapse when the card becomes the dragged one */
+  transition: background-color 0.3s, box-shadow 0.2s, height 160ms ease,
+    margin 160ms ease, padding 160ms ease;
   color: var(--text-1);
+  overflow: hidden;
 
   &:not(.has-badge) {
     padding-top: 0.7rem;
@@ -19,13 +22,19 @@
     border-left: 4px solid #4caf50;
   }
 
-  /* While dragging: hide the original card (keeps layout space) */
+  /* While dragging: collapse the original card footprint smoothly */
   &.dragging {
-    visibility: hidden; /* keeps space, avoids reflow */
+    visibility: hidden;
     opacity: 0;
     transform: none;
     box-shadow: none;
     pointer-events: none;
+
+    height: 0 !important;
+    margin: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border: 0 !important;
   }
 
   .due-row {
@@ -214,4 +223,17 @@
   .task-card.dropped-pulse {
     animation: none;
   }
+}
+
+/* === Drag snapshot === */
+.task-drag-image {
+  pointer-events: none !important;
+  transform: scale(1.06);
+  filter: drop-shadow(0 10px 22px rgba(25, 118, 210, 0.32))
+    drop-shadow(0 3px 8px rgba(0, 0, 0, 0.18));
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  border: 2px solid var(--brand, #1976d2);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+  opacity: 1;
 }

@@ -209,11 +209,7 @@ export class TaskComponent implements OnChanges {
 
   // --- Drag & drop handlers (card only) ---
   onTaskDragStart(event: DragEvent): void {
-    if (this.ghost) {
-      event.preventDefault();
-      return;
-    }
-    if (this.localTask().isEditing) {
+    if (this.ghost || this.localTask().isEditing) {
       event.preventDefault();
       return;
     }
@@ -229,14 +225,19 @@ export class TaskComponent implements OnChanges {
       this.localTask().kanbanColumnId!
     );
 
-    // Capture card size to size the placeholder accurately.
-    const cardSize = this.cardEl?.nativeElement.getBoundingClientRect();
-    if (cardSize) {
-      this.dragDropGlobal.setDragPreviewSize(cardSize.width, cardSize.height);
+    // Capture card size to size the placeholder accurately + smooth collapse
+    const cardEl = this.cardEl?.nativeElement;
+    const rect = cardEl?.getBoundingClientRect();
+    if (rect) {
+      this.dragDropGlobal.setDragPreviewSize(rect.width, rect.height);
+      cardEl!.style.height = `${Math.round(rect.height)}px`;
+      cardEl!.style.willChange = "height, margin, padding";
     }
 
-    const card = (event.target as HTMLElement).closest(".task-card");
-    if (card && card instanceof HTMLElement) {
+    const card = (event.target as HTMLElement).closest(
+      ".task-card"
+    ) as HTMLElement | null;
+    if (card) {
       const clone = card.cloneNode(true) as HTMLElement;
       clone.classList.remove(
         "dragging",
@@ -244,35 +245,41 @@ export class TaskComponent implements OnChanges {
         "dropped-pulse",
         "ghost"
       );
-      clone.querySelectorAll("button, input[type='checkbox']").forEach((el) => {
-        (el as HTMLElement).setAttribute("disabled", "true");
-        (el as HTMLElement).style.pointerEvents = "none";
-        (el as HTMLElement).style.opacity = "0.6";
-      });
-      clone.style.width = `${(card as HTMLElement).offsetWidth}px`;
-      clone.style.height = `${(card as HTMLElement).offsetHeight}px`;
+      clone.classList.add("task-drag-image");
+
+      // Disable interactivity inside the clone
+      clone
+        .querySelectorAll("button, [href], input, textarea, select")
+        .forEach((el) => {
+          (el as HTMLElement).setAttribute("disabled", "true");
+          (el as HTMLElement).style.pointerEvents = "none";
+        });
+
+      const { width, height } = card.getBoundingClientRect();
+      clone.style.width = `${Math.round(width)}px`;
+      clone.style.height = `${Math.round(height)}px`;
       clone.style.position = "absolute";
       clone.style.top = "-9999px";
       clone.style.left = "-9999px";
-      clone.style.zIndex = "99999";
-      clone.style.boxShadow = "0 4px 14px 2px #1976d23d";
+      clone.style.zIndex = "2147483647"; // max
+      clone.style.transition = "none";
       document.body.appendChild(clone);
+      const offsetX = Math.min(24, Math.round(width * 0.12));
+      const offsetY = Math.min(20, Math.round(height * 0.1));
+      event.dataTransfer?.setDragImage(clone, offsetX, offsetY);
 
-      event.dataTransfer?.setDragImage(
-        clone,
-        clone.offsetWidth / 2,
-        clone.offsetHeight / 2
-      );
       setTimeout(() => document.body.removeChild(clone), 0);
     } else {
+      // Fallback snapshot
       const dragImage = document.createElement("div");
       dragImage.textContent = this.localTask().title;
       dragImage.style.cssText = `
-        position: absolute; top: -1000px; padding: 0.5rem 1rem; background: white;
-        border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.3);
-        border-radius: 4px; font-weight: bold; font-size: 1rem;`;
+      position:absolute; top:-1000px; padding:0.6rem 1rem; background:white;
+      border:2px solid var(--brand, #1976d2);
+      box-shadow:0 8px 20px rgba(25,118,210,.25),0 3px 8px rgba(0,0,0,.15);
+      border-radius:8px; font-weight:700; font-size:1rem;`;
       document.body.appendChild(dragImage);
-      event.dataTransfer?.setDragImage(dragImage, 10, 10);
+      event.dataTransfer?.setDragImage(dragImage, 12, 10);
       setTimeout(() => document.body.removeChild(dragImage), 0);
     }
   }
@@ -281,6 +288,11 @@ export class TaskComponent implements OnChanges {
     if (this.ghost) return;
     this.dragging.set(false);
     this.dragDropGlobal.endDrag();
+    const el = this.cardEl?.nativeElement;
+    if (el) {
+      el.style.height = "";
+      el.style.willChange = "";
+    }
   }
 
   onTaskDragOver(event: DragEvent): void {

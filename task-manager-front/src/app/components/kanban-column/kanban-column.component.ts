@@ -204,6 +204,17 @@ export class KanbanColumnComponent {
     return zoneIndex === fromIdx || zoneIndex === fromIdx + 1;
   }
 
+  /** Hide slices that match the dragged card own edges (remove no-op targets). */
+  suppressZone(zoneIndex: number): boolean {
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
+    const arr = this.filteredTasks();
+    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
+    return (
+      fromIdx !== -1 && (zoneIndex === fromIdx || zoneIndex === fromIdx + 1)
+    );
+  }
+
   /**
    * Dragging over a slice (top/bottom half of a card, or head/tail).
    * IMPORTANT: Do not rely on custom DataTransfer in dragover (not stable cross-browser).

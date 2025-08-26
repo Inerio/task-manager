@@ -27,11 +27,10 @@
     <!-- ===== Non-empty column: head slice + (optional) top preview + tasks + tail slice ===== -->
     @if (filteredTasks().length > 0) {
 
-    <!-- TOP ZONE:
-         - constant top gap via .head-spacer (same as between two tasks)
-         - head-slice overlays the whole zone
-         - top preview is INSIDE the zone so its bottom margin creates the normal gap -->
+    <!-- TOP ZONE -->
     <div class="head-zone">
+      <!-- Hide the head-slice if it matches the dragged card own edge -->
+      @if (!suppressZone(0)) {
       <div
         class="drop-slice head-slice"
         [class.active]="sliceIsActive(0)"
@@ -39,6 +38,7 @@
         (drop)="onSliceDrop($event, 0)"
         aria-dropeffect="move"
       ></div>
+      }
 
       <div class="head-spacer" aria-hidden="true"></div>
 
@@ -59,7 +59,8 @@
     @for (task of filteredTasks(); track trackById($index, task); let idx =
     $index) {
     <div class="task-row">
-      <!-- Slice before current card (index = idx) -->
+      <!-- Slice before current card (index = idx); hidden if it's the dragged card own edge -->
+      @if (!suppressZone(idx)) {
       <div
         class="drop-slice slice-before"
         [class.active]="sliceIsActive(idx)"
@@ -67,6 +68,7 @@
         (drop)="onSliceDrop($event, idx)"
         aria-dropeffect="move"
       ></div>
+      }
 
       <app-task [task]="task"></app-task>
 
@@ -83,7 +85,8 @@
       </div>
       }
 
-      <!-- Slice after current card (index = idx + 1) -->
+      <!-- Slice after current card (index = idx + 1); hidden if it's the dragged card own edge -->
+      @if (!suppressZone(idx + 1)) {
       <div
         class="drop-slice slice-after"
         [class.active]="sliceIsActive(idx + 1)"
@@ -91,6 +94,7 @@
         (drop)="onSliceDrop($event, idx + 1)"
         aria-dropeffect="move"
       ></div>
+      }
     </div>
     }
 

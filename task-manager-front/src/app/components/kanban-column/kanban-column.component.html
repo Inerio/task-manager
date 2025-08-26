@@ -24,9 +24,11 @@
     </div>
     }
 
-    <!-- ===== TOP ZONE: persistent spacer + slice + optional placeholder ===== -->
+    <!-- ===== Non-empty column: head slice + (optional) top preview + tasks + tail slice ===== -->
+    @if (filteredTasks().length > 0) {
+
+    <!-- TOP ZONE: persistent spacer + head slice (no placeholder here) -->
     <div class="head-zone">
-      <!-- Persistent spacer so the top gap exists before any drag -->
       <div class="head-spacer" aria-hidden="true"></div>
 
       <div
@@ -36,22 +38,22 @@
         (drop)="onSliceDrop($event, 0)"
         aria-dropeffect="move"
       ></div>
-
-      @if (dragOverIndex() === 0) {
-      <div
-        class="task-placeholder open"
-        [style.--ph.px]="placeholderHeight()"
-        aria-hidden="true"
-      >
-        <!-- Render the actual dragged card as ghost -->
-        @if (ghostTask()) {
-        <app-task [task]="ghostTask()!"></app-task>
-        }
-      </div>
-      }
     </div>
 
-    <!-- ===== Inter-task slices + live placeholder ===== -->
+    <!-- Top placeholder rendered OUTSIDE head-zone so it gets a normal bottom gap -->
+    @if (dragOverIndex() === 0) {
+    <div
+      class="task-placeholder open"
+      [style.--ph.px]="placeholderHeight()"
+      aria-hidden="true"
+    >
+      @if (ghostTask()) {
+      <app-task [task]="ghostTask()!"></app-task>
+      }
+    </div>
+    }
+
+    <!-- Inter-task slices + live placeholder -->
     @for (task of filteredTasks(); track trackById($index, task); let idx =
     $index) {
     <div class="task-row">
@@ -99,15 +101,33 @@
       aria-dropeffect="move"
     ></div>
 
-    <!-- Empty state: allow dropping into an empty column -->
-    @if (filteredTasks().length === 0) {
-    <div
-      class="empty-column-drop"
-      (dragover)="onSliceDragOver($event, 0)"
-      (drop)="onSliceDrop($event, 0)"
-      aria-dropeffect="move"
-    >
-      {{ "task.dropHere" | transloco }}
+    } @else {
+    <!-- ===== EMPTY COLUMN: drop directly on the visible hint; preview replaces it on hover ===== -->
+    <div class="empty-drop-wrapper">
+      <!-- Overlay slice so the hint itself captures dragover/drop -->
+      <div
+        class="drop-slice empty-slice"
+        [class.active]="sliceIsActive(0)"
+        (dragover)="onSliceDragOver($event, 0)"
+        (drop)="onSliceDrop($event, 0)"
+        aria-dropeffect="move"
+      ></div>
+
+      @if (dragOverIndex() === 0 && isTaskDragActive()) {
+      <div
+        class="task-placeholder open"
+        [style.--ph.px]="placeholderHeight()"
+        aria-hidden="true"
+      >
+        @if (ghostTask()) {
+        <app-task [task]="ghostTask()!"></app-task>
+        }
+      </div>
+      } @else {
+      <div class="empty-column-drop">
+        {{ "task.dropHere" | transloco }}
+      </div>
+      }
     </div>
     }
   </div>

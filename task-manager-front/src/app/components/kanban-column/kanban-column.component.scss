@@ -44,7 +44,6 @@
 .head-zone {
   position: relative;
 
-  /* Persistent spacer to keep the same gap as between two tasks, even before drag */
   .head-spacer {
     height: var(--task-gap);
   }
@@ -69,11 +68,8 @@
   pointer-events: none;
   z-index: 20;
 }
-
-.task-drag-active {
-  .drop-slice {
-    pointer-events: auto;
-  }
+.task-drag-active .drop-slice {
+  pointer-events: auto;
 }
 
 /* Head slice overlays the whole head-zone (spacer + placeholder area) */
@@ -103,13 +99,29 @@
   pointer-events: auto;
 }
 
-/* Empty column drop target */
+/* ===== Empty column: wrapper + overlay slice (captures drop ON the hint) ===== */
+.empty-drop-wrapper {
+  position: relative;
+  margin: 0.4rem 0 0.6rem 0;
+}
+
+/* Slice placed over the whole empty state to capture dragover/drop */
+.empty-slice {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+.task-drag-active .empty-slice {
+  pointer-events: auto;
+}
+
+/* Visible hint */
 .empty-column-drop {
   border: 2px dashed #e0e7ef;
   border-radius: var(--radius-2);
   min-height: 84px;
   background: #f9fbff;
-  margin: 0.4rem 0 0.6rem 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -123,12 +135,11 @@
   }
 }
 
-/* ===== Placeholder (preview) =====
-   Render the real card as ghost (non-interactive). */
+/* ===== Placeholder (preview) ===== */
 .task-placeholder {
   --ph: 72px; /* fallback */
   height: 0;
-  margin: 0 0 var(--task-gap) 0; /* same gap as between two tasks */
+  margin: 0 0 var(--task-gap) 0;
   border-radius: var(--radius-3);
   background: transparent;
   border: 0;
@@ -138,7 +149,6 @@
   pointer-events: none;
   z-index: 10;
 
-  /* **Blue dashed outline** around the preview (inside the placeholder box). */
   &::before {
     content: "";
     position: absolute;
@@ -149,7 +159,6 @@
     z-index: 3;
   }
 
-  /* Shine sweeping across the ghost */
   &::after {
     content: "";
     position: absolute;
@@ -164,59 +173,15 @@
     animation: phShimmer 900ms linear infinite;
     opacity: 0.55;
     pointer-events: none;
-    z-index: 1; /* below the outline frame */
+    z-index: 1;
   }
 
   &.open {
     animation: phOpen 140ms ease-out forwards;
   }
 
-  /* Ensure embedded card uses full height of the placeholder */
   app-task .task-card {
     margin: 0 !important;
-  }
-}
-
-/* Visual of the dragged card inside the placeholder */
-.task-ghost {
-  position: relative;
-  background: var(--surface-1);
-  border-radius: var(--radius-3);
-  box-shadow: var(--shadow-1);
-  padding: 0.7rem 1rem 0.32rem 1rem;
-  color: var(--text-1);
-  pointer-events: none;
-
-  /* Inner dashed ring on the ghost itself (fallback to ensure visibility). */
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border: 2px dashed var(--brand, #1e88e5);
-    border-radius: var(--radius-3);
-    pointer-events: none;
-    z-index: 4;
-  }
-
-  .task-ghost-title {
-    font-size: 1.08rem;
-    font-weight: 700;
-    margin: 0 0 0.35rem 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .task-ghost-desc {
-    background: var(--surface-2);
-    border-radius: var(--radius-1);
-    color: #444;
-    font-size: 0.99rem;
-    margin: 0 0 0.5rem 0;
-    padding: 0.44rem 0.7rem;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    white-space: pre-line;
-    min-height: 24px;
   }
 }
 
@@ -228,7 +193,6 @@
     height: var(--ph);
   }
 }
-
 @keyframes phShimmer {
   0% {
     transform: translateX(-100%);

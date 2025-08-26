@@ -102,7 +102,8 @@
 /* ===== Empty column: wrapper + overlay slice (captures drop ON the hint) ===== */
 .empty-drop-wrapper {
   position: relative;
-  margin: 0.4rem 0 0.6rem 0;
+  /* Align top spacing with non-empty columns */
+  margin: var(--task-gap) 0; /* <-- updated */
 }
 
 /* Slice placed over the whole empty state to capture dragover/drop */

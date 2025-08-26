@@ -27,10 +27,11 @@
     <!-- ===== Non-empty column: head slice + (optional) top preview + tasks + tail slice ===== -->
     @if (filteredTasks().length > 0) {
 
-    <!-- TOP ZONE: persistent spacer + head slice (no placeholder here) -->
+    <!-- TOP ZONE:
+         - constant top gap via .head-spacer (same as between two tasks)
+         - head-slice overlays the whole zone
+         - top preview is INSIDE the zone so its bottom margin creates the normal gap -->
     <div class="head-zone">
-      <div class="head-spacer" aria-hidden="true"></div>
-
       <div
         class="drop-slice head-slice"
         [class.active]="sliceIsActive(0)"
@@ -38,20 +39,21 @@
         (drop)="onSliceDrop($event, 0)"
         aria-dropeffect="move"
       ></div>
-    </div>
 
-    <!-- Top placeholder rendered OUTSIDE head-zone so it gets a normal bottom gap -->
-    @if (dragOverIndex() === 0) {
-    <div
-      class="task-placeholder open"
-      [style.--ph.px]="placeholderHeight()"
-      aria-hidden="true"
-    >
-      @if (ghostTask()) {
-      <app-task [task]="ghostTask()!"></app-task>
+      <div class="head-spacer" aria-hidden="true"></div>
+
+      @if (dragOverIndex() === 0) {
+      <div
+        class="task-placeholder open"
+        [style.--ph.px]="placeholderHeight()"
+        aria-hidden="true"
+      >
+        @if (ghostTask()) {
+        <app-task [task]="ghostTask()!"></app-task>
+        }
+      </div>
       }
     </div>
-    }
 
     <!-- Inter-task slices + live placeholder -->
     @for (task of filteredTasks(); track trackById($index, task); let idx =

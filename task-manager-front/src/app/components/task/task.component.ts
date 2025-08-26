@@ -43,7 +43,14 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 })
 export class TaskComponent implements OnChanges {
   @Input({ required: true }) task!: Task;
+
+  /** Ghost mode: visual-only clone (used in placeholder). */
+  @Input() ghost = false;
+
+  /** Emits the native drop event to the parent column. */
   @Output() taskDropped = new EventEmitter<DragEvent>();
+  /** Emits dragover to the parent column so it can compute live preview index. */
+  @Output() taskDragOver = new EventEmitter<DragEvent>();
 
   @ViewChild("cardEl") private cardEl?: ElementRef<HTMLElement>;
 
@@ -202,7 +209,7 @@ export class TaskComponent implements OnChanges {
 
   // --- Drag & drop handlers (card only) ---
   onTaskDragStart(event: DragEvent): void {
-    if (this.localTask().isEditing) {
+    if (this.ghost || this.localTask().isEditing) {
       event.preventDefault();
       return;
     }
@@ -218,70 +225,121 @@ export class TaskComponent implements OnChanges {
       this.localTask().kanbanColumnId!
     );
 
-    const card = (event.target as HTMLElement).closest(".task-card");
-    if (card && card instanceof HTMLElement) {
+    // Capture card size to size the placeholder accurately + smooth collapse
+    const cardEl = this.cardEl?.nativeElement;
+    const rect = cardEl?.getBoundingClientRect();
+    if (rect) {
+      this.dragDropGlobal.setDragPreviewSize(rect.width, rect.height);
+      cardEl!.style.height = `${Math.round(rect.height)}px`;
+      cardEl!.style.willChange = "height, margin, padding";
+    }
+
+    const card = (event.target as HTMLElement).closest(
+      ".task-card"
+    ) as HTMLElement | null;
+    if (card) {
       const clone = card.cloneNode(true) as HTMLElement;
-      clone.classList.remove("dragging", "drag-over-card");
-      clone.querySelectorAll("button, input[type='checkbox']").forEach((el) => {
-        (el as HTMLElement).setAttribute("disabled", "true");
-        (el as HTMLElement).style.pointerEvents = "none";
-        (el as HTMLElement).style.opacity = "0.6";
-      });
-      clone.style.width = `${(card as HTMLElement).offsetWidth}px`;
-      clone.style.height = `${(card as HTMLElement).offsetHeight}px`;
+      clone.classList.remove(
+        "dragging",
+        "drag-over-card",
+        "dropped-pulse",
+        "ghost"
+      );
+      clone.classList.add("task-drag-image");
+
+      // Disable interactivity inside the clone
+      clone
+        .querySelectorAll("button, [href], input, textarea, select")
+        .forEach((el) => {
+          (el as HTMLElement).setAttribute("disabled", "true");
+          (el as HTMLElement).style.pointerEvents = "none";
+        });
+
+      const { width, height } = card.getBoundingClientRect();
+      clone.style.width = `${Math.round(width)}px`;
+      clone.style.height = `${Math.round(height)}px`;
       clone.style.position = "absolute";
       clone.style.top = "-9999px";
       clone.style.left = "-9999px";
-      clone.style.zIndex = "99999";
-      clone.style.boxShadow = "0 4px 14px 2px #1976d23d";
+      clone.style.zIndex = "2147483647"; // max
+      clone.style.transition = "none";
       document.body.appendChild(clone);
+      const offsetX = Math.min(24, Math.round(width * 0.12));
+      const offsetY = Math.min(20, Math.round(height * 0.1));
+      event.dataTransfer?.setDragImage(clone, offsetX, offsetY);
 
-      event.dataTransfer?.setDragImage(
-        clone,
-        clone.offsetWidth / 2,
-        clone.offsetHeight / 2
-      );
       setTimeout(() => document.body.removeChild(clone), 0);
     } else {
+      // Fallback snapshot
       const dragImage = document.createElement("div");
       dragImage.textContent = this.localTask().title;
       dragImage.style.cssText = `
-        position: absolute; top: -1000px; padding: 0.5rem 1rem; background: white;
-        border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.3);
-        border-radius: 4px; font-weight: bold; font-size: 1rem;`;
+      position:absolute; top:-1000px; padding:0.6rem 1rem; background:white;
+      border:2px solid var(--brand, #1976d2);
+      box-shadow:0 8px 20px rgba(25,118,210,.25),0 3px 8px rgba(0,0,0,.15);
+      border-radius:8px; font-weight:700; font-size:1rem;`;
       document.body.appendChild(dragImage);
-      event.dataTransfer?.setDragImage(dragImage, 10, 10);
+      event.dataTransfer?.setDragImage(dragImage, 12, 10);
       setTimeout(() => document.body.removeChild(dragImage), 0);
     }
   }
 
   onTaskDragEnd(): void {
+    if (this.ghost) return;
     this.dragging.set(false);
     this.dragDropGlobal.endDrag();
+    const el = this.cardEl?.nativeElement;
+    if (el) {
+      el.style.height = "";
+      el.style.willChange = "";
+    }
   }
 
   onTaskDragOver(event: DragEvent): void {
+    if (this.ghost) return;
     event.preventDefault();
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (ctx && ctx.taskId === this.localTask().id) {
+      return;
+    }
+    this.taskDragOver.emit(event);
   }
 
   onTaskDragEnter(_event?: DragEvent): void {
+    if (this.ghost) return;
     if (!this.localTask().isEditing && this.dragDropGlobal.isTaskDrag()) {
+      const ctx = this.dragDropGlobal.currentTaskDrag();
+      if (ctx && ctx.taskId === this.localTask().id) {
+        return;
+      }
       this.dragEnterCount++;
       this.dragOver.set(true);
     }
   }
 
   onTaskDragLeave(_event?: DragEvent): void {
+    if (this.ghost) return;
     if (!this.localTask().isEditing && this.dragDropGlobal.isTaskDrag()) {
+      const ctx = this.dragDropGlobal.currentTaskDrag();
+      if (ctx && ctx.taskId === this.localTask().id) {
+        return;
+      }
       this.dragEnterCount = Math.max(0, this.dragEnterCount - 1);
       if (this.dragEnterCount === 0) this.dragOver.set(false);
     }
   }
 
   onTaskDrop(event: DragEvent): void {
+    if (this.ghost) return;
     if (this.localTask().isEditing) return;
     if (!event.dataTransfer || event.dataTransfer.getData("type") !== "task")
       return;
+
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (ctx && ctx.taskId === this.localTask().id) {
+      return;
+    }
+
     event.preventDefault();
     this.dragEnterCount = 0;
     this.dragOver.set(false);
@@ -315,7 +373,6 @@ export class TaskComponent implements OnChanges {
     if (fullTask.id) {
       await this.taskService.updateTask(fullTask.id, fullTask);
       await this.refreshFromBackend(fullTask.id);
-      // Pulse on save
       this.dragDropGlobal.markTaskSaved(fullTask.id);
     } else {
       try {
@@ -357,8 +414,6 @@ export class TaskComponent implements OnChanges {
     if (id) await this.refreshFromBackend(id);
     else this.patchLocalTask({ isEditing: false });
   }
-
-  /** Ask confirmation before deleting the task. */
   async confirmDelete(): Promise<void> {
     const id = this.localTask().id;
     if (!id) return;
@@ -459,7 +514,6 @@ export class TaskComponent implements OnChanges {
 
   /** Localized badge text that recomputes when the language changes. */
   dueBadge = computed(() => {
-    // Touch the language signal so this recomputes on language switch.
     this.lang();
 
     const dueRaw = this.localTask().dueDate;
@@ -483,7 +537,6 @@ export class TaskComponent implements OnChanges {
 
   /** Localized due date text (en: month/day/year, fr: day/month/year). */
   readonly formattedDueDate = computed(() => {
-    // Touch language so it recomputes on switch
     const lang = (this.lang() as string) || "en";
 
     const raw = this.localTask().dueDate;

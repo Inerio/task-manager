@@ -6,6 +6,7 @@ import {
   Input,
   signal,
   type Signal,
+  effect,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
@@ -18,7 +19,8 @@ import { getTaskDragData } from "../../utils/drag-drop-utils";
 import { AttachmentService } from "../../services/attachment.service";
 
 /**
- * A single Kanban column: renders its tasks, an add form, and manages DnD.
+ * Kanban column with inter-task dropzones ("slices").
+ * Cards are not drop targets → no flicker; preview appears exactly under cursor.
  */
 @Component({
   selector: "app-kanban-column",
@@ -42,17 +44,36 @@ export class KanbanColumnComponent {
   // State signals
   readonly showForm = signal(false);
   readonly editingTask = signal<null | Task>(null);
+
+  /** Live insertion index during dragover (null = no preview). */
   readonly dragOverIndex = signal<number | null>(null);
-  readonly dropzoneDragOver = signal(false);
 
-  /** Guard against nested dragenter/leaves on children. */
-  private dropzoneEnterCount = 0;
+  /** Slice "hover" state (used for visual guide). */
+  readonly hoveredZoneIndex = signal<number | null>(null);
 
-  /** Accept dropzone only for tasks coming from another column. */
-  private isForeignTaskDrag(): boolean {
-    if (!this.dragDropGlobal.isTaskDrag()) return false;
+  /** True when a task is currently dragged (used to enable slices). */
+  readonly isTaskDragActive = computed(() => this.dragDropGlobal.isTaskDrag());
+
+  /** The actual dragged task object (used to render the ghost preview). */
+  readonly ghostTask = computed<Task | null>(() => {
     const ctx = this.dragDropGlobal.currentTaskDrag();
-    return !!ctx && ctx.columnId !== this.kanbanColumnId;
+    if (!ctx) return null;
+    const all = this.taskService.tasks();
+    return all.find((t) => t.id === ctx.taskId) ?? null;
+  });
+
+  /** guard to know if we really left the column (not just moving over children) */
+  private columnEnterCount = 0;
+
+  constructor() {
+    // Clear preview when the drag ends globally.
+    effect(() => {
+      if (!this.isTaskDragActive()) {
+        this.dragOverIndex.set(null);
+        this.hoveredZoneIndex.set(null);
+        this.columnEnterCount = 0;
+      }
+    });
   }
 
   /** Tasks for this column, sorted by position. */
@@ -62,6 +83,12 @@ export class KanbanColumnComponent {
       .filter((task) => task.kanbanColumnId === this.kanbanColumnId)
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   );
+
+  /** Placeholder height: use drag image size when available (fallback = 72px). */
+  readonly placeholderHeight = computed(() => {
+    const size = this.dragDropGlobal.taskDragPreviewSize();
+    return Math.max(48, Math.round(size?.height ?? 72));
+  });
 
   // ---- OPEN/CLOSE instead of toggle to avoid accidental close on file dialog cancel ----
   openForm(): void {
@@ -113,7 +140,6 @@ export class KanbanColumnComponent {
           await this.taskService.refreshTaskById(created.id!);
         }
 
-        // Emit "created" pulse once (after the card exists in the view).
         if (created.id) {
           setTimeout(() => this.dragDropGlobal.markTaskCreated(created.id!), 0);
         }
@@ -148,70 +174,115 @@ export class KanbanColumnComponent {
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
-  // ========== DRAG & DROP ==========
-  onDropzoneDragEnter(_event: DragEvent): void {
-    if (!this.isForeignTaskDrag()) {
-      this.dropzoneEnterCount = 0;
-      this.dropzoneDragOver.set(false);
-      return;
-    }
-    this.dropzoneEnterCount++;
-    if (!this.dropzoneDragOver()) this.dropzoneDragOver.set(true);
+  // ====== DRAG & DROP (inter-task dropzones) ======
+
+  /** Track true leave of the whole column (not just child transitions). */
+  onColumnDragEnter(_: DragEvent): void {
+    if (!this.dragDropGlobal.isTaskDrag()) return;
+    this.columnEnterCount++;
   }
 
-  onDropzoneDragOver(event: DragEvent): void {
-    if (this.isForeignTaskDrag()) {
-      event.preventDefault();
-      if (!this.dropzoneDragOver()) this.dropzoneDragOver.set(true);
-    } else {
-      if (this.dropzoneDragOver()) this.dropzoneDragOver.set(false);
-    }
-  }
-
-  onDropzoneDragLeave(_event?: DragEvent): void {
-    if (!this.isForeignTaskDrag()) {
-      this.dropzoneEnterCount = 0;
-      this.dropzoneDragOver.set(false);
-      return;
-    }
-    this.dropzoneEnterCount = Math.max(0, this.dropzoneEnterCount - 1);
-    if (this.dropzoneEnterCount === 0) this.dropzoneDragOver.set(false);
-  }
-
-  async onDropzoneDrop(event: DragEvent): Promise<void> {
-    this.dropzoneEnterCount = 0;
-    this.dropzoneDragOver.set(false);
-    if (!this.isForeignTaskDrag()) return;
-    if (
-      event.dataTransfer?.types.includes("Files") ||
-      event.dataTransfer?.getData("type") !== "task"
-    ) {
-      return;
-    }
-    event.preventDefault();
-    await this.onTaskDrop(event, 0);
-  }
-
-  onTaskDragOver(event: DragEvent, targetIndex: number): void {
-    event.preventDefault();
-    if (this.dragDropGlobal.isTaskDrag()) {
-      this.dragOverIndex.set(targetIndex);
-    } else {
+  onColumnDragLeave(_: DragEvent): void {
+    if (!this.dragDropGlobal.isTaskDrag()) return;
+    this.columnEnterCount = Math.max(0, this.columnEnterCount - 1);
+    if (this.columnEnterCount === 0) {
       this.dragOverIndex.set(null);
+      this.hoveredZoneIndex.set(null);
     }
   }
 
-  onTaskDragLeave(): void {
-    this.dragOverIndex.set(null);
+  /** True if the hovered zone is exactly the dragged card own edges (no-op move). */
+  private isSelfEdge(zoneIndex: number): boolean {
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
+
+    const arr = this.filteredTasks();
+    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
+    if (fromIdx === -1) return false;
+
+    // "Before me" == fromIdx, "after me" == fromIdx + 1
+    return zoneIndex === fromIdx || zoneIndex === fromIdx + 1;
   }
 
-  async onTaskDrop(event: DragEvent, targetIndex: number): Promise<void> {
-    if (
-      event.dataTransfer?.types.includes("Files") ||
-      event.dataTransfer?.getData("type") !== "task"
-    ) {
+  /** Hide slices that match the dragged card own edges (remove no-op targets). */
+  suppressZone(zoneIndex: number): boolean {
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
+    const arr = this.filteredTasks();
+    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
+    return (
+      fromIdx !== -1 && (zoneIndex === fromIdx || zoneIndex === fromIdx + 1)
+    );
+  }
+
+  /**
+   * Dragging over a slice (top/bottom half of a card, or head/tail).
+   * IMPORTANT: Do not rely on custom DataTransfer in dragover (not stable cross-browser).
+   * We rely on the global drag state instead.
+   */
+  onSliceDragOver(event: DragEvent, zoneIndex: number): void {
+    if (!this.dragDropGlobal.isTaskDrag()) return;
+
+    // Ignore real file drags
+    if (event.dataTransfer?.types.includes("Files")) return;
+
+    // If hovering the dragged card's own edges, do not show any preview/animation.
+    if (this.isSelfEdge(zoneIndex)) {
+      event.preventDefault();
+      this.hoveredZoneIndex.set(null);
+      this.dragOverIndex.set(null);
       return;
     }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Preview must appear exactly under cursor.
+    this.hoveredZoneIndex.set(zoneIndex);
+    this.dragOverIndex.set(zoneIndex);
+  }
+
+  /** Drop on a slice. */
+  async onSliceDrop(event: DragEvent, zoneIndex: number): Promise<void> {
+    // Ignore non-task drops (files, etc.)
+    if (event.dataTransfer?.types.includes("Files")) return;
+
+    if (this.isSelfEdge(zoneIndex)) {
+      event.preventDefault();
+      this.hoveredZoneIndex.set(null);
+      this.dragOverIndex.set(null);
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const dragData = getTaskDragData(event);
+    if (!dragData) return;
+    const { taskId, kanbanColumnId: fromColumnId } = dragData;
+
+    const insertAt = this.computeInsertIndex(zoneIndex, fromColumnId, taskId);
+    await this.onTaskDrop(event, insertAt);
+  }
+
+  /** Compute the actual insert index to apply on drop. */
+  private computeInsertIndex(
+    zoneIndex: number,
+    fromColumnId: number,
+    taskId: number
+  ): number {
+    if (fromColumnId !== this.kanbanColumnId) return zoneIndex;
+    const arr = this.filteredTasks();
+    const fromIdx = arr.findIndex((t) => t.id === taskId);
+    if (fromIdx === -1) return zoneIndex;
+    return zoneIndex > fromIdx ? zoneIndex - 1 : zoneIndex;
+  }
+
+  /** Core drop logic (reorder/move). */
+  private async onTaskDrop(
+    event: DragEvent,
+    targetIndex: number
+  ): Promise<void> {
     event.preventDefault();
 
     const dragData = getTaskDragData(event);
@@ -223,16 +294,26 @@ export class KanbanColumnComponent {
     const draggedTask = allTasks.find((t) => t.id === taskId);
     if (!draggedTask) return;
 
-    // Reorder within the same column
+    // Same-column reorder
     if (fromColumnId === this.kanbanColumnId) {
       const columnTasks = [...this.filteredTasks()];
       const fromIdx = columnTasks.findIndex((t) => t.id === taskId);
       if (fromIdx === -1) return;
+
+      if (targetIndex === fromIdx) {
+        this.dragOverIndex.set(null);
+        this.hoveredZoneIndex.set(null);
+        return;
+      }
+
       columnTasks.splice(fromIdx, 1);
-      columnTasks.splice(targetIndex, 0, draggedTask);
+      const insertAt = Math.max(0, Math.min(targetIndex, columnTasks.length));
+      columnTasks.splice(insertAt, 0, draggedTask);
+
       const reordered = columnTasks.map((t, idx) => ({ ...t, position: idx }));
-      this.taskService.reorderTasks(reordered);
+      await this.taskService.reorderTasks(reordered);
       this.dragOverIndex.set(null);
+      this.hoveredZoneIndex.set(null);
       this.dragDropGlobal.markTaskDropped(taskId);
       return;
     }
@@ -243,7 +324,8 @@ export class KanbanColumnComponent {
     );
     const targetTasks = [...this.filteredTasks()];
     const newTask = { ...draggedTask, kanbanColumnId: this.kanbanColumnId };
-    targetTasks.splice(targetIndex, 0, newTask);
+    const insertAt = Math.max(0, Math.min(targetIndex, targetTasks.length));
+    targetTasks.splice(insertAt, 0, newTask);
 
     const reorderedSource = sourceTasks.map((t, idx) => ({
       ...t,
@@ -255,18 +337,18 @@ export class KanbanColumnComponent {
     }));
 
     await this.taskService.updateTask(newTask.id!, newTask);
-    this.taskService.reorderTasks(reorderedSource);
-    this.taskService.reorderTasks(reorderedTarget);
+    await this.taskService.reorderTasks(reorderedSource);
+    await this.taskService.reorderTasks(reorderedTarget);
     this.dragOverIndex.set(null);
+    this.hoveredZoneIndex.set(null);
     this.dragDropGlobal.markTaskDropped(taskId);
-  }
-
-  async onTaskItemDrop(event: DragEvent, targetIndex: number): Promise<void> {
-    await this.onTaskDrop(event, targetIndex);
   }
 
   /** TrackBy for tasks. */
   trackById(_index: number, task: Task): number | undefined {
     return task.id;
   }
+
+  /** Template helper for active slice class. */
+  sliceIsActive = (zoneIndex: number) => this.hoveredZoneIndex() === zoneIndex;
 }

@@ -9,11 +9,6 @@
   draggable="true"
   (dragstart)="onTaskDragStart($event)"
   (dragend)="onTaskDragEnd()"
-  (dragenter)="onTaskDragEnter()"
-  (dragleave)="onTaskDragLeave()"
-  (dragover)="onTaskDragOver($event)"
-  (drop)="onTaskDrop($event)"
-  [class.drag-over-card]="isDragOver()"
 >
   <!-- ==== READ-ONLY MODE ==== -->
   @if (!localTask().isEditing) {

@@ -1,6 +1,10 @@
+<!-- Template micro-perf: cache expensive reads with @let; remove deprecated aria-dropeffect -->
+@let tasks = filteredTasks(); @let ghost = ghostTask(); @let isDrag =
+isTaskDragActive(); @let ph = placeholderHeight();
+
 <div
   class="task-kanbanColumn"
-  [class.task-drag-active]="isTaskDragActive()"
+  [class.task-drag-active]="isDrag"
   (dragenter)="onColumnDragEnter($event)"
   (dragleave)="onColumnDragLeave($event)"
 >
@@ -25,7 +29,7 @@
     }
 
     <!-- ===== Non-empty column: head slice + (optional) top preview + tasks + tail slice ===== -->
-    @if (filteredTasks().length > 0) {
+    @if (tasks.length > 0) {
 
     <!-- TOP ZONE -->
     <div class="head-zone">
@@ -36,7 +40,6 @@
         [class.active]="sliceIsActive(0)"
         (dragover)="onSliceDragOver($event, 0)"
         (drop)="onSliceDrop($event, 0)"
-        aria-dropeffect="move"
       ></div>
       }
 
@@ -45,19 +48,18 @@
       @if (dragOverIndex() === 0) {
       <div
         class="task-placeholder open"
-        [style.--ph.px]="placeholderHeight()"
+        [style.--ph.px]="ph"
         aria-hidden="true"
       >
-        @if (ghostTask()) {
-        <app-task [task]="ghostTask()!"></app-task>
+        @if (ghost) {
+        <app-task [task]="ghost"></app-task>
         }
       </div>
       }
     </div>
 
     <!-- Inter-task slices + live placeholder -->
-    @for (task of filteredTasks(); track trackById($index, task); let idx =
-    $index) {
+    @for (task of tasks; track trackById($index, task); let idx = $index) {
     <div class="task-row">
       <!-- Slice before current card (index = idx); hidden if it's the dragged card own edge -->
       @if (!suppressZone(idx)) {
@@ -66,7 +68,6 @@
         [class.active]="sliceIsActive(idx)"
         (dragover)="onSliceDragOver($event, idx)"
         (drop)="onSliceDrop($event, idx)"
-        aria-dropeffect="move"
       ></div>
       }
 
@@ -76,11 +77,11 @@
       @if (dragOverIndex() === idx + 1) {
       <div
         class="task-placeholder open"
-        [style.--ph.px]="placeholderHeight()"
+        [style.--ph.px]="ph"
         aria-hidden="true"
       >
-        @if (ghostTask()) {
-        <app-task [task]="ghostTask()!"></app-task>
+        @if (ghost) {
+        <app-task [task]="ghost"></app-task>
         }
       </div>
       }
@@ -92,7 +93,6 @@
         [class.active]="sliceIsActive(idx + 1)"
         (dragover)="onSliceDragOver($event, idx + 1)"
         (drop)="onSliceDrop($event, idx + 1)"
-        aria-dropeffect="move"
       ></div>
       }
     </div>
@@ -101,10 +101,9 @@
     <!-- Tail slice to allow "append" under the last card (index = length) -->
     <div
       class="drop-slice tail-slice"
-      [class.active]="sliceIsActive(filteredTasks().length)"
-      (dragover)="onSliceDragOver($event, filteredTasks().length)"
-      (drop)="onSliceDrop($event, filteredTasks().length)"
-      aria-dropeffect="move"
+      [class.active]="sliceIsActive(tasks.length)"
+      (dragover)="onSliceDragOver($event, tasks.length)"
+      (drop)="onSliceDrop($event, tasks.length)"
     ></div>
 
     } @else {
@@ -116,17 +115,16 @@
         [class.active]="sliceIsActive(0)"
         (dragover)="onSliceDragOver($event, 0)"
         (drop)="onSliceDrop($event, 0)"
-        aria-dropeffect="move"
       ></div>
 
-      @if (dragOverIndex() === 0 && isTaskDragActive()) {
+      @if (dragOverIndex() === 0 && isDrag) {
       <div
         class="task-placeholder open"
-        [style.--ph.px]="placeholderHeight()"
+        [style.--ph.px]="ph"
         aria-hidden="true"
       >
-        @if (ghostTask()) {
-        <app-task [task]="ghostTask()!"></app-task>
+        @if (ghost) {
+        <app-task [task]="ghost"></app-task>
         }
       </div>
       } @else {

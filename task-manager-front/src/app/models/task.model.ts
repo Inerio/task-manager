@@ -1,38 +1,43 @@
-// import { signal, WritableSignal } from '@angular/core';
 import type { KanbanColumnId } from "./kanban-column.model";
 
 /** Distinct alias for task identifiers. */
 export type TaskId = number;
 
-/**
- * Represents a single task in a kanban column.
- */
+/** Single task entity displayed within a kanban column. */
 export interface Task {
-  /** Unique identifier (undefined for drafts). */
+  /** Unique identifier (undefined for drafts/new tasks). */
   id?: TaskId;
+
+  /** Parent kanban column identifier (required). */
+  kanbanColumnId: KanbanColumnId;
+
+  /** Display order within the column (lower = higher). */
+  position?: number;
+
   /** Title (required). */
   title: string;
+
   /** Free-text description (may be empty). */
   description: string;
+
   /** Completion status. */
   completed: boolean;
-  /** Parent kanban column identifier. */
-  kanbanColumnId: KanbanColumnId;
-  /** Due date in ISO format (YYYY-MM-DD) or null if not set. */
+
+  /** Due date (ISO `YYYY-MM-DD`) or `null`/`undefined` if not set. */
   dueDate?: string | null;
-  /**
-   * UI-only flag used by components (never persisted).
-   * Prefer keeping this out of API payloads.
-   */
-  isEditing?: boolean;
+
   /** Filenames associated to this task (as returned by the backend). */
   attachments?: readonly string[];
-  /** Position inside the column (0/1-based depending on backend). */
-  position?: number;
+
+  /**
+   * UI-only flag (not persisted). Used by components to toggle edit mode.
+   * Keep this out of API payloads.
+   */
+  isEditing?: boolean;
 }
 
 /**
- * Creation payload helper: shape commonly sent to POST /tasks.
+ * Creation payload helper: commonly sent to POST /tasks.
  * Keeps fields optional when server can default them.
  */
 export type TaskCreation = Omit<
@@ -44,27 +49,19 @@ export type TaskCreation = Omit<
   position?: number;
 };
 
-/**
- * Helper type used by the TaskForm to carry yet-to-upload files.
- */
-export type TaskWithPendingFiles = Partial<Task> & { _pendingFiles?: File[] };
+/** Helper type used by TaskForm to carry yet-to-upload files. */
+export type TaskWithPendingFiles = Partial<Task> & {
+  _pendingFiles?: readonly File[];
+};
 
-/**
- * Type guard for runtime safety when consuming unknown API responses.
- */
+/** Narrow runtime check for unknown API data before casting to Task. */
 export function isTask(value: unknown): value is Task {
   if (value == null || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   return (
-    typeof v["title"] === "string" && typeof v["kanbanColumnId"] === "number"
+    typeof v["title"] === "string" &&
+    typeof v["kanbanColumnId"] === "number" &&
+    typeof v["completed"] === "boolean" &&
+    typeof v["description"] === "string"
   );
 }
-
-/**
- * @deprecated Prefer using Angular's `signal()` directly in the component
- * that needs it, e.g. `const s = signal(task);`. Keeping this for backward
- * compatibility; safe to remove once no call sites remain.
- */
-// export function createTaskSignal(task: Task): WritableSignal<Task> {
-//   return signal({ ...task });
-// }

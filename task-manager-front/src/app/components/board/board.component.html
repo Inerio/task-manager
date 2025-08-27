@@ -81,9 +81,7 @@
               class="edit-icon"
             />
           </span>
-          } @else {
-          {{ kanbanColumn.name }}
-          }
+          } @else { {{ kanbanColumn.name }} }
         </span>
         } @else {
         <input
@@ -127,11 +125,11 @@
       <div class="column-blocker"></div>
       }
     </div>
-    } @if (kanbanColumns().length < MAX_KANBANCOLUMNS) {
+    } @if (kanbanColumns().length < MAX_COLUMNS) {
     <button
       type="button"
       class="add-kanbanColumn-fab-inline"
-      [disabled]="kanbanColumns().length >= MAX_KANBANCOLUMNS"
+      [disabled]="kanbanColumns().length >= MAX_COLUMNS"
       (click)="addKanbanColumnAndEdit()"
       [attr.title]="'boards.column.add' | transloco"
       aria-label="{{ 'boards.column.add' | transloco }}"

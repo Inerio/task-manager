@@ -15,25 +15,35 @@
       <span class="tasukeru-sub">{{ "boards.title" | transloco }}</span>
     </h1>
 
-    <nav class="boards-list">
+    <nav
+      class="boards-list"
+      role="list"
+      [attr.aria-label]="'boards.title' | transloco"
+    >
       @for (board of displayedBoards(); track board.id; let i = $index) { @if
       (board.id !== null) {
       <div
         class="board-item"
+        role="button"
+        tabindex="0"
         [class.selected]="selectedBoardId() === board.id"
         [class.drag-over]="dragOverBoardIndex() === i"
-        draggable="{{ editingBoardId() === null }}"
+        [attr.aria-current]="selectedBoardId() === board.id ? 'page' : null"
+        [draggable]="editingBoardId() === null"
         (click)="selectBoard(board.id)"
+        (keydown.enter)="selectBoard(board.id)"
+        (keydown.space)="selectBoard(board.id)"
         (dragstart)="onBoardDragStart($event, board.id!)"
         (dragover)="onBoardDragOver($event, i)"
         (dragleave)="onBoardDragLeave(i)"
         (drop)="onBoardDrop($event, i)"
+        role="listitem"
       >
         {{ board.name }}
       </div>
       } @else {
       <input
-        id="new-board-input"
+        #newBoardInput
         class="board-item board-edit-input"
         type="text"
         [value]="editingBoardValue()"
@@ -44,12 +54,15 @@
         required
         autofocus
         placeholder="{{ 'boards.namePlaceholder' | transloco }}"
+        role="listitem"
+        aria-label="{{ 'boards.add' | transloco }}"
       />
       } } @if (canShowAdd()) {
       <button
         class="add-board-btn"
         (click)="addBoard()"
         [disabled]="editingBoardId() !== null"
+        aria-label="{{ 'boards.add' | transloco }}"
       >
         {{ "boards.add" | transloco }}
       </button>
@@ -96,7 +109,7 @@
         </h2>
         } @else {
         <input
-          id="edit-selected-board-input"
+          #editSelectedBoardInput
           class="selected-board-title-edit"
           type="text"
           [value]="editingSelectedBoardValue()"
@@ -108,6 +121,7 @@
           required
           autofocus
           placeholder="{{ 'boards.namePlaceholder' | transloco }}"
+          aria-label="{{ 'boards.namePlaceholder' | transloco }}"
         />
         }
       </div>
@@ -116,6 +130,7 @@
         class="delete-btn styled-trash-btn delete-all-btn"
         (click)="deleteAllTasks()"
         [title]="'boards.deleteAll' | transloco"
+        [attr.aria-label]="'boards.deleteAll' | transloco"
       >
         <img
           src="/svg/trash.svg"

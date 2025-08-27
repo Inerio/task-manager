@@ -38,6 +38,7 @@
     <span class="attachment-tag">
       <span
         class="filename"
+        role="button"
         tabindex="0"
         (click)="onDownloadAttachment(filename); $event.stopPropagation()"
         (keydown.enter)="
@@ -54,6 +55,7 @@
             ? null
             : ('common.download' | transloco)
         "
+        [attr.aria-label]="'common.download' | transloco"
       >
         {{ filename }}
       </span>

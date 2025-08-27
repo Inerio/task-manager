@@ -39,10 +39,7 @@
     </div>
     } @else {
     <div class="due-row">
-      <span
-        class="due-badge"
-        [class.late]="dueBadge() === ('task.due.late' | transloco)"
-      >
+      <span class="due-badge" [class.late]="isDueLate()">
         {{ dueBadge() }}
       </span>
       @if (formattedDueDate()) {

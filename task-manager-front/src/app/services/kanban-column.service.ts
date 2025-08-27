@@ -6,24 +6,28 @@ import {
   type KanbanColumnId,
 } from "../models/kanban-column.model";
 import { environment } from "../../environments/environment";
-import { firstValueFrom } from "rxjs";
+import { firstValueFrom, finalize } from "rxjs";
 import { AlertService } from "./alert.service";
 import { LoadingService } from "./loading.service";
 
 /** Kanban columns CRUD + ordering with signals and optimistic updates. */
 @Injectable({ providedIn: "root" })
 export class KanbanColumnService {
+  // ---- deps ----
   private readonly http = inject(HttpClient);
   private readonly alert = inject(AlertService);
   private readonly i18n = inject(TranslocoService);
   private readonly loadingSvc = inject(LoadingService);
 
+  // ---- state ----
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
   readonly kanbanColumns = computed(() => this._kanbanColumns());
 
   private readonly _loading = signal(false);
   /** Local loading state used by components (e.g. to disable UI). */
   readonly loading = computed(() => this._loading());
+
+  // ===========================================================================
 
   /** Load columns for a board (scoped overlay: "board"). */
   loadKanbanColumns(boardId: number): void {
@@ -36,6 +40,7 @@ export class KanbanColumnService {
     const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns`;
     this.loadingSvc
       .wrap$(this.http.get<KanbanColumn[]>(url), "board")
+      .pipe(finalize(() => this._loading.set(false))) // ensure local spinner is cleared on both success & error
       .subscribe({
         next: (cols) => this._kanbanColumns.set(cols ?? []),
         error: () => {
@@ -45,7 +50,6 @@ export class KanbanColumnService {
             this.i18n.translate("errors.loadingColumns")
           );
         },
-        complete: () => this._loading.set(false),
       });
   }
 
@@ -145,7 +149,7 @@ export class KanbanColumnService {
     return draft;
   }
 
-  /** Replace a reference in the array */
+  /** Replace a reference in the array (used after server creation). */
   replaceRef(from: KanbanColumn, to: KanbanColumn): void {
     this._kanbanColumns.update((arr) => {
       const idx = arr.indexOf(from);

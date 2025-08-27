@@ -31,6 +31,11 @@
     cursor: pointer;
     line-height: 1;
 
+    &:focus-visible {
+      /* Improve accessibility on keyboard navigation */
+      @include focus-ring;
+    }
+
     &.active {
       background: color-mix(in oklab, #111827 92%, #0000);
       color: #fff;

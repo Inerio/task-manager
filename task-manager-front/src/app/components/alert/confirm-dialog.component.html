@@ -7,10 +7,12 @@
     aria-modal="true"
     tabindex="0"
     (click)="$event.stopPropagation()"
+    [attr.aria-labelledby]="'confirm-dialog-title'"
+    [attr.aria-describedby]="'confirm-dialog-message'"
   >
-    <h3>{{ state().title }}</h3>
+    <h3 id="confirm-dialog-title">{{ state().title }}</h3>
     <!-- Use class for clarity; SCSS renders \n as real line breaks -->
-    <p class="message">{{ state().message }}</p>
+    <p id="confirm-dialog-message" class="message">{{ state().message }}</p>
     <div class="btn-group">
       <button
         class="btn btn-success"

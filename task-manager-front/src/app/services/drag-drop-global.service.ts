@@ -1,39 +1,51 @@
 import { Injectable, signal } from "@angular/core";
 
+/** Drag kind handled by the global service. */
+export type DragType = "task" | "column" | "board" | "file" | null;
+
+/** Minimal contexts carried during a drag operation. */
+export interface TaskDragCtx {
+  taskId: number;
+  columnId: number;
+}
+export interface ColumnDragCtx {
+  columnId: number;
+}
+export interface BoardDragCtx {
+  boardId: number;
+}
+
 /**
  * Global drag/drop context shared across components.
+ * Keeps only the minimal state needed for rendering + drop logic.
  */
 @Injectable({ providedIn: "root" })
 export class DragDropGlobalService {
-  readonly currentDragType = signal<
-    "task" | "column" | "board" | "file" | null
-  >(null);
+  // ---- Current drag kind ----
+  readonly currentDragType = signal<DragType>(null);
 
-  readonly currentTaskDrag = signal<{
-    taskId: number;
-    columnId: number;
-  } | null>(null);
-  readonly currentColumnDrag = signal<{ columnId: number } | null>(null);
-  readonly currentBoardDrag = signal<{ boardId: number } | null>(null);
+  // ---- Contexts for each drag kind ----
+  readonly currentTaskDrag = signal<TaskDragCtx | null>(null);
+  readonly currentColumnDrag = signal<ColumnDragCtx | null>(null);
+  readonly currentBoardDrag = signal<BoardDragCtx | null>(null);
   readonly currentFileDrag = signal<boolean>(false);
 
-  /** Dragged task visual size (used to size the placeholder). */
+  // ---- Task preview sizing (used by column placeholders) ----
   readonly taskDragPreviewSize = signal<{
     width: number;
     height: number;
   } | null>(null);
 
-  /** Last dropped elements (to trigger a visual pulse). */
+  // ---- One-shot “pulse” markers (used for small UI glow feedback) ----
   readonly lastDroppedTask = signal<{ id: number; token: number } | null>(null);
   readonly lastDroppedColumn = signal<{ id: number; token: number } | null>(
     null
   );
-
-  /** Pulse on create/save to reuse the same glow animation. */
   readonly lastCreatedTask = signal<{ id: number; token: number } | null>(null);
   readonly lastSavedTask = signal<{ id: number; token: number } | null>(null);
 
   constructor() {
+    // Flush any stale pulses on bootstrap (defensive).
     setTimeout(() => {
       this.lastDroppedTask.set(null);
       this.lastDroppedColumn.set(null);
@@ -41,6 +53,8 @@ export class DragDropGlobalService {
       this.lastSavedTask.set(null);
     }, 0);
   }
+
+  // ===========================================================================
 
   // === Drag type control ===
   startTaskDrag(taskId: number, columnId: number): void {
@@ -75,6 +89,7 @@ export class DragDropGlobalService {
     this.currentBoardDrag.set(null);
   }
 
+  /** Clear all drag state and preview sizing. */
   endDrag(): void {
     this.currentDragType.set(null);
     this.currentTaskDrag.set(null);
@@ -84,6 +99,7 @@ export class DragDropGlobalService {
     this.clearDragPreviewSize();
   }
 
+  // Convenience guards (used by components)
   isTaskDrag(): boolean {
     return this.currentDragType() === "task" && !!this.currentTaskDrag();
   }
@@ -98,7 +114,7 @@ export class DragDropGlobalService {
   }
 
   // === Drag preview sizing ===
-  /** Set the visual size of the dragged task to size the placeholder. */
+  /** Set the visual size of the dragged task to size placeholders accurately. */
   setDragPreviewSize(width: number, height: number): void {
     this.taskDragPreviewSize.set({ width, height });
   }
@@ -113,9 +129,8 @@ export class DragDropGlobalService {
     this.lastDroppedTask.set({ id, token });
     setTimeout(() => {
       const cur = this.lastDroppedTask();
-      if (cur && cur.id === id && cur.token === token) {
+      if (cur && cur.id === id && cur.token === token)
         this.lastDroppedTask.set(null);
-      }
     }, 1500);
   }
 
@@ -124,9 +139,8 @@ export class DragDropGlobalService {
     this.lastDroppedColumn.set({ id, token });
     setTimeout(() => {
       const cur = this.lastDroppedColumn();
-      if (cur && cur.id === id && cur.token === token) {
+      if (cur && cur.id === id && cur.token === token)
         this.lastDroppedColumn.set(null);
-      }
     }, 1500);
   }
 
@@ -135,9 +149,8 @@ export class DragDropGlobalService {
     this.lastCreatedTask.set({ id, token });
     setTimeout(() => {
       const cur = this.lastCreatedTask();
-      if (cur && cur.id === id && cur.token === token) {
+      if (cur && cur.id === id && cur.token === token)
         this.lastCreatedTask.set(null);
-      }
     }, 1500);
   }
 
@@ -146,9 +159,8 @@ export class DragDropGlobalService {
     this.lastSavedTask.set({ id, token });
     setTimeout(() => {
       const cur = this.lastSavedTask();
-      if (cur && cur.id === id && cur.token === token) {
+      if (cur && cur.id === id && cur.token === token)
         this.lastSavedTask.set(null);
-      }
     }, 1500);
   }
 }

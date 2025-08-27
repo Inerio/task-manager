@@ -4,4 +4,4 @@ export const environment = {
   clientIdHeader: "X-Client-Id",
   uploadAcceptTypes: "image/*,application/pdf",
   uploadMaxBytes: 5 * 1024 * 1024, // 5 MB
-};
+} as const;

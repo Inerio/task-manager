@@ -14,29 +14,32 @@ import { type Task, type TaskId } from "../models/task.model";
 import { AlertService } from "./alert.service";
 import { LoadingService } from "./loading.service";
 
-/** Tasks CRUD + reordering with signals as the single source of truth. */
+/** Tasks CRUD + reordering. Signals are the single source of truth. */
 @Injectable({ providedIn: "root" })
 export class TaskService {
+  // ---- deps & config ----
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = environment.apiUrl + "/tasks";
+  private readonly apiUrl = `${environment.apiUrl}/tasks`;
   private readonly alert = inject(AlertService);
   private readonly i18n = inject(TranslocoService);
   private readonly loading = inject(LoadingService);
 
-  /** All tasks loaded from backend. */
+  // ---- state ----
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
-  /** Readonly tasks signal for consumers. */
+  /** Read-only signal consumed by components. */
   readonly tasks: Signal<Task[]> = computed(() => this.tasksSignal());
 
-  /** Load barrier to avoid refetching on every board switch. */
+  /** Load barrier to avoid repeated refetches. */
   private readonly _loaded = signal(false);
   readonly loaded = computed(() => this._loaded());
+
+  // ===========================================================================
 
   // === Fetch ===
 
   /**
-   * Load all tasks with a scoped overlay ("board").
-   * Pass { force: true } to bypass the "already loaded" guard.
+   * Load all tasks (overlay scope: "board").
+   * Pass `{ force: true }` to bypass the "already loaded" guard.
    */
   loadTasks(options?: { force?: boolean }): void {
     if (!options?.force && this._loaded()) return;
@@ -51,15 +54,14 @@ export class TaskService {
     });
   }
 
-  /** Derived signal of a column's tasks. */
+  /** Derived signal containing only tasks for a given kanban column. */
   getTasksByKanbanColumnId(kanbanColumnId: number): Signal<Task[]> {
     return computed(() =>
-      this.tasksSignal().filter(
-        (task) => task.kanbanColumnId === kanbanColumnId
-      )
+      this.tasksSignal().filter((t) => t.kanbanColumnId === kanbanColumnId)
     );
   }
 
+  /** Fetch a task by id (null on error). */
   async fetchTaskById(taskId: TaskId): Promise<Task | null> {
     try {
       return await firstValueFrom(
@@ -70,6 +72,7 @@ export class TaskService {
     }
   }
 
+  /** Refetch a task and update local state. */
   async refreshTaskById(taskId: TaskId): Promise<void> {
     const fresh = await this.fetchTaskById(taskId);
     if (fresh) this.updateTaskFromApi(fresh);
@@ -77,29 +80,27 @@ export class TaskService {
 
   // === Create & Update ===
 
-  /** Create a task; updates state on success. */
+  /** Create a task; updates local state on success. */
   async createTask(task: Task): Promise<Task> {
     try {
-      const newTask = await firstValueFrom(
+      const created = await firstValueFrom(
         this.http.post<Task>(this.apiUrl, task)
       );
-      this.tasksSignal.set([...this.tasksSignal(), newTask]);
-      return newTask;
+      this.tasksSignal.set([...this.tasksSignal(), created]);
+      return created;
     } catch (err) {
       this.alert.show("error", this.i18n.translate("errors.creatingTask"));
       throw err;
     }
   }
 
-  /** Update a task; updates state on success. */
+  /** Update a task; replaces it in local state on success. */
   async updateTask(id: TaskId, updatedTask: Task): Promise<void> {
     try {
       const updated = await firstValueFrom(
         this.http.put<Task>(`${this.apiUrl}/${id}`, updatedTask)
       );
-      this.tasksSignal.set(
-        this.tasksSignal().map((t) => (t.id === id ? updated : t))
-      );
+      this.replaceInState(updated);
     } catch (err) {
       this.alert.show("error", this.i18n.translate("errors.updatingTask"));
       throw err;
@@ -108,9 +109,7 @@ export class TaskService {
 
   /** Replace a task in state from an API-returned payload. */
   updateTaskFromApi(updated: Task): void {
-    this.tasksSignal.set(
-      this.tasksSignal().map((t) => (t.id === updated.id ? updated : t))
-    );
+    this.replaceInState(updated);
   }
 
   // === Delete ===
@@ -147,8 +146,7 @@ export class TaskService {
       await firstValueFrom(
         this.http.delete<void>(`${this.apiUrl}/board/${boardId}`)
       );
-      // Force a refresh because we might have cached tasks.
-      this.loadTasks({ force: true });
+      this.loadTasks({ force: true }); // refresh since we may have cached tasks
     } catch (err) {
       this.alert.show(
         "error",
@@ -170,8 +168,11 @@ export class TaskService {
 
   // === Reorder ===
 
-  /** Optimistically reorder a subset of tasks and sync with backend. */
-  async reorderTasks(tasks: Task[]): Promise<void> {
+  /**
+   * Optimistically reorder a subset of tasks and sync with backend.
+   * Accepts a readonly array to prevent accidental mutation by callers.
+   */
+  async reorderTasks(tasks: ReadonlyArray<Task>): Promise<void> {
     const updatedIds = new Set(tasks.map((t) => t.id));
     const nextState = [
       ...this.tasksSignal().filter((t) => !updatedIds.has(t.id)),
@@ -181,9 +182,13 @@ export class TaskService {
         ? (a.kanbanColumnId ?? 0) - (b.kanbanColumnId ?? 0)
         : (a.position ?? 0) - (b.position ?? 0)
     );
+
     this.tasksSignal.set(nextState);
 
-    const dto = tasks.map((t) => ({ id: t.id, position: t.position }));
+    // Filter out any item without a persisted id to avoid sending `undefined`.
+    const dto = tasks
+      .filter((t): t is Task & { id: number } => typeof t.id === "number")
+      .map((t) => ({ id: t.id, position: t.position ?? 0 }));
 
     try {
       await firstValueFrom(this.http.put<void>(`${this.apiUrl}/reorder`, dto));
@@ -191,5 +196,14 @@ export class TaskService {
       this.alert.show("error", this.i18n.translate("errors.reorderingTasks"));
       throw err;
     }
+  }
+
+  // === Private helpers ===
+
+  /** Replace by id in local state; no-op if not found. */
+  private replaceInState(updated: Task): void {
+    this.tasksSignal.set(
+      this.tasksSignal().map((t) => (t.id === updated.id ? updated : t))
+    );
   }
 }

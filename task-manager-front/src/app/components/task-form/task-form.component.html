@@ -11,10 +11,12 @@
   [formGroup]="form"
 >
   <input
+    #titleInput
     class="form-control"
     type="text"
     formControlName="title"
     [placeholder]="'task.titlePlaceholder' | transloco"
+    [attr.aria-label]="'task.titlePlaceholder' | transloco"
     required
     autocomplete="off"
   />
@@ -25,6 +27,7 @@
       class="form-control textarea"
       formControlName="description"
       [placeholder]="'task.descriptionPlaceholder' | transloco"
+      [attr.aria-label]="'task.descriptionPlaceholder' | transloco"
       rows="4"
     ></textarea>
 
@@ -55,6 +58,7 @@
     type="date"
     formControlName="dueDate"
     [placeholder]="'task.dueDatePlaceholder' | transloco"
+    [attr.aria-label]="'task.dueDatePlaceholder' | transloco"
     autocomplete="off"
   />
 

@@ -8,6 +8,7 @@ import {
 import { TranslocoModule } from "@jsverse/transloco";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
+/** Simple confirm dialog wired to a reactive service state. */
 @Component({
   selector: "app-confirm-dialog",
   standalone: true,
@@ -17,26 +18,36 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   imports: [TranslocoModule],
 })
 export class ConfirmDialogComponent {
+  // ---- Injections ----
   private readonly confirmDialog = inject(ConfirmDialogService);
 
+  // ---- Reactive state ----
+  /** Service state (title/message/visibility). */
   readonly state = this.confirmDialog.state;
+  /** Visibility computed for template `@if`. */
   readonly visible = computed(() => this.state().visible);
 
+  // ---- Public actions ----
+  /** Confirm action. */
   confirm(): void {
     this.confirmDialog.confirm();
   }
+
+  /** Cancel action. */
   cancel(): void {
     this.confirmDialog.cancel();
   }
 
-  // Close with ESC anywhere
+  // ---- Global keybindings ----
+  /** Close with ESC anywhere. */
   @HostListener("document:keydown.escape")
-  onEsc(): void {
+  private onEsc(): void {
     if (this.visible()) this.cancel();
   }
 
+  /** Confirm with ENTER when dialog is visible. */
   @HostListener("document:keydown.enter", ["$event"])
-  onEnter(e: KeyboardEvent): void {
+  private onEnter(e: KeyboardEvent): void {
     if (!this.visible()) return;
     e.preventDefault();
     this.confirm();

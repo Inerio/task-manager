@@ -31,15 +31,13 @@ textarea,
 button,
 select,
 option {
-  font-family: var(--font-sans) !important;
+  font-family: var(--font-sans);
 }
 
 /* Global focus (AA) */
-:where(a, button, input, textarea, [tabindex]) :focus {
-  outline: none;
-}
 :where(a, button, input, textarea, [tabindex]):focus-visible {
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 40%, transparent);
+  outline: none;
 }
 
 /* Utility */

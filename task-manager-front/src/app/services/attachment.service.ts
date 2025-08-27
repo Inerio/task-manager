@@ -8,7 +8,7 @@ import { AlertService } from "./alert.service";
 
 /**
  * File attachment operations for tasks (upload / download / delete / preview).
- * Important: all HTTP calls go through HttpClient; the interceptor adds X-Client-Id.
+ * Note: all HTTP calls go through HttpClient; interceptors can decorate requests.
  */
 @Injectable({ providedIn: "root" })
 export class AttachmentService {
@@ -26,7 +26,7 @@ export class AttachmentService {
 
   /**
    * Returns an object URL for preview.
-   * The caller is responsible for revoking it with URL.revokeObjectURL(...) when no longer needed.
+   * Caller must revoke it with URL.revokeObjectURL(...) when no longer needed.
    */
   async getPreviewObjectUrl(taskId: TaskId, filename: string): Promise<string> {
     const blob = await firstValueFrom(
@@ -34,10 +34,8 @@ export class AttachmentService {
         responseType: "blob",
       })
     );
-    // Preserve server-provided type if any; otherwise provide a reasonable fallback.
-    const typedBlob = blob.type
-      ? blob
-      : new Blob([blob], { type: this.guessMime(filename) });
+    const type = blob.type || this.guessMime(filename);
+    const typedBlob = type ? new Blob([blob], { type }) : blob;
     return URL.createObjectURL(typedBlob);
   }
 
@@ -97,6 +95,8 @@ export class AttachmentService {
     }
   }
 
+  // ---- private helpers ----
+
   /** Create a temporary link, click it, then clean up and revoke the URL. */
   private triggerBrowserDownload(blob: Blob, filename: string): void {
     const url = URL.createObjectURL(blob);
@@ -113,7 +113,7 @@ export class AttachmentService {
     }
   }
 
-  /** Minimal MIME guess by extension (fallback if server doesn't set Content-Type). */
+  /** Minimal MIME guess by extension (fallback when server omits Content-Type). */
   private guessMime(filename: string): string {
     const f = filename.toLowerCase();
     if (f.endsWith(".png")) return "image/png";

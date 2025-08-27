@@ -28,7 +28,7 @@
   &:has(.column-draggable:nth-of-type(2)):not(
       :has(.column-draggable:nth-of-type(3))
     ) {
-    --col-max: 520px; /* réduction */
+    --col-max: 520px; /* compact */
     --col-w: min(var(--col-max), calc((100% - var(--gap)) / 2));
   }
 
@@ -96,11 +96,9 @@
   z-index: 3;
 }
 
-.add-kanbanColumn-error {
-  color: var(--danger);
-  font-size: 0.9em;
-  margin-top: 0.25em;
-}
+/* (removed) .add-kanbanColumn-error — not used in the template */
+
+/* Optional hint copy retained if needed later */
 .add-kanbanColumn-max-warning {
   color: #6c757d;
   font-size: 0.9em;
@@ -263,6 +261,7 @@
     animation: none;
   }
 }
+
 .columns-reordering .task-kanbanColumn {
-  pointer-events: none;
+  pointer-events: none; /* prevent card hover/drag during column DnD */
 }

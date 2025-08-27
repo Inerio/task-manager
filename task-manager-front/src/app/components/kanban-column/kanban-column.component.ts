@@ -7,6 +7,8 @@ import {
   signal,
   type Signal,
   effect,
+  ViewChild,
+  afterNextRender,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
@@ -15,7 +17,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { DragDropGlobalService } from "../../services/drag-drop-global.service";
 import { TaskComponent } from "../task/task.component";
 import { TaskFormComponent } from "../task-form/task-form.component";
-import { getTaskDragData } from "../../utils/drag-drop-utils";
+import { getTaskDragData, isFileDragEvent } from "../../utils/drag-drop-utils";
 import { AttachmentService } from "../../services/attachment.service";
 
 /**
@@ -30,31 +32,31 @@ import { AttachmentService } from "../../services/attachment.service";
   styleUrls: ["./kanban-column.component.scss"],
 })
 export class KanbanColumnComponent {
+  // ===== Inputs =====
   @Input({ required: true }) title!: string;
   @Input({ required: true }) kanbanColumnId!: number;
   @Input() hasAnyTask = false;
 
-  // Services
+  // ===== Child refs =====
+  @ViewChild(TaskFormComponent) private taskForm?: TaskFormComponent;
+
+  // ===== Injections =====
   private readonly taskService = inject(TaskService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly i18n = inject(TranslocoService);
 
-  // State signals
+  // ===== UI state =====
   readonly showForm = signal(false);
   readonly editingTask = signal<null | Task>(null);
-
-  /** Live insertion index during dragover (null = no preview). */
   readonly dragOverIndex = signal<number | null>(null);
-
-  /** Slice "hover" state (used for visual guide). */
   readonly hoveredZoneIndex = signal<number | null>(null);
 
-  /** True when a task is currently dragged (used to enable slices). */
+  // ===== Derived =====
   readonly isTaskDragActive = computed(() => this.dragDropGlobal.isTaskDrag());
 
-  /** The actual dragged task object (used to render the ghost preview). */
+  /** The dragged task object (for ghost preview). */
   readonly ghostTask = computed<Task | null>(() => {
     const ctx = this.dragDropGlobal.currentTaskDrag();
     if (!ctx) return null;
@@ -62,9 +64,24 @@ export class KanbanColumnComponent {
     return all.find((t) => t.id === ctx.taskId) ?? null;
   });
 
-  /** guard to know if we really left the column (not just moving over children) */
+  /** Guard to differentiate true leave vs. bubbling from children. */
   private columnEnterCount = 0;
 
+  /** Tasks for this column, sorted by position. */
+  readonly filteredTasks: Signal<Task[]> = computed(() =>
+    this.taskService
+      .tasks()
+      .filter((task) => task.kanbanColumnId === this.kanbanColumnId)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+  );
+
+  /** Placeholder height uses drag preview size when available. */
+  readonly placeholderHeight = computed(() => {
+    const size = this.dragDropGlobal.taskDragPreviewSize();
+    return Math.max(48, Math.round(size?.height ?? 72));
+  });
+
+  // ===== Effects =====
   constructor() {
     // Clear preview when the drag ends globally.
     effect(() => {
@@ -76,32 +93,15 @@ export class KanbanColumnComponent {
     });
   }
 
-  /** Tasks for this column, sorted by position. */
-  readonly filteredTasks: Signal<Task[]> = computed(() =>
-    this.taskService
-      .tasks()
-      .filter((task) => task.kanbanColumnId === this.kanbanColumnId)
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-  );
-
-  /** Placeholder height: use drag image size when available (fallback = 72px). */
-  readonly placeholderHeight = computed(() => {
-    const size = this.dragDropGlobal.taskDragPreviewSize();
-    return Math.max(48, Math.round(size?.height ?? 72));
-  });
-
-  // ---- OPEN/CLOSE instead of toggle to avoid accidental close on file dialog cancel ----
+  // ===== Form actions =====
+  /** Open instead of toggle to avoid accidental close on file dialog cancel. */
   openForm(): void {
-    if (!this.showForm()) {
-      this.showForm.set(true);
-      this.editingTask.set(null);
-      queueMicrotask(() => {
-        const input = document.querySelector(
-          '.task-form input.form-control[type="text"]'
-        ) as HTMLInputElement | null;
-        input?.focus();
-      });
-    }
+    if (this.showForm()) return;
+    this.showForm.set(true);
+    this.editingTask.set(null);
+
+    // Focus the title after the form has been rendered.
+    afterNextRender(() => this.taskForm?.focusTitle());
   }
 
   closeForm(): void {
@@ -122,14 +122,14 @@ export class KanbanColumnComponent {
       if (!task.id) {
         const created = await this.taskService.createTask(task as Task);
 
-        // Reorder locally so the new task is visually first
+        // Reorder locally so the new task is visually first.
         const current = this.filteredTasks();
         const withoutCreated = current.filter((t) => t.id !== created.id);
         const reordered = [
           { ...created, position: 0 },
           ...withoutCreated.map((t, idx) => ({ ...t, position: idx + 1 })),
         ];
-        this.taskService.reorderTasks(reordered);
+        await this.taskService.reorderTasks(reordered);
 
         if (_pendingFiles.length) {
           await Promise.all(
@@ -174,9 +174,7 @@ export class KanbanColumnComponent {
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
-  // ====== DRAG & DROP (inter-task dropzones) ======
-
-  /** Track true leave of the whole column (not just child transitions). */
+  // ===== DnD: column-level enter/leave =====
   onColumnDragEnter(_: DragEvent): void {
     if (!this.dragDropGlobal.isTaskDrag()) return;
     this.columnEnterCount++;
@@ -191,42 +189,18 @@ export class KanbanColumnComponent {
     }
   }
 
-  /** True if the hovered zone is exactly the dragged card own edges (no-op move). */
-  private isSelfEdge(zoneIndex: number): boolean {
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
-
-    const arr = this.filteredTasks();
-    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
-    if (fromIdx === -1) return false;
-
-    // "Before me" == fromIdx, "after me" == fromIdx + 1
-    return zoneIndex === fromIdx || zoneIndex === fromIdx + 1;
-  }
-
-  /** Hide slices that match the dragged card own edges (remove no-op targets). */
-  suppressZone(zoneIndex: number): boolean {
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
-    const arr = this.filteredTasks();
-    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
-    return (
-      fromIdx !== -1 && (zoneIndex === fromIdx || zoneIndex === fromIdx + 1)
-    );
-  }
-
+  // ===== DnD: inter-task slices =====
   /**
    * Dragging over a slice (top/bottom half of a card, or head/tail).
-   * IMPORTANT: Do not rely on custom DataTransfer in dragover (not stable cross-browser).
-   * We rely on the global drag state instead.
+   * IMPORTANT: rely on global drag state, not custom DT during dragover.
    */
   onSliceDragOver(event: DragEvent, zoneIndex: number): void {
     if (!this.dragDropGlobal.isTaskDrag()) return;
 
-    // Ignore real file drags
-    if (event.dataTransfer?.types.includes("Files")) return;
+    // Ignore real file drags.
+    if (isFileDragEvent(event)) return;
 
-    // If hovering the dragged card's own edges, do not show any preview/animation.
+    // If hovering the dragged card's own edges, suppress preview/animation.
     if (this.isSelfEdge(zoneIndex)) {
       event.preventDefault();
       this.hoveredZoneIndex.set(null);
@@ -237,15 +211,12 @@ export class KanbanColumnComponent {
     event.preventDefault();
     event.stopPropagation();
 
-    // Preview must appear exactly under cursor.
     this.hoveredZoneIndex.set(zoneIndex);
     this.dragOverIndex.set(zoneIndex);
   }
 
-  /** Drop on a slice. */
   async onSliceDrop(event: DragEvent, zoneIndex: number): Promise<void> {
-    // Ignore non-task drops (files, etc.)
-    if (event.dataTransfer?.types.includes("Files")) return;
+    if (isFileDragEvent(event)) return;
 
     if (this.isSelfEdge(zoneIndex)) {
       event.preventDefault();
@@ -265,7 +236,16 @@ export class KanbanColumnComponent {
     await this.onTaskDrop(event, insertAt);
   }
 
-  /** Compute the actual insert index to apply on drop. */
+  // ===== Template utils =====
+  trackById(_index: number, task: Task): number | undefined {
+    return task.id;
+  }
+
+  sliceIsActive(zoneIndex: number): boolean {
+    return this.hoveredZoneIndex() === zoneIndex;
+  }
+
+  // ===== Private helpers =====
   private computeInsertIndex(
     zoneIndex: number,
     fromColumnId: number,
@@ -278,7 +258,6 @@ export class KanbanColumnComponent {
     return zoneIndex > fromIdx ? zoneIndex - 1 : zoneIndex;
   }
 
-  /** Core drop logic (reorder/move). */
   private async onTaskDrop(
     event: DragEvent,
     targetIndex: number
@@ -294,7 +273,7 @@ export class KanbanColumnComponent {
     const draggedTask = allTasks.find((t) => t.id === taskId);
     if (!draggedTask) return;
 
-    // Same-column reorder
+    // Same-column reorder.
     if (fromColumnId === this.kanbanColumnId) {
       const columnTasks = [...this.filteredTasks()];
       const fromIdx = columnTasks.findIndex((t) => t.id === taskId);
@@ -318,7 +297,7 @@ export class KanbanColumnComponent {
       return;
     }
 
-    // Move between columns
+    // Move between columns.
     const sourceTasks = allTasks.filter(
       (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
     );
@@ -344,11 +323,26 @@ export class KanbanColumnComponent {
     this.dragDropGlobal.markTaskDropped(taskId);
   }
 
-  /** TrackBy for tasks. */
-  trackById(_index: number, task: Task): number | undefined {
-    return task.id;
+  /** True if the hovered zone equals the dragged card own edges (no-op move). */
+  private isSelfEdge(zoneIndex: number): boolean {
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
+
+    const arr = this.filteredTasks();
+    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
+    if (fromIdx === -1) return false;
+
+    return zoneIndex === fromIdx || zoneIndex === fromIdx + 1;
   }
 
-  /** Template helper for active slice class. */
-  sliceIsActive = (zoneIndex: number) => this.hoveredZoneIndex() === zoneIndex;
+  /** Hide slices that match the dragged card own edges (remove no-op targets). */
+  suppressZone(zoneIndex: number): boolean {
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
+    const arr = this.filteredTasks();
+    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
+    return (
+      fromIdx !== -1 && (zoneIndex === fromIdx || zoneIndex === fromIdx + 1)
+    );
+  }
 }

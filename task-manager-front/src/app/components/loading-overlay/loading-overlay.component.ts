@@ -24,6 +24,7 @@ export class LoadingOverlayComponent implements OnChanges {
   /** If provided, the overlay becomes "inline" and listens to that scope only. */
   @Input() scope?: string;
 
+  /** Scoped loading signal when `scope` is set. */
   private scopedSignal?: Signal<boolean>;
 
   ngOnChanges(_changes: SimpleChanges): void {
@@ -32,6 +33,8 @@ export class LoadingOverlayComponent implements OnChanges {
       : undefined;
   }
 
-  isLoading = () =>
-    this.scopedSignal ? this.scopedSignal() : this.loading.isLoading();
+  /** Read current loading state (scoped or global). */
+  isLoading(): boolean {
+    return this.scopedSignal ? this.scopedSignal() : this.loading.isLoading();
+  }
 }

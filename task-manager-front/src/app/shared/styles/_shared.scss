@@ -8,6 +8,8 @@
                     .styled-trash-btn/.styled-x-btn
    ========================================================= */
 
+@use "../../../styles/_mixins" as mx;
+
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;
@@ -25,35 +27,52 @@
   &:active {
     transform: translateY(1px);
   }
+  &:focus-visible {
+    /* AA focus ring, consistent across themes */
+    @include mx.focus-ring;
+  }
+  &:disabled,
+  &[aria-disabled="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
 }
+
 .btn--primary {
   background: var(--brand);
   color: #fff;
+
+  &:hover {
+    background: color-mix(in oklab, var(--brand) 88%, #000);
+  }
 }
+
 .btn--success {
   background: var(--success);
   color: #fff;
+
+  &:hover {
+    background: color-mix(in oklab, var(--success) 82%, #000);
+  }
 }
+
 .btn--secondary {
   background: #dadada;
   color: #333;
+
+  &:hover {
+    background: #bbb;
+  }
 }
+
 .btn--danger {
   background: var(--danger);
   color: #fff;
-}
 
-.btn--primary:hover {
-  background: color-mix(in oklab, var(--brand) 88%, #000);
-}
-.btn--success:hover {
-  background: color-mix(in oklab, var(--success) 82%, #000);
-}
-.btn--secondary:hover {
-  background: #bbb;
-}
-.btn--danger:hover {
-  background: color-mix(in oklab, var(--danger) 85%, #000);
+  &:hover {
+    background: color-mix(in oklab, var(--danger) 85%, #000);
+  }
 }
 
 /* Button group */
@@ -63,7 +82,7 @@
 }
 
 /* ---------- Compatibility for existing buttons ---------- */
-/* Avoid touching templates for now */
+/* Keep legacy classes without touching templates */
 .btn.btn--success,
 .btn-success {
   background: var(--success);
@@ -74,9 +93,11 @@
   background: #dadada;
   color: #333;
 }
+.btn.btn--success:hover,
 .btn-success:hover {
   background: color-mix(in oklab, var(--success) 82%, #000);
 }
+.btn.btn--secondary:hover,
 .btn-secondary:hover {
   background: #bbb;
 }
@@ -103,6 +124,15 @@
   }
   &:active {
     transform: translateY(1px);
+  }
+  &:focus-visible {
+    @include mx.focus-ring;
+  }
+  &[disabled],
+  &[aria-disabled="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
   }
 
   /* SVGs inherit the text color */
@@ -145,16 +175,30 @@
   margin-bottom: 0.46rem;
   outline: none;
   transition: border 0.18s, box-shadow 0.18s;
-  resize: vertical;
 
   &:focus {
     border-color: var(--brand);
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 35%, transparent);
   }
+  &:focus-visible {
+    @include mx.focus-ring;
+  }
+  &::placeholder {
+    color: color-mix(in oklab, var(--text-2) 70%, #0000);
+  }
+  &:disabled,
+  &[aria-disabled="true"] {
+    background: var(--surface-2);
+    color: color-mix(in oklab, var(--text-2) 70%, #0000);
+    cursor: not-allowed;
+  }
 }
+
+/* Only textareas should be resizable */
 .form-control.textarea {
   min-height: 54px;
   max-height: 180px;
+  resize: vertical;
 }
 
 /* ---------- Simple badges/labels ---------- */

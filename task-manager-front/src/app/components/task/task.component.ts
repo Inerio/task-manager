@@ -1,8 +1,6 @@
 import {
   Component,
   Input,
-  Output,
-  EventEmitter,
   computed,
   inject,
   signal,
@@ -16,7 +14,7 @@ import {
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { toSignal } from "@angular/core/rxjs-interop";
-import { Task } from "../../models/task.model";
+import { Task, TaskWithPendingFiles } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
 import { TaskService } from "../../services/task.service";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
@@ -42,18 +40,15 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskComponent implements OnChanges {
+  // === Inputs ===
   @Input({ required: true }) task!: Task;
-
   /** Ghost mode: visual-only clone (used in placeholder). */
   @Input() ghost = false;
 
-  /** Emits the native drop event to the parent column. */
-  @Output() taskDropped = new EventEmitter<DragEvent>();
-  /** Emits dragover to the parent column so it can compute live preview index. */
-  @Output() taskDragOver = new EventEmitter<DragEvent>();
-
+  // === Template refs ===
   @ViewChild("cardEl") private cardEl?: ElementRef<HTMLElement>;
 
+  // === Injections ===
   private readonly taskService = inject(TaskService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
@@ -67,27 +62,33 @@ export class TaskComponent implements OnChanges {
     initialValue: this.i18n.getActiveLang(),
   });
 
+  // === Local state ===
   readonly localTask: WritableSignal<Task> = signal({} as Task);
 
   // Attachment constraints (from token)
   readonly acceptTypes = this.uploadCfg.acceptTypes;
   readonly maxSize = this.uploadCfg.maxSize;
 
-  // Local DnD flags
-  private dragEnterCount = 0;
-  private dragOver = signal(false);
-  isDragOver = () => this.dragOver();
+  // DnD (own card)
   readonly dragging = signal(false);
 
   // --- Drop / save / create pulse (visual confirmation) ---
   readonly droppedPulse = signal(false);
-  private _pulseTimer: any = null;
+  private _pulseTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Per-card debounce so we don't re-pulse on unrelated signal changes. */
-  private lastPulseToken = { drop: 0, created: 0, saved: 0 };
+  private readonly lastPulseToken = { drop: 0, created: 0, saved: 0 };
+
+  // === Truncation logic ===
+  private readonly TITLE_TRUNCATE_BASE = 18;
+  private readonly TITLE_TRUNCATE_WITH_BADGE = 22;
+  private readonly DESC_TRUNCATE = 139;
+
+  readonly showFullTitle = signal(false);
+  readonly showFullDescription = signal(false);
 
   constructor() {
-    // Pulse exactly once per new token for drop/created/saved
+    // Pulse exactly once per new token for drop/created/saved.
     effect(() => {
       const me = this.localTask().id;
       if (!me) return;
@@ -111,29 +112,13 @@ export class TaskComponent implements OnChanges {
       }
     });
 
-    // When a task switches to edit mode, ensure the whole form is visible
+    // When a task switches to edit mode, ensure the whole form is visible.
     effect(() => {
-      const editing = this.localTask().isEditing;
-      if (editing) {
-        this.scheduleEnsureCardVisible();
-      }
+      if (this.localTask().isEditing) this.scheduleEnsureCardVisible();
     });
   }
 
-  private triggerPulse(): void {
-    this.droppedPulse.set(false);
-    clearTimeout(this._pulseTimer);
-    this.droppedPulse.set(true);
-    this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
-  }
-
-  // Truncation logic
-  readonly TITLE_TRUNCATE_BASE = 18;
-  readonly TITLE_TRUNCATE_WITH_BADGE = 22;
-  readonly DESC_TRUNCATE = 139;
-  readonly showFullTitle = signal(false);
-  readonly showFullDescription = signal(false);
-
+  // === Computed (truncate) ===
   readonly titleTruncateLength = computed(() =>
     this.dueBadge() ? this.TITLE_TRUNCATE_WITH_BADGE : this.TITLE_TRUNCATE_BASE
   );
@@ -171,6 +156,7 @@ export class TaskComponent implements OnChanges {
       this.showFullDescription.set(!this.showFullDescription());
   };
 
+  // === i/o changes ===
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["task"] && this.task) {
       this.localTask.set({ ...this.task });
@@ -179,7 +165,7 @@ export class TaskComponent implements OnChanges {
     }
   }
 
-  // ==== Ensure the edit form is fully visible ====
+  // === Ensure the edit form is fully visible ===
   private ensureCardFullyVisible(): void {
     const el = this.cardEl?.nativeElement;
     if (!el) return;
@@ -197,17 +183,23 @@ export class TaskComponent implements OnChanges {
       dy = rect.bottom - (vpH - BOTTOM_SAFE);
     }
 
-    if (dy !== 0) {
-      window.scrollBy({ top: dy, behavior: "smooth" });
-    }
+    if (dy !== 0) window.scrollBy({ top: dy, behavior: "smooth" });
   }
 
   private scheduleEnsureCardVisible(): void {
-    const runs = [0, 80, 160, 260, 360]; // ms
+    // Simple spaced retries to cover transitions.
+    const runs = [0, 80, 160, 260, 360] as const;
     runs.forEach((t) => setTimeout(() => this.ensureCardFullyVisible(), t));
   }
 
-  // --- Drag & drop handlers (card only) ---
+  private triggerPulse(): void {
+    this.droppedPulse.set(false);
+    if (this._pulseTimer) clearTimeout(this._pulseTimer);
+    this.droppedPulse.set(true);
+    this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
+  }
+
+  // === Drag & drop handlers (for the dragged card itself) ===
   onTaskDragStart(event: DragEvent): void {
     if (this.ghost || this.localTask().isEditing) {
       event.preventDefault();
@@ -225,7 +217,7 @@ export class TaskComponent implements OnChanges {
       this.localTask().kanbanColumnId!
     );
 
-    // Capture card size to size the placeholder accurately + smooth collapse
+    // Capture card size to size the placeholder accurately + smooth collapse.
     const cardEl = this.cardEl?.nativeElement;
     const rect = cardEl?.getBoundingClientRect();
     if (rect) {
@@ -234,6 +226,7 @@ export class TaskComponent implements OnChanges {
       cardEl!.style.willChange = "height, margin, padding";
     }
 
+    // Build a nicer drag image snapshot.
     const card = (event.target as HTMLElement).closest(
       ".task-card"
     ) as HTMLElement | null;
@@ -247,7 +240,7 @@ export class TaskComponent implements OnChanges {
       );
       clone.classList.add("task-drag-image");
 
-      // Disable interactivity inside the clone
+      // Disable interactivity inside the clone.
       clone
         .querySelectorAll("button, [href], input, textarea, select")
         .forEach((el) => {
@@ -267,17 +260,16 @@ export class TaskComponent implements OnChanges {
       const offsetX = Math.min(24, Math.round(width * 0.12));
       const offsetY = Math.min(20, Math.round(height * 0.1));
       event.dataTransfer?.setDragImage(clone, offsetX, offsetY);
-
       setTimeout(() => document.body.removeChild(clone), 0);
     } else {
-      // Fallback snapshot
+      // Fallback snapshot.
       const dragImage = document.createElement("div");
       dragImage.textContent = this.localTask().title;
       dragImage.style.cssText = `
-      position:absolute; top:-1000px; padding:0.6rem 1rem; background:white;
-      border:2px solid var(--brand, #1976d2);
-      box-shadow:0 8px 20px rgba(25,118,210,.25),0 3px 8px rgba(0,0,0,.15);
-      border-radius:8px; font-weight:700; font-size:1rem;`;
+        position:absolute; top:-1000px; padding:0.6rem 1rem; background:white;
+        border:2px solid var(--brand, #1976d2);
+        box-shadow:0 8px 20px rgba(25,118,210,.25),0 3px 8px rgba(0,0,0,.15);
+        border-radius:8px; font-weight:700; font-size:1rem;`;
       document.body.appendChild(dragImage);
       event.dataTransfer?.setDragImage(dragImage, 12, 10);
       setTimeout(() => document.body.removeChild(dragImage), 0);
@@ -295,77 +287,23 @@ export class TaskComponent implements OnChanges {
     }
   }
 
-  onTaskDragOver(event: DragEvent): void {
-    if (this.ghost) return;
-    event.preventDefault();
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    if (ctx && ctx.taskId === this.localTask().id) {
-      return;
-    }
-    this.taskDragOver.emit(event);
-  }
-
-  onTaskDragEnter(_event?: DragEvent): void {
-    if (this.ghost) return;
-    if (!this.localTask().isEditing && this.dragDropGlobal.isTaskDrag()) {
-      const ctx = this.dragDropGlobal.currentTaskDrag();
-      if (ctx && ctx.taskId === this.localTask().id) {
-        return;
-      }
-      this.dragEnterCount++;
-      this.dragOver.set(true);
-    }
-  }
-
-  onTaskDragLeave(_event?: DragEvent): void {
-    if (this.ghost) return;
-    if (!this.localTask().isEditing && this.dragDropGlobal.isTaskDrag()) {
-      const ctx = this.dragDropGlobal.currentTaskDrag();
-      if (ctx && ctx.taskId === this.localTask().id) {
-        return;
-      }
-      this.dragEnterCount = Math.max(0, this.dragEnterCount - 1);
-      if (this.dragEnterCount === 0) this.dragOver.set(false);
-    }
-  }
-
-  onTaskDrop(event: DragEvent): void {
-    if (this.ghost) return;
-    if (this.localTask().isEditing) return;
-    if (!event.dataTransfer || event.dataTransfer.getData("type") !== "task")
-      return;
-
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    if (ctx && ctx.taskId === this.localTask().id) {
-      return;
-    }
-
-    event.preventDefault();
-    this.dragEnterCount = 0;
-    this.dragOver.set(false);
-    this.taskDropped.emit(event);
-  }
-
-  // --- CRUD & editing (delegated to TaskForm) ---
+  // === CRUD & editing (delegated to TaskForm) ===
   startEdit(): void {
     this.patchLocalTask({ isEditing: true });
     this.scheduleEnsureCardVisible();
   }
 
-  async saveEdit(partialTask: Partial<Task>): Promise<void> {
-    const pendingFiles = (partialTask as any)._pendingFiles as
-      | File[]
-      | undefined;
+  async saveEdit(payload: TaskWithPendingFiles): Promise<void> {
+    const pendingFiles = payload._pendingFiles;
 
     const fullTask: Task = {
       ...this.localTask(),
-      ...partialTask,
-      title: partialTask.title ?? this.localTask().title ?? "",
-      description:
-        partialTask.description ?? this.localTask().description ?? "",
+      ...payload,
+      title: payload.title ?? this.localTask().title ?? "",
+      description: payload.description ?? this.localTask().description ?? "",
       kanbanColumnId:
-        partialTask.kanbanColumnId ?? this.localTask().kanbanColumnId!,
-      completed: partialTask.completed ?? this.localTask().completed ?? false,
+        payload.kanbanColumnId ?? this.localTask().kanbanColumnId!,
+      completed: payload.completed ?? this.localTask().completed ?? false,
       isEditing: false,
     };
     this.localTask.set(fullTask);
@@ -397,9 +335,7 @@ export class TaskComponent implements OnChanges {
         } else {
           this.localTask.set(createdTask);
         }
-        if (createdTask.id) {
-          await this.refreshFromBackend(createdTask.id);
-        }
+        if (createdTask.id) await this.refreshFromBackend(createdTask.id);
       } catch {
         this.alertService.show(
           "error",
@@ -414,6 +350,7 @@ export class TaskComponent implements OnChanges {
     if (id) await this.refreshFromBackend(id);
     else this.patchLocalTask({ isEditing: false });
   }
+
   async confirmDelete(): Promise<void> {
     const id = this.localTask().id;
     if (!id) return;
@@ -512,27 +449,40 @@ export class TaskComponent implements OnChanges {
     return dt;
   }
 
-  /** Localized badge text that recomputes when the language changes. */
-  dueBadge = computed(() => {
-    this.lang();
-
+  /** Compute day difference (due - today), or null if unavailable. */
+  private computeDueDiffDays(): number | null {
     const dueRaw = this.localTask().dueDate;
     if (!dueRaw) return null;
 
     const dueDate = this.parseLocalISO(dueRaw);
     if (!dueDate) return null;
 
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const diffDays = Math.ceil(
-      (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    return Math.ceil(
+      (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
+  }
+
+  /** Localized badge text that recomputes when the language changes. */
+  readonly dueBadge = computed(() => {
+    // Recompute when language changes.
+    this.lang();
+
+    const diffDays = this.computeDueDiffDays();
+    if (diffDays == null) return null;
 
     if (diffDays < 0) return this.i18n.translate("task.due.late");
     if (diffDays === 0) return this.i18n.translate("task.due.today");
     if (diffDays === 1) return this.i18n.translate("task.due.oneDay");
     return this.i18n.translate("task.due.nDays", { count: diffDays });
+  });
+
+  /** True if due date is in the past (separate from i18n). */
+  readonly isDueLate = computed(() => {
+    const diff = this.computeDueDiffDays();
+    return diff != null && diff < 0;
   });
 
   /** Localized due date text (en: month/day/year, fr: day/month/year). */

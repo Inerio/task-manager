@@ -3,10 +3,19 @@ import {
   Component,
   OnDestroy,
   OnInit,
+  inject,
   signal,
 } from "@angular/core";
 import { TranslocoService, TranslocoModule } from "@jsverse/transloco";
 
+type Lang = "en" | "fr";
+
+/**
+ * Language switcher:
+ * - Persists active lang in localStorage.
+ * - Updates <html lang> attribute.
+ * - Subscribes to Transloco changes to keep local state in sync.
+ */
 @Component({
   selector: "app-language-switcher",
   standalone: true,
@@ -16,28 +25,32 @@ import { TranslocoService, TranslocoModule } from "@jsverse/transloco";
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LanguageSwitcherComponent implements OnInit, OnDestroy {
-  readonly active = signal<"en" | "fr">("en");
+  private readonly transloco = inject(TranslocoService);
+
+  /** Current language as a signal. */
+  readonly active = signal<Lang>("en");
+
+  /** Lazy subscription holder. */
   private sub?: { unsubscribe(): void };
 
-  constructor(private transloco: TranslocoService) {}
-
   ngOnInit(): void {
-    // Restore last language (manual persist kept even if plugin is added later)
+    // Restore last language; fallback to Transloco active or "en"
     const saved =
-      (localStorage.getItem("translocoLang") as "en" | "fr") ?? null;
-    const initial =
-      saved ?? ((this.transloco.getActiveLang() as "en" | "fr") || "en");
+      (localStorage.getItem("translocoLang") as Lang | null) ?? null;
+    const current = (this.transloco.getActiveLang() as Lang) || "en";
+    const initial: Lang = saved ?? current;
 
-    if (initial !== this.transloco.getActiveLang()) {
+    if (initial !== current) {
       this.transloco.setActiveLang(initial);
     }
     this.active.set(initial);
     document.documentElement.setAttribute("lang", initial);
 
     this.sub = this.transloco.langChanges$.subscribe((l) => {
-      this.active.set(l as "en" | "fr");
-      document.documentElement.setAttribute("lang", l);
-      localStorage.setItem("translocoLang", l);
+      const lang = (l as Lang) || "en";
+      this.active.set(lang);
+      document.documentElement.setAttribute("lang", lang);
+      localStorage.setItem("translocoLang", lang);
     });
   }
 
@@ -47,7 +60,7 @@ export class LanguageSwitcherComponent implements OnInit, OnDestroy {
 
   /** Toggle language regardless of which button is clicked. */
   toggle(): void {
-    const next = this.active() === "en" ? "fr" : "en";
+    const next: Lang = this.active() === "en" ? "fr" : "en";
     this.transloco.setActiveLang(next);
   }
 }

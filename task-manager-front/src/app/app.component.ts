@@ -1,4 +1,12 @@
-import { Component, signal, inject, computed } from "@angular/core";
+import {
+  Component,
+  signal,
+  inject,
+  computed,
+  effect,
+  ViewChild,
+  ElementRef,
+} from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertComponent } from "./components/alert/alert.component";
@@ -18,9 +26,13 @@ import { applyBoardTemplate } from "./utils/board-templates";
 import { DragDropGlobalService } from "./services/drag-drop-global.service";
 import { getBoardDragData, setBoardDragData } from "./utils/drag-drop-utils";
 
+/** Minimal local typing for boards to improve readability. */
+type BoardLike = { id?: number | null; name: string };
+
+/** Ephemeral item appended when typing a new board name. */
 interface TempBoard {
-  id: null;
-  name: string;
+  readonly id: null;
+  readonly name: string;
 }
 
 @Component({
@@ -41,6 +53,7 @@ interface TempBoard {
   ],
 })
 export class AppComponent {
+  // ===== Services =====
   private readonly boardService = inject(BoardService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly taskService = inject(TaskService);
@@ -50,35 +63,44 @@ export class AppComponent {
   private readonly templatePicker = inject(TemplatePickerService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
 
-  readonly boards = this.boardService.boards;
+  // ===== Template refs (for focus management) =====
+  @ViewChild("newBoardInput", { read: ElementRef })
+  private newBoardInput?: ElementRef<HTMLInputElement>;
+  @ViewChild("editSelectedBoardInput", { read: ElementRef })
+  private editSelectedBoardInput?: ElementRef<HTMLInputElement>;
+
+  // ===== State (signals) =====
+  readonly boards = this.boardService.boards; // Signal<Array<BoardLike>>
   readonly selectedBoardId = signal<number | null>(null);
 
   /** Max number of boards allowed in the sidebar. */
   readonly BOARD_LIMIT = 12;
 
-  /** Inline add board state */
+  /** Inline add board state. */
   readonly editingBoardId = signal<number | null>(null);
   readonly editingBoardValue = signal<string>("");
 
-  /** Edit mode for selected board title (main area) */
+  /** Edit mode for selected board title (main area). */
   readonly editingSelectedBoard = signal<boolean>(false);
   readonly editingSelectedBoardValue = signal<string>("");
 
-  /** Footer year */
+  /** Footer year. */
   readonly currentYear = new Date().getFullYear();
 
-  /** DnD UI state for boards list */
+  /** DnD UI state for boards list. */
   readonly dragOverBoardIndex = signal<number | null>(null);
   readonly dropEndOver = signal(false);
 
-  /** Displayed boards (boards + temp new board if editing) */
-  readonly displayedBoards = computed(() => {
-    if (this.editingBoardId() === null) return this.boards();
-    return [
-      ...this.boards(),
-      { id: null, name: this.editingBoardValue() } as TempBoard,
-    ];
-  });
+  /** Displayed boards (existing + temporary item while editing). */
+  readonly displayedBoards = computed<ReadonlyArray<BoardLike | TempBoard>>(
+    () => {
+      if (this.editingBoardId() === null) return this.boards();
+      return [
+        ...this.boards(),
+        { id: null, name: this.editingBoardValue() } as TempBoard,
+      ];
+    }
+  );
 
   /**
    * Show "+ Add Board" only when under the limit.
@@ -91,10 +113,12 @@ export class AppComponent {
     return count < this.BOARD_LIMIT;
   });
 
+  // ===== Lifecycle =====
   constructor() {
     this.boardService.loadBoards();
-    // Auto select first board
-    computed(() => {
+
+    // Auto-select the first board once boards are loaded (only if none selected).
+    effect(() => {
       const firstId = this.boards()[0]?.id;
       if (typeof firstId === "number" && this.selectedBoardId() === null) {
         this.selectedBoardId.set(firstId);
@@ -102,7 +126,7 @@ export class AppComponent {
     });
   }
 
-  // ==== Sidebar: Board selection and add ====
+  // ===== Sidebar: board selection & inline add =====
   selectBoard(id: number | null | undefined): void {
     if (typeof id === "number" && this.selectedBoardId() !== id) {
       this.selectedBoardId.set(id);
@@ -113,17 +137,13 @@ export class AppComponent {
 
   addBoard(): void {
     if (this.boards().length >= this.BOARD_LIMIT) return;
+    if (this.editingBoardId() !== null) return;
 
-    if (this.editingBoardId() === null) {
-      this.editingBoardId.set(-1);
-      this.editingBoardValue.set("");
-      setTimeout(() => {
-        const el = document.getElementById(
-          "new-board-input"
-        ) as HTMLInputElement | null;
-        el?.focus();
-      });
-    }
+    this.editingBoardId.set(-1); // sentinel value = "editing new board"
+    this.editingBoardValue.set("");
+
+    // Focus the inline input as soon as it exists in the view.
+    setTimeout(() => this.newBoardInput?.nativeElement.focus());
   }
 
   onEditBoardInput(event: Event): void {
@@ -136,11 +156,7 @@ export class AppComponent {
    */
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
-    if (!name) {
-      this.cancelBoardEdit();
-      return;
-    }
-    if (this.boards().length >= this.BOARD_LIMIT) {
+    if (!name || this.boards().length >= this.BOARD_LIMIT) {
       this.cancelBoardEdit();
       return;
     }
@@ -151,7 +167,7 @@ export class AppComponent {
         const newId = typeof board.id === "number" ? board.id : null;
         if (newId !== null) this.selectedBoardId.set(newId);
 
-        // ---- Open template picker ----
+        // Open template picker and apply if chosen.
         const chosenTemplate = await this.templatePicker.open();
         if (chosenTemplate && newId !== null) {
           await this.loading.wrap(
@@ -175,7 +191,7 @@ export class AppComponent {
     this.editingBoardValue.set("");
   }
 
-  // ==== DnD: boards ====
+  // ===== DnD: boards =====
   onBoardDragStart(event: DragEvent, boardId: number): void {
     if (this.editingBoardId() !== null) return;
     setBoardDragData(event, boardId);
@@ -210,7 +226,6 @@ export class AppComponent {
     current.splice(targetIndex, 0, moved);
 
     this.boardService.reorderBoardsLocal(current);
-
     const payload = current.map((b, idx) => ({ id: b.id!, position: idx }));
     this.boardService.reorderBoards(payload).subscribe({
       error: () => this.boardService.loadBoards(),
@@ -256,19 +271,16 @@ export class AppComponent {
     this.dragDropGlobal.endDrag();
   }
 
-  // ==== Board title main area ====
+  // ===== Board title (main area) =====
   startSelectedBoardEdit(): void {
     const board = this.getSelectedBoard();
-    if (board) {
-      this.editingSelectedBoard.set(true);
-      this.editingSelectedBoardValue.set(board.name);
-      setTimeout(() => {
-        const el = document.getElementById(
-          "edit-selected-board-input"
-        ) as HTMLInputElement | null;
-        el?.focus();
-      });
-    }
+    if (!board) return;
+
+    this.editingSelectedBoard.set(true);
+    this.editingSelectedBoardValue.set(board.name);
+
+    // Focus the title input when it appears.
+    setTimeout(() => this.editSelectedBoardInput?.nativeElement.focus());
   }
 
   onEditSelectedBoardInput(event: Event): void {
@@ -296,15 +308,17 @@ export class AppComponent {
     this.editingSelectedBoardValue.set("");
   }
 
-  // ==== Board deletion and global task deletion ====
+  // ===== Destructive actions =====
   async deleteSelectedBoard(): Promise<void> {
     const board = this.getSelectedBoard();
     if (!board || typeof board.id !== "number") return;
+
     const confirmed = await this.confirmDialog.open(
       this.i18n.translate("boards.delete"),
       this.i18n.translate("boards.deleteBoardConfirm", { name: board.name })
     );
     if (!confirmed) return;
+
     this.boardService.deleteBoard(board.id).subscribe({
       next: () => {
         this.boardService.loadBoards();
@@ -335,8 +349,8 @@ export class AppComponent {
       );
   }
 
-  // ==== Utils ====
-  getSelectedBoard() {
+  // ===== Utils =====
+  getSelectedBoard(): BoardLike | undefined {
     return this.boards().find((b) => b.id === this.selectedBoardId());
   }
 

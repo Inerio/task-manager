@@ -16,7 +16,7 @@ import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { AttachmentService } from "../../services/attachment.service";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 
-/** Minimal local types to avoid `any` for FS Access while remaining framework-agnostic. */
+/** Minimal local types to avoid `any` while staying framework-agnostic. */
 type FSFileHandle = { getFile(): Promise<File> };
 type OpenFilePickerOptions = {
   multiple?: boolean;
@@ -25,9 +25,9 @@ type OpenFilePickerOptions = {
 
 /**
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
- * and deferred/buffered uploads in creation mode.
+ * and deferred uploads (creation mode).
  *
- * Preview strategy: fetch blob via HttpClient (header X-Client-Id present) and use an object URL.
+ * Preview: fetch blob via HttpClient (with header) → create object URL.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -38,40 +38,46 @@ type OpenFilePickerOptions = {
   imports: [TranslocoModule],
 })
 export class AttachmentZoneComponent implements OnDestroy {
+  // ===== Inputs =====
   @Input({ required: true }) attachments!: ReadonlyArray<string>;
   @Input({ required: true }) taskId!: number;
   @Input() acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
   @Input() maxSize = 5 * 1024 * 1024;
-
   @Input() creationMode = false;
   @Input() pendingFiles: File[] = [];
 
+  // ===== Outputs =====
+  @Output() readonly filesUploaded = new EventEmitter<File[]>();
+  @Output() readonly fileDeleted = new EventEmitter<string>();
+  @Output() readonly fileDownloaded = new EventEmitter<string>();
+  @Output() readonly dialogOpen = new EventEmitter<boolean>();
+
+  // ===== Template refs =====
+  @ViewChild("fileInput") fileInput!: ElementRef<HTMLInputElement>;
+
+  // ===== Injections =====
+  private readonly attachmentService = inject(AttachmentService);
+  private readonly alertService = inject(AlertService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly i18n = inject(TranslocoService);
+
+  // ===== UI state =====
   readonly isDragging = signal(false);
   readonly previewUrl = signal<string | null>(null);
   readonly previewFilename = signal<string | null>(null);
   readonly previewTop = signal(0);
   readonly previewLeft = signal(0);
 
-  @ViewChild("fileInput") fileInput!: ElementRef<HTMLInputElement>;
-
-  private readonly attachmentService = inject(AttachmentService);
-  private readonly alertService = inject(AlertService);
-  private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly i18n = inject(TranslocoService);
-
-  @Output() readonly filesUploaded = new EventEmitter<File[]>();
-  @Output() readonly fileDeleted = new EventEmitter<string>();
-  @Output() readonly fileDownloaded = new EventEmitter<string>();
-  @Output() readonly dialogOpen = new EventEmitter<boolean>();
-
+  // ===== Internals =====
   private previewToken = 0;
   private lastObjectUrl: string | null = null;
 
+  // ===== Lifecycle =====
   ngOnDestroy(): void {
     this.revokePreviewUrl();
   }
 
-  // ===== Track helpers =====
+  // ===== Track helpers (stable references for @for trackBy) =====
   trackByFilename(_index: number, filename: string): string {
     return filename;
   }
@@ -118,7 +124,7 @@ export class AttachmentZoneComponent implements OnDestroy {
 
   /**
    * Open using File System Access API.
-   * We do not emit `dialogOpen` here to avoid triggering upstream native picker guards.
+   * Do not emit `dialogOpen` here (avoid upstream native picker guards).
    */
   private async openViaFSAccess(): Promise<void> {
     try {
@@ -145,7 +151,7 @@ export class AttachmentZoneComponent implements OnDestroy {
     }
   }
 
-  /** Accept filter supporting ".png,.pdf,image/*,application/pdf" */
+  /** Accept filter supporting ".png,.pdf,image/*,application/pdf". */
   private matchesAccept(file: File): boolean {
     const accept = (this.acceptTypes || "").trim();
     if (!accept) return true;
@@ -222,7 +228,7 @@ export class AttachmentZoneComponent implements OnDestroy {
     return { accepted, rejectedCount };
   }
 
-  private handleFileSelection(selectedFiles: File[]) {
+  private handleFileSelection(selectedFiles: File[]): void {
     const already = new Set([
       ...this.attachments,
       ...(this.creationMode ? this.pendingFiles.map((f) => f.name) : []),
@@ -255,12 +261,12 @@ export class AttachmentZoneComponent implements OnDestroy {
     this.fileDeleted.emit(filename);
   }
 
-  // ===== Preview helpers (uses HttpClient -> blob -> object URL) =====
+  // ===== Preview helpers (HttpClient -> blob -> object URL) =====
   isImage(filename: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
   }
 
-  /** Build URL is kept for downloads, but NOT used directly by <img> anymore. */
+  /** Build URL kept for downloads; do NOT bind directly as <img src>. */
   buildAttachmentUrl(filename: string): string {
     return this.attachmentService.buildAttachmentUrl(this.taskId, filename);
   }
@@ -272,10 +278,10 @@ export class AttachmentZoneComponent implements OnDestroy {
     this.previewTop.set(event.clientY + 14);
     this.previewLeft.set(event.clientX + 18);
 
-    // If same file already shown, just move the popover
+    // Same file already shown → only move popover
     if (this.previewFilename() === filename && this.previewUrl()) return;
 
-    // New file: fetch blob via HttpClient (header present), create object URL
+    // New file: fetch blob → object URL
     this.previewFilename.set(filename);
     const token = ++this.previewToken;
 
@@ -285,7 +291,7 @@ export class AttachmentZoneComponent implements OnDestroy {
         filename
       );
 
-      // Ignore late responses if another preview started meanwhile
+      // Ignore late responses if another preview started in-between
       if (this.previewToken !== token) {
         URL.revokeObjectURL(objectUrl);
         return;
@@ -319,7 +325,7 @@ export class AttachmentZoneComponent implements OnDestroy {
     }
   }
 
-  /** Returns a deduplicated list of attached files, preserving order. */
+  /** Return a deduplicated list of attached files, preserving order. */
   getUniqueAttachments(): string[] {
     const seen = new Set<string>();
     return this.attachments.filter((filename) => {

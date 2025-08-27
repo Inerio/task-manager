@@ -18,12 +18,15 @@ import { AlertService } from "../../services/alert.service";
 export class AlertComponent {
   private readonly alertService = inject(AlertService);
 
-  /** All current alerts (reactive signal). */
+  /** Current alerts (reactive signal). */
   readonly alerts = computed(() => this.alertService.alerts());
 
-  /** Track function for @for. */
-  readonly trackById = (_: number, a: { id: number }) => a.id;
+  /** Stable trackBy for @for (prevents DOM churn). */
+  trackById(_index: number, a: { id: number }): number {
+    return a.id;
+  }
 
+  /** Dismiss a toast by id. */
   dismiss(id: number): void {
     this.alertService.dismiss(id);
   }

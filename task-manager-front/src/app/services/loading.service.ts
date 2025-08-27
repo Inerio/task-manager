@@ -11,7 +11,7 @@ import { Observable, finalize, firstValueFrom } from "rxjs";
  * Global + scoped loading manager with reference counters.
  * - isLoading() -> global spinner (backward compatible)
  * - isLoadingScope(key) -> spinner for a specific area (e.g. "board")
- * - show()/wrap()/wrap$ now accept an optional 'scope' to toggle only that area.
+ * - show()/wrap()/wrap$ accept an optional 'scope' to toggle only that area.
  */
 @Injectable({ providedIn: "root" })
 export class LoadingService {

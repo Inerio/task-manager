@@ -9,14 +9,17 @@ import { AlertService } from "./alert.service";
 /** Boards CRUD + signal state. */
 @Injectable({ providedIn: "root" })
 export class BoardService {
+  // ---- deps ----
   private readonly http = inject(HttpClient);
   private readonly alert = inject(AlertService);
   private readonly i18n = inject(TranslocoService);
-  private readonly apiUrl = environment.apiUrl + "/boards";
+  private readonly apiUrl = `${environment.apiUrl}/boards`;
 
-  /** Workspace boards state. */
+  // ---- state ----
   private readonly _boards = signal<Board[]>([]);
   readonly boards = computed(() => this._boards());
+
+  // ===========================================================================
 
   /** Load all boards. */
   loadBoards(): void {
@@ -60,8 +63,8 @@ export class BoardService {
       );
   }
 
-  /** Optimistic reordering. */
-  reorderBoardsLocal(newOrder: Board[]): void {
+  /** Optimistic reordering (client state only). */
+  reorderBoardsLocal(newOrder: ReadonlyArray<Board>): void {
     const normalized = newOrder.map((b, idx) => ({ ...b, position: idx }));
     this._boards.set(normalized);
   }

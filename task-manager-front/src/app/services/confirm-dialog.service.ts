@@ -1,6 +1,6 @@
 import { Injectable, signal, type Signal } from "@angular/core";
 
-/** Internal state shape for the confirm dialog. */
+/** Internal state for the confirm dialog. */
 interface ConfirmDialogState {
   visible: boolean;
   title: string;
@@ -9,6 +9,11 @@ interface ConfirmDialogState {
   confirmText?: string;
   cancelText?: string;
 }
+
+type ConfirmDialogOptions = {
+  confirmText?: string;
+  cancelText?: string;
+};
 
 @Injectable({ providedIn: "root" })
 export class ConfirmDialogService {
@@ -21,21 +26,20 @@ export class ConfirmDialogService {
     cancelText: undefined,
   });
 
+  /** Readonly state consumed by the dialog component. */
   readonly state: Signal<ConfirmDialogState> = this._state.asReadonly();
 
   /**
-   * Open the dialog and resolve with user's choice (true/false).
-   * You may override button labels via `options`.
+   * Open the dialog and resolve with the user's choice (true/false).
+   * If a dialog is already open, the previous Promise resolves to `false`.
    */
   open(
     title: string,
     message: string,
-    options?: { confirmText?: string; cancelText?: string }
+    options?: ConfirmDialogOptions
   ): Promise<boolean> {
-    // If already open, resolve previous as "cancel" to avoid dangling promises.
-    if (this._state().visible) {
-      this._state().resolve?.(false);
-    }
+    if (this._state().visible) this._state().resolve?.(false);
+
     return new Promise<boolean>((resolve) => {
       this._state.set({
         visible: true,
@@ -50,18 +54,16 @@ export class ConfirmDialogService {
 
   /** Confirm action (idempotent). */
   confirm(): void {
-    if (this._state().visible) {
-      this._state().resolve?.(true);
-      this.close();
-    }
+    if (!this._state().visible) return;
+    this._state().resolve?.(true);
+    this.close();
   }
 
   /** Cancel action (idempotent). */
   cancel(): void {
-    if (this._state().visible) {
-      this._state().resolve?.(false);
-      this.close();
-    }
+    if (!this._state().visible) return;
+    this._state().resolve?.(false);
+    this.close();
   }
 
   /** Close dialog and clear resolver/labels. */

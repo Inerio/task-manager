@@ -9,6 +9,8 @@ import {
   effect,
   ViewChild,
   afterNextRender,
+  Injector,
+  runInInjectionContext,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
@@ -46,6 +48,7 @@ export class KanbanColumnComponent {
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly i18n = inject(TranslocoService);
+  private readonly injector = inject(Injector); // for afterNextRender context
 
   // ===== UI state =====
   readonly showForm = signal(false);
@@ -145,7 +148,10 @@ export class KanbanColumnComponent {
     this.editingTask.set(null);
 
     // Focus the title after the form has been rendered.
-    afterNextRender(() => this.taskForm?.focusTitle());
+    // Must run inside an injection context → fixes NG0203.
+    runInInjectionContext(this.injector, () => {
+      afterNextRender(() => this.taskForm?.focusTitle());
+    });
   }
 
   closeForm(): void {

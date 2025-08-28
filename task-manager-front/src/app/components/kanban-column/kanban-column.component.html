@@ -1,5 +1,5 @@
 <!-- Template micro-perf: cache expensive reads with @let; remove deprecated aria-dropeffect -->
-@let tasks = filteredTasks(); @let ghost = ghostTask(); @let isDrag =
+@let tasks = displayedTasks(); @let ghost = ghostTask(); @let isDrag =
 isTaskDragActive(); @let ph = placeholderHeight();
 
 <div
@@ -47,7 +47,9 @@ isTaskDragActive(); @let ph = placeholderHeight();
 
       @if (dragOverIndex() === 0) {
       <div
-        class="task-placeholder open"
+        class="task-placeholder"
+        [class.open]="animateOnEnter()"
+        [class.open-static]="!animateOnEnter()"
         [style.--ph.px]="ph"
         aria-hidden="true"
       >
@@ -76,7 +78,9 @@ isTaskDragActive(); @let ph = placeholderHeight();
       <!-- Live placeholder AFTER this card (index = idx + 1) -->
       @if (dragOverIndex() === idx + 1) {
       <div
-        class="task-placeholder open"
+        class="task-placeholder"
+        [class.open]="animateOnEnter()"
+        [class.open-static]="!animateOnEnter()"
         [style.--ph.px]="ph"
         aria-hidden="true"
       >
@@ -119,7 +123,9 @@ isTaskDragActive(); @let ph = placeholderHeight();
 
       @if (dragOverIndex() === 0 && isDrag) {
       <div
-        class="task-placeholder open"
+        class="task-placeholder"
+        [class.open]="animateOnEnter()"
+        [class.open-static]="!animateOnEnter()"
         [style.--ph.px]="ph"
         aria-hidden="true"
       >

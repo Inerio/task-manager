@@ -1,4 +1,9 @@
-import { Injectable, signal } from "@angular/core";
+import {
+  Injectable,
+  signal,
+  computed,
+  type WritableSignal,
+} from "@angular/core";
 
 /** Drag kind handled by the global service. */
 export type DragType = "task" | "column" | "board" | "file" | null;
@@ -32,9 +37,12 @@ export class DragDropGlobalService {
 
   // ---- Task preview sizing (used by column placeholders) ----
   readonly taskDragPreviewSize = signal<{
-    width: number;
-    height: number;
+    readonly width: number;
+    readonly height: number;
   } | null>(null);
+
+  // ---- Live "which column is hovered" during task drag (single owner) ----
+  readonly hoveredTaskColumnId = signal<number | null>(null);
 
   // ---- One-shot “pulse” markers (used for small UI glow feedback) ----
   readonly lastDroppedTask = signal<{ id: number; token: number } | null>(null);
@@ -44,59 +52,46 @@ export class DragDropGlobalService {
   readonly lastCreatedTask = signal<{ id: number; token: number } | null>(null);
   readonly lastSavedTask = signal<{ id: number; token: number } | null>(null);
 
+  // ---- Derived state ----
+  readonly isDragging = computed(() => this.currentDragType() !== null);
+
   constructor() {
     // Flush any stale pulses on bootstrap (defensive).
-    setTimeout(() => {
-      this.lastDroppedTask.set(null);
-      this.lastDroppedColumn.set(null);
-      this.lastCreatedTask.set(null);
-      this.lastSavedTask.set(null);
-    }, 0);
+    setTimeout(() => this.flushPulses(), 0);
   }
 
   // ===========================================================================
 
   // === Drag type control ===
   startTaskDrag(taskId: number, columnId: number): void {
+    this.resetDrag();
     this.currentDragType.set("task");
     this.currentTaskDrag.set({ taskId, columnId });
-    this.currentColumnDrag.set(null);
-    this.currentBoardDrag.set(null);
-    this.currentFileDrag.set(false);
   }
 
   startColumnDrag(columnId: number): void {
+    this.resetDrag();
     this.currentDragType.set("column");
     this.currentColumnDrag.set({ columnId });
-    this.currentTaskDrag.set(null);
-    this.currentBoardDrag.set(null);
-    this.currentFileDrag.set(false);
   }
 
   startBoardDrag(boardId: number): void {
+    this.resetDrag();
     this.currentDragType.set("board");
     this.currentBoardDrag.set({ boardId });
-    this.currentTaskDrag.set(null);
-    this.currentColumnDrag.set(null);
-    this.currentFileDrag.set(false);
   }
 
   startFileDrag(): void {
+    this.resetDrag();
     this.currentDragType.set("file");
     this.currentFileDrag.set(true);
-    this.currentTaskDrag.set(null);
-    this.currentColumnDrag.set(null);
-    this.currentBoardDrag.set(null);
   }
 
   /** Clear all drag state and preview sizing. */
   endDrag(): void {
-    this.currentDragType.set(null);
-    this.currentTaskDrag.set(null);
-    this.currentColumnDrag.set(null);
-    this.currentBoardDrag.set(null);
-    this.currentFileDrag.set(false);
+    this.resetDrag();
     this.clearDragPreviewSize();
+    this.hoveredTaskColumnId.set(null);
   }
 
   // Convenience guards (used by components)
@@ -123,44 +118,64 @@ export class DragDropGlobalService {
     this.taskDragPreviewSize.set(null);
   }
 
+  /** Update which column is currently hovered during a task drag. */
+  setTaskHoverColumn(columnId: number | null): void {
+    // Only meaningful during a task drag.
+    if (!this.isTaskDrag()) return;
+    this.hoveredTaskColumnId.set(columnId);
+  }
+
   // === Pulse markers (auto-expire to prevent stale pulses) ===
   markTaskDropped(id: number): void {
-    const token = Date.now();
-    this.lastDroppedTask.set({ id, token });
-    setTimeout(() => {
-      const cur = this.lastDroppedTask();
-      if (cur && cur.id === id && cur.token === token)
-        this.lastDroppedTask.set(null);
-    }, 1500);
+    this.setPulse(this.lastDroppedTask, id);
   }
 
   markColumnDropped(id: number): void {
-    const token = Date.now();
-    this.lastDroppedColumn.set({ id, token });
-    setTimeout(() => {
-      const cur = this.lastDroppedColumn();
-      if (cur && cur.id === id && cur.token === token)
-        this.lastDroppedColumn.set(null);
-    }, 1500);
+    this.setPulse(this.lastDroppedColumn, id);
   }
 
   markTaskCreated(id: number): void {
-    const token = Date.now();
-    this.lastCreatedTask.set({ id, token });
-    setTimeout(() => {
-      const cur = this.lastCreatedTask();
-      if (cur && cur.id === id && cur.token === token)
-        this.lastCreatedTask.set(null);
-    }, 1500);
+    this.setPulse(this.lastCreatedTask, id);
   }
 
   markTaskSaved(id: number): void {
+    this.setPulse(this.lastSavedTask, id);
+  }
+
+  // ===========================================================================
+
+  /** Reset all drag-related contexts and type. */
+  private resetDrag(): void {
+    this.currentDragType.set(null);
+    this.currentTaskDrag.set(null);
+    this.currentColumnDrag.set(null);
+    this.currentBoardDrag.set(null);
+    this.currentFileDrag.set(false);
+  }
+
+  /** Clear any lingering pulse markers. */
+  private flushPulses(): void {
+    this.lastDroppedTask.set(null);
+    this.lastDroppedColumn.set(null);
+    this.lastCreatedTask.set(null);
+    this.lastSavedTask.set(null);
+  }
+
+  /** Set a pulse value that auto-expires; prevents code duplication. */
+  private setPulse(
+    sig: WritableSignal<{ id: number; token: number } | null>,
+    id: number,
+    ttlMs = 1500
+  ): void {
     const token = Date.now();
-    this.lastSavedTask.set({ id, token });
+    sig.set({ id, token });
+
+    // Auto-expire only if nobody overwrote the same signal in the meantime.
     setTimeout(() => {
-      const cur = this.lastSavedTask();
-      if (cur && cur.id === id && cur.token === token)
-        this.lastSavedTask.set(null);
-    }, 1500);
+      const cur = sig();
+      if (cur && cur.id === id && cur.token === token) {
+        sig.set(null);
+      }
+    }, ttlMs);
   }
 }

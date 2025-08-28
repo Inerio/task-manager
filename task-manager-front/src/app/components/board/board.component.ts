@@ -164,16 +164,19 @@ export class BoardComponent implements OnChanges {
   }
 
   onColumnDragHover(idx: number, e: DragEvent): void {
-    e.preventDefault();
     if (this.editingColumn()) return;
-    if (this.dragDropGlobal.isColumnDrag()) {
-      this.dragOverIndex.set(idx);
-    }
+    // Engage only when a column drag is actually happening (avoid blocking other drags like files).
+    if (!this.dragDropGlobal.isColumnDrag()) return;
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; // better cursor/UX
+    e.preventDefault();
+    this.dragOverIndex.set(idx);
   }
 
   async onColumnDrop(e: DragEvent): Promise<void> {
     if (this.editingColumn()) return;
-    if (!isColumnDragEvent(e)) {
+
+    // Allow drop if either the global state OR the DataTransfer says "column"
+    if (!this.dragDropGlobal.isColumnDrag() && !isColumnDragEvent(e)) {
       this.resetDragState();
       return;
     }

@@ -225,7 +225,7 @@
   }
 }
 
-/* === Drag snapshot === */
+/* === Drag snapshot (kept for other uses) === */
 .task-drag-image {
   pointer-events: none !important;
   transform: scale(1.06);
@@ -236,4 +236,20 @@
   border-radius: var(--radius-3);
   background: var(--surface-1);
   opacity: 1;
+}
+
+/* === Simplified cursor-following ghost === */
+.task-drag-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translate(-9999px, -9999px); /* moved immediately on dragover */
+  z-index: 2147483647;
+  pointer-events: none;
+  opacity: 0.55; /* transparent ghost */
+  box-shadow: none !important;
+  filter: none !important;
+  border: 1px dashed var(--brand, #1976d2);
+  background: color-mix(in oklab, var(--surface-1) 55%, transparent);
+  transition: none !important;
 }

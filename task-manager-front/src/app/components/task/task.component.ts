@@ -79,6 +79,11 @@ export class TaskComponent implements OnChanges {
   /** Per-card debounce so we don't re-pulse on unrelated signal changes. */
   private readonly lastPulseToken = { drop: 0, created: 0, saved: 0 };
 
+  // === Drag overlay (custom ghost that follows the cursor) ===
+  private _dragOverlayEl: HTMLElement | null = null;
+  private _onDocDragOver: ((e: DragEvent) => void) | null = null;
+  private _overlayOffset = { x: 12, y: 10 };
+
   // === Truncation logic ===
   private readonly TITLE_TRUNCATE_BASE = 18;
   private readonly TITLE_TRUNCATE_WITH_BADGE = 22;
@@ -207,79 +212,22 @@ export class TaskComponent implements OnChanges {
     }
     this.dragging.set(true);
 
-    setTaskDragData(
-      event,
-      this.localTask().id!,
-      this.localTask().kanbanColumnId!
-    );
-    this.dragDropGlobal.startTaskDrag(
-      this.localTask().id!,
-      this.localTask().kanbanColumnId!
-    );
+    // 1) Init global + DataTransfer payload (single source of truth).
+    this.initDragState(event);
 
-    // Capture card size to size the placeholder accurately + smooth collapse.
-    const cardEl = this.cardEl?.nativeElement;
-    const rect = cardEl?.getBoundingClientRect();
-    if (rect) {
-      this.dragDropGlobal.setDragPreviewSize(rect.width, rect.height);
-      cardEl!.style.height = `${Math.round(rect.height)}px`;
-      cardEl!.style.willChange = "height, margin, padding";
-    }
+    // 2) Capture size to drive placeholder height and smooth collapse.
+    this.applyPlaceholderSizing();
 
-    // Build a nicer drag image snapshot.
-    const card = (event.target as HTMLElement).closest(
-      ".task-card"
-    ) as HTMLElement | null;
-    if (card) {
-      const clone = card.cloneNode(true) as HTMLElement;
-      clone.classList.remove(
-        "dragging",
-        "drag-over-card",
-        "dropped-pulse",
-        "ghost"
-      );
-      clone.classList.add("task-drag-image");
-
-      // Disable interactivity inside the clone.
-      clone
-        .querySelectorAll("button, [href], input, textarea, select")
-        .forEach((el) => {
-          (el as HTMLElement).setAttribute("disabled", "true");
-          (el as HTMLElement).style.pointerEvents = "none";
-        });
-
-      const { width, height } = card.getBoundingClientRect();
-      clone.style.width = `${Math.round(width)}px`;
-      clone.style.height = `${Math.round(height)}px`;
-      clone.style.position = "absolute";
-      clone.style.top = "-9999px";
-      clone.style.left = "-9999px";
-      clone.style.zIndex = "2147483647"; // max
-      clone.style.transition = "none";
-      document.body.appendChild(clone);
-      const offsetX = Math.min(24, Math.round(width * 0.12));
-      const offsetY = Math.min(20, Math.round(height * 0.1));
-      event.dataTransfer?.setDragImage(clone, offsetX, offsetY);
-      setTimeout(() => document.body.removeChild(clone), 0);
-    } else {
-      // Fallback snapshot.
-      const dragImage = document.createElement("div");
-      dragImage.textContent = this.localTask().title;
-      dragImage.style.cssText = `
-        position:absolute; top:-1000px; padding:0.6rem 1rem; background:white;
-        border:2px solid var(--brand, #1976d2);
-        box-shadow:0 8px 20px rgba(25,118,210,.25),0 3px 8px rgba(0,0,0,.15);
-        border-radius:8px; font-weight:700; font-size:1rem;`;
-      document.body.appendChild(dragImage);
-      event.dataTransfer?.setDragImage(dragImage, 12, 10);
-      setTimeout(() => document.body.removeChild(dragImage), 0);
-    }
+    // 3) Use a custom overlay that follows the cursor (no browser crop).
+    this.applyDragOverlay(event);
   }
 
   onTaskDragEnd(): void {
     if (this.ghost) return;
     this.dragging.set(false);
     this.dragDropGlobal.endDrag();
+    this.cleanupDragOverlay();
+
     const el = this.cardEl?.nativeElement;
     if (el) {
       el.style.height = "";
@@ -503,4 +451,119 @@ export class TaskComponent implements OnChanges {
       day: "2-digit",
     }).format(date);
   });
+
+  // ===== DnD helpers =====
+
+  /** Initialize global drag state and DataTransfer payload. */
+  private initDragState(event: DragEvent): void {
+    const id = this.localTask().id!;
+    const columnId = this.localTask().kanbanColumnId!;
+    setTaskDragData(event, id, columnId);
+    this.dragDropGlobal.startTaskDrag(id, columnId);
+    if (event.dataTransfer) {
+      // Hint intent for better cursor/UX across browsers.
+      event.dataTransfer.effectAllowed = "move";
+    }
+  }
+
+  /** Capture card size to drive placeholder height + smooth collapse of source. */
+  private applyPlaceholderSizing(): void {
+    const el = this.cardEl?.nativeElement;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    this.dragDropGlobal.setDragPreviewSize(rect.width, rect.height);
+    el.style.height = `${Math.round(rect.height)}px`;
+    el.style.willChange = "height, margin, padding";
+  }
+
+  /**
+   * Create a minimal, semi-transparent overlay that follows the cursor.
+   * We hide the native drag image to avoid browser sizing/cropping.
+   */
+  private applyDragOverlay(event: DragEvent): void {
+    // Clean previous overlay if any.
+    this.cleanupDragOverlay();
+
+    const src = this.cardEl?.nativeElement;
+    const { width, height } = src?.getBoundingClientRect() ?? {
+      width: 220,
+      height: 72,
+    };
+
+    // Light clone: exact proportions, but no interactive affordances.
+    const overlay = (
+      src ? src.cloneNode(true) : document.createElement("div")
+    ) as HTMLElement;
+
+    overlay.classList.remove(
+      "dragging",
+      "drag-over-card",
+      "dropped-pulse",
+      "ghost"
+    );
+    // Keep styling minimal; a dedicated class will make it translucent.
+    overlay.classList.add("task-drag-overlay");
+
+    // Frame & positioning controlled here; visuals handled by CSS class.
+    overlay.style.width = `${Math.round(width)}px`;
+    overlay.style.height = `${Math.round(height)}px`;
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.margin = "0";
+    overlay.style.pointerEvents = "none";
+    overlay.style.zIndex = "2147483647";
+    overlay.style.transition = "none";
+    overlay.style.transform = "translate(-9999px, -9999px)";
+
+    // Disable interactivity inside the clone.
+    overlay
+      .querySelectorAll("button, [href], input, textarea, select")
+      .forEach((el) => {
+        (el as HTMLElement).setAttribute("disabled", "true");
+        (el as HTMLElement).style.pointerEvents = "none";
+      });
+
+    if (!src) {
+      // Minimal fallback when no source node is available.
+      overlay.textContent = this.localTask().title ?? "";
+      overlay.style.padding = "0.6rem 1rem";
+    }
+
+    document.body.appendChild(overlay);
+    this._dragOverlayEl = overlay;
+
+    // Cursor grip offset (feels more natural than top-left sticking).
+    const offsetX = Math.min(24, Math.round(width * 0.12));
+    const offsetY = Math.min(20, Math.round(height * 0.1));
+    this._overlayOffset = { x: offsetX, y: offsetY };
+
+    // Always track cursor, even if dropzones stop propagation.
+    this._onDocDragOver = (e: DragEvent) => {
+      const x = (e.clientX ?? 0) - this._overlayOffset.x;
+      const y = (e.clientY ?? 0) - this._overlayOffset.y;
+      overlay.style.transform = `translate(${x}px, ${y}px)`;
+    };
+    document.addEventListener("dragover", this._onDocDragOver, {
+      capture: true,
+    });
+
+    // Hide native drag image so ONLY our overlay is visible.
+    const shim = document.createElement("canvas");
+    shim.width = 1;
+    shim.height = 1;
+    event.dataTransfer?.setDragImage(shim, 0, 0);
+  }
+
+  /** Remove the overlay and detach the document listener. */
+  private cleanupDragOverlay(): void {
+    if (this._onDocDragOver) {
+      document.removeEventListener("dragover", this._onDocDragOver);
+      this._onDocDragOver = null;
+    }
+    if (this._dragOverlayEl?.parentNode) {
+      this._dragOverlayEl.parentNode.removeChild(this._dragOverlayEl);
+    }
+    this._dragOverlayEl = null;
+  }
 }

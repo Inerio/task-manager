@@ -90,9 +90,14 @@
 
 /* Tail area at the end of the column */
 .tail-slice {
-  position: relative;
-  height: 48px;
-  margin-top: calc(var(--task-gap) * 0.25);
+  /* Extend detection below column bottom so the cursor can "re-enter"
+     even if the placeholder pushes content upward. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -72px; /* bleed outside the column to catch the cursor */
+  height: 112px; /* generous hit area at the very bottom */
+  z-index: 30; /* above placeholders/cards */
   pointer-events: none;
 }
 .task-drag-active .tail-slice {
@@ -177,8 +182,15 @@
     z-index: 1;
   }
 
+  /* Animate only on first entry from another column */
   &.open {
     animation: phOpen 140ms ease-out forwards;
+  }
+
+  /* Within the same column: no animation, directly occupy space */
+  &.open-static {
+    height: var(--ph);
+    animation: none;
   }
 
   app-task .task-card {

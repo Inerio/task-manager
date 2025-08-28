@@ -53,6 +53,9 @@ export class KanbanColumnComponent {
   readonly dragOverIndex = signal<number | null>(null);
   readonly hoveredZoneIndex = signal<number | null>(null);
 
+  /** Animate placeholder only on first entry from another column. */
+  readonly animateOnEnter = signal(false);
+
   // ===== Derived =====
   readonly isTaskDragActive = computed(() => this.dragDropGlobal.isTaskDrag());
 
@@ -75,6 +78,33 @@ export class KanbanColumnComponent {
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   );
 
+  /**
+   * Visible order during dragover. We reorder *only* for same-column drags,
+   * so cards already shift into their final position before drop.
+   * (When dragging from another column, the placeholder alone is enough.)
+   */
+  readonly displayedTasks: Signal<Task[]> = computed(() => {
+    const base = this.filteredTasks();
+    const zone = this.dragOverIndex();
+    if (zone == null) return base;
+
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    if (!ctx || ctx.columnId !== this.kanbanColumnId) return base;
+
+    const fromIdx = base.findIndex((t) => t.id === ctx.taskId);
+    if (fromIdx === -1) return base;
+
+    const insertAt = this.computeInsertIndex(zone, ctx.columnId, ctx.taskId);
+    if (insertAt === fromIdx) return base;
+
+    const copy = base.slice();
+    const [dragged] = copy.splice(fromIdx, 1);
+    // Clamp to bounds; defensive in case of transient indices.
+    const clamped = Math.max(0, Math.min(insertAt, copy.length));
+    copy.splice(clamped, 0, dragged);
+    return copy;
+  });
+
   /** Placeholder height uses drag preview size when available. */
   readonly placeholderHeight = computed(() => {
     const size = this.dragDropGlobal.taskDragPreviewSize();
@@ -88,6 +118,20 @@ export class KanbanColumnComponent {
       if (!this.isTaskDragActive()) {
         this.dragOverIndex.set(null);
         this.hoveredZoneIndex.set(null);
+        this.columnEnterCount = 0;
+        this.animateOnEnter.set(false);
+      }
+    });
+
+    // Ensure only ONE column shows a placeholder at any time.
+    // If another column becomes hovered, immediately clear this one.
+    effect(() => {
+      if (!this.isTaskDragActive()) return;
+      const hoveredCol = this.dragDropGlobal.hoveredTaskColumnId();
+      if (hoveredCol !== this.kanbanColumnId && this.dragOverIndex() !== null) {
+        this.dragOverIndex.set(null);
+        this.hoveredZoneIndex.set(null);
+        this.animateOnEnter.set(false);
         this.columnEnterCount = 0;
       }
     });
@@ -178,6 +222,8 @@ export class KanbanColumnComponent {
   onColumnDragEnter(_: DragEvent): void {
     if (!this.dragDropGlobal.isTaskDrag()) return;
     this.columnEnterCount++;
+    // Inform global "hovered column" as early as possible.
+    this.dragDropGlobal.setTaskHoverColumn(this.kanbanColumnId);
   }
 
   onColumnDragLeave(_: DragEvent): void {
@@ -186,6 +232,7 @@ export class KanbanColumnComponent {
     if (this.columnEnterCount === 0) {
       this.dragOverIndex.set(null);
       this.hoveredZoneIndex.set(null);
+      this.animateOnEnter.set(false);
     }
   }
 
@@ -200,16 +247,35 @@ export class KanbanColumnComponent {
     // Ignore real file drags.
     if (isFileDragEvent(event)) return;
 
+    // Improve cursor/UX.
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+
+    // This column is the active hover owner now.
+    this.dragDropGlobal.setTaskHoverColumn(this.kanbanColumnId);
+
     // If hovering the dragged card's own edges, suppress preview/animation.
     if (this.isSelfEdge(zoneIndex)) {
       event.preventDefault();
       this.hoveredZoneIndex.set(null);
       this.dragOverIndex.set(null);
+      this.animateOnEnter.set(false);
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
+
+    // Animate only when entering this column from another one (first time).
+    const firstInColumn = this.dragOverIndex() === null;
+    if (firstInColumn) {
+      const ctx = this.dragDropGlobal.currentTaskDrag();
+      const isForeign = !!ctx && ctx.columnId !== this.kanbanColumnId;
+      this.animateOnEnter.set(isForeign);
+      if (isForeign) {
+        // Let the first render use ".open", then disable for subsequent moves.
+        setTimeout(() => this.animateOnEnter.set(false), 0);
+      }
+    }
 
     this.hoveredZoneIndex.set(zoneIndex);
     this.dragOverIndex.set(zoneIndex);
@@ -222,15 +288,19 @@ export class KanbanColumnComponent {
       event.preventDefault();
       this.hoveredZoneIndex.set(null);
       this.dragOverIndex.set(null);
+      this.animateOnEnter.set(false);
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
 
-    const dragData = getTaskDragData(event);
-    if (!dragData) return;
-    const { taskId, kanbanColumnId: fromColumnId } = dragData;
+    // Prefer global context (source of truth); fallback to DT for resilience.
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    const fromColumnId =
+      ctx?.columnId ?? getTaskDragData(event)?.kanbanColumnId ?? null;
+    const taskId = ctx?.taskId ?? getTaskDragData(event)?.taskId ?? null;
+    if (fromColumnId == null || taskId == null) return;
 
     const insertAt = this.computeInsertIndex(zoneIndex, fromColumnId, taskId);
     await this.onTaskDrop(event, insertAt);
@@ -264,9 +334,10 @@ export class KanbanColumnComponent {
   ): Promise<void> {
     event.preventDefault();
 
-    const dragData = getTaskDragData(event);
-    if (!dragData) return;
-    const { taskId, kanbanColumnId: fromColumnId } = dragData;
+    const ctx = this.dragDropGlobal.currentTaskDrag();
+    const dtData = getTaskDragData(event);
+    const taskId = ctx?.taskId ?? dtData?.taskId ?? null;
+    const fromColumnId = ctx?.columnId ?? dtData?.kanbanColumnId ?? null;
     if (taskId == null || fromColumnId == null) return;
 
     const allTasks = this.taskService.tasks();
@@ -282,6 +353,7 @@ export class KanbanColumnComponent {
       if (targetIndex === fromIdx) {
         this.dragOverIndex.set(null);
         this.hoveredZoneIndex.set(null);
+        this.animateOnEnter.set(false);
         return;
       }
 
@@ -293,6 +365,7 @@ export class KanbanColumnComponent {
       await this.taskService.reorderTasks(reordered);
       this.dragOverIndex.set(null);
       this.hoveredZoneIndex.set(null);
+      this.animateOnEnter.set(false);
       this.dragDropGlobal.markTaskDropped(taskId);
       return;
     }
@@ -320,6 +393,7 @@ export class KanbanColumnComponent {
     await this.taskService.reorderTasks(reorderedTarget);
     this.dragOverIndex.set(null);
     this.hoveredZoneIndex.set(null);
+    this.animateOnEnter.set(false);
     this.dragDropGlobal.markTaskDropped(taskId);
   }
 

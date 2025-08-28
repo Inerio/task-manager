@@ -164,16 +164,19 @@ export class BoardComponent implements OnChanges {
   }
 
   onColumnDragHover(idx: number, e: DragEvent): void {
-    e.preventDefault();
     if (this.editingColumn()) return;
-    if (this.dragDropGlobal.isColumnDrag()) {
-      this.dragOverIndex.set(idx);
-    }
+    // Engage only when a column drag is actually happening (avoid blocking other drags like files).
+    if (!this.dragDropGlobal.isColumnDrag()) return;
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; // better cursor/UX
+    e.preventDefault();
+    this.dragOverIndex.set(idx);
   }
 
   async onColumnDrop(e: DragEvent): Promise<void> {
     if (this.editingColumn()) return;
-    if (!isColumnDragEvent(e)) {
+
+    // Allow drop if either the global state OR the DataTransfer says "column"
+    if (!this.dragDropGlobal.isColumnDrag() && !isColumnDragEvent(e)) {
       this.resetDragState();
       return;
     }
@@ -309,14 +312,31 @@ export class BoardComponent implements OnChanges {
 
     try {
       if (!column.id) {
+        // Creating from a DRAFT.
+        // createKanbanColumn() appends the created item to the array.
+        // To avoid NG0955 (duplicate keys), remove the draft and optionally
+        // move the created item to the draft index.
+        const before = this.kanbanColumnService.kanbanColumns();
+        const draftIndex = before.indexOf(currentlyEditing);
+
         const created = await this.kanbanColumnService.createKanbanColumn(
           newName,
           boardId
         );
-        this.kanbanColumnService.replaceRef(currentlyEditing, {
-          ...created,
-          boardId,
-        });
+
+        // Remove draft entry so we don't have two items with the same id.
+        this.kanbanColumnService.removeColumnRef(currentlyEditing);
+
+        // Keep new column at the draft's previous index (UX nicety).
+        const after = this.kanbanColumnService.kanbanColumns();
+        const createdIdx = after.findIndex((c) => c.id === created.id);
+        if (createdIdx !== -1 && draftIndex >= 0 && draftIndex !== createdIdx) {
+          const copy = after.slice();
+          const [row] = copy.splice(createdIdx, 1);
+          const insertAt = Math.min(draftIndex, copy.length);
+          copy.splice(insertAt, 0, row);
+          this.kanbanColumnService.reorderKanbanColumns(copy);
+        }
       } else {
         const updated: KanbanColumn = { ...column, name: newName, boardId };
         await this.kanbanColumnService.updateKanbanColumn(updated);
@@ -348,8 +368,9 @@ export class BoardComponent implements OnChanges {
   // --------------------
   // Template utilities
   // --------------------
-  trackByColumnId(_index: number, col: KanbanColumn): number | undefined {
-    return col.id;
+  trackByColumnId(_index: number, col: KanbanColumn): number | string {
+    // Use a stable unique key also for drafts.
+    return typeof col.id === "number" ? col.id : `draft-${_index}`;
   }
 
   isEditingTitle(column: KanbanColumn): boolean {

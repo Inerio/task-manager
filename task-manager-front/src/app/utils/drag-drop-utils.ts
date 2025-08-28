@@ -4,7 +4,7 @@
 const DATA_KEYS = {
   type: "type",
   taskId: "task-id",
-  columnId: "kanbanColumn-id",
+  columnId: "kanbanColumn-id", // keep key name for backward compatibility
   boardId: "board-id",
 } as const;
 
@@ -23,6 +23,9 @@ export interface BoardDragData {
 }
 
 // ---- internal helpers (non-exported) ----
+function dtOf(event: DragEvent): DataTransfer | null {
+  return event.dataTransfer ?? null;
+}
 function setDT(dt: DataTransfer | null, key: string, value: string): void {
   dt?.setData(key, value);
 }
@@ -33,6 +36,16 @@ function getNumDT(dt: DataTransfer | null, key: string): number | null {
   const v = Number(getDT(dt, key));
   return Number.isFinite(v) ? v : null;
 }
+/** Hint the browser that we intend to move an item (visual cursor + DnD UX). */
+function applyMoveEffect(dt: DataTransfer | null): void {
+  if (dt) dt.effectAllowed = "move";
+}
+
+/** Return the drag kind encoded in the DataTransfer, or null. */
+export function getDragKind(event: DragEvent): DragKind | null {
+  const kind = getDT(dtOf(event), DATA_KEYS.type);
+  return kind === "task" || kind === "column" || kind === "board" ? kind : null;
+}
 
 /** ===== TASK ===== */
 export function setTaskDragData(
@@ -40,14 +53,15 @@ export function setTaskDragData(
   taskId: number,
   kanbanColumnId: number
 ): void {
-  const dt = event.dataTransfer ?? null;
+  const dt = dtOf(event);
+  applyMoveEffect(dt);
   setDT(dt, DATA_KEYS.type, "task");
   setDT(dt, DATA_KEYS.taskId, String(taskId));
   setDT(dt, DATA_KEYS.columnId, String(kanbanColumnId));
 }
 
 export function getTaskDragData(event: DragEvent): TaskDragData | null {
-  const dt = event.dataTransfer ?? null;
+  const dt = dtOf(event);
   if (getDT(dt, DATA_KEYS.type) !== "task") return null;
 
   const taskId = getNumDT(dt, DATA_KEYS.taskId);
@@ -58,9 +72,8 @@ export function getTaskDragData(event: DragEvent): TaskDragData | null {
 }
 
 export function isTaskDragEvent(event: DragEvent): boolean {
-  return (
-    !!event.dataTransfer && getDT(event.dataTransfer, DATA_KEYS.type) === "task"
-  );
+  const dt = dtOf(event);
+  return !!dt && getDT(dt, DATA_KEYS.type) === "task";
 }
 
 /** ===== COLUMN ===== */
@@ -68,13 +81,14 @@ export function setColumnDragData(
   event: DragEvent,
   kanbanColumnId: number
 ): void {
-  const dt = event.dataTransfer ?? null;
+  const dt = dtOf(event);
+  applyMoveEffect(dt);
   setDT(dt, DATA_KEYS.type, "column");
   setDT(dt, DATA_KEYS.columnId, String(kanbanColumnId));
 }
 
 export function getColumnDragData(event: DragEvent): ColumnDragData | null {
-  const dt = event.dataTransfer ?? null;
+  const dt = dtOf(event);
   if (getDT(dt, DATA_KEYS.type) !== "column") return null;
 
   const kanbanColumnId = getNumDT(dt, DATA_KEYS.columnId);
@@ -84,21 +98,20 @@ export function getColumnDragData(event: DragEvent): ColumnDragData | null {
 }
 
 export function isColumnDragEvent(event: DragEvent): boolean {
-  return (
-    !!event.dataTransfer &&
-    getDT(event.dataTransfer, DATA_KEYS.type) === "column"
-  );
+  const dt = dtOf(event);
+  return !!dt && getDT(dt, DATA_KEYS.type) === "column";
 }
 
 /** ===== BOARD ===== */
 export function setBoardDragData(event: DragEvent, boardId: number): void {
-  const dt = event.dataTransfer ?? null;
+  const dt = dtOf(event);
+  applyMoveEffect(dt);
   setDT(dt, DATA_KEYS.type, "board");
   setDT(dt, DATA_KEYS.boardId, String(boardId));
 }
 
 export function getBoardDragData(event: DragEvent): BoardDragData | null {
-  const dt = event.dataTransfer ?? null;
+  const dt = dtOf(event);
   if (getDT(dt, DATA_KEYS.type) !== "board") return null;
 
   const boardId = getNumDT(dt, DATA_KEYS.boardId);
@@ -108,20 +121,14 @@ export function getBoardDragData(event: DragEvent): BoardDragData | null {
 }
 
 export function isBoardDragEvent(event: DragEvent): boolean {
-  return (
-    !!event.dataTransfer &&
-    getDT(event.dataTransfer, DATA_KEYS.type) === "board"
-  );
+  const dt = dtOf(event);
+  return !!dt && getDT(dt, DATA_KEYS.type) === "board";
 }
 
 /* ==== DRAG & DROP UTILS — FILES ==== */
 
 /** True when the native drag contains real files (system drag). */
 export function isFileDragEvent(event: DragEvent): boolean {
-  return (
-    !!event.dataTransfer &&
-    Array.from(event.dataTransfer.types).some(
-      (t) => t.toLowerCase() === "files"
-    )
-  );
+  const dt = dtOf(event);
+  return !!dt && Array.from(dt.types).some((t) => t.toLowerCase() === "files");
 }

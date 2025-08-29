@@ -1,4 +1,4 @@
-<div class="board-scope">
+<div class="board-scope" style="position: relative">
   <!-- Scoped spinner only for the board area -->
   <app-loading-overlay [scope]="'board'"></app-loading-overlay>
 
@@ -27,7 +27,7 @@
       <button
         type="button"
         class="cancel-edit-btn-top"
-        (mousedown)="cancelTitleEdit()"
+        (mousedown)="(cancelTitleEdit)"
         [attr.title]="'boards.column.cancelAdd' | transloco"
       >
         ✖ {{ "boards.column.cancelAdd" | transloco }}

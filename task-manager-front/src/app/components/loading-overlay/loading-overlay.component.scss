@@ -7,8 +7,14 @@
   backdrop-filter: blur(2px);
   z-index: var(--z-overlay);
 
+  /* Inline (scoped) overlay lives inside a positioned container.
+     We soften the dimming to avoid the "black screen" effect. */
   &.inline {
     position: absolute;
+    /* same inset as fixed, but relative to the board container */
+    inset: 0;
+    background: color-mix(in oklab, var(--bg-body) 75%, rgba(0, 0, 0, 0.15));
+    backdrop-filter: blur(1px);
   }
 }
 

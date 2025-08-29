@@ -3,6 +3,12 @@
 .board-scope {
   position: relative;
   min-height: 220px;
+
+  /* Make the board fill the available height so inner columns can scroll */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 /* ===== Grid Kanban ===== */
@@ -15,9 +21,14 @@
   margin-right: auto;
   --gap: var(--space-6);
   gap: var(--gap);
-  padding: var(--space-4);
+  /* tighter vertical padding to push grid up & increase inner height */
+  padding: var(--space-2) var(--space-4);
   --fab: 62px;
   flex-wrap: wrap;
+
+  /* occupy remaining height under the board header */
+  flex: 1 1 auto;
+  min-height: 0; /* critical so columns become the scroll containers */
 
   /* -------- 1 column -------- */
   --col-max: 640px;
@@ -60,7 +71,7 @@
     --gap: var(--space-5);
   }
   @include bp.md-down {
-    padding: var(--space-4) var(--space-3);
+    padding: var(--space-3) var(--space-3);
     gap: var(--space-4);
     --col-w: min(100%, var(--col-max));
   }
@@ -76,6 +87,19 @@
   width: var(--col-w);
   min-width: var(--col-min);
   max-width: var(--col-max);
+
+  /* header fixed + body scrolls */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  /* make the column body (app-kanban-column) consume remaining height */
+  app-kanban-column {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 
   @include bp.sm-down {
     width: 100%;
@@ -96,9 +120,6 @@
   z-index: 3;
 }
 
-/* (removed) .add-kanbanColumn-error — not used in the template */
-
-/* Optional hint copy retained if needed later */
 .add-kanbanColumn-max-warning {
   color: #6c757d;
   font-size: 0.9em;
@@ -119,6 +140,7 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--text-1);
+  flex: 0 0 auto; /* don’t grow */
 }
 
 .cancel-edit-btn-top {

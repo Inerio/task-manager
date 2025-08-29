@@ -2,7 +2,8 @@
 
 .main-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   position: relative;
 
   /* Decorative watermark (kept) */
@@ -140,22 +141,36 @@
 
 .board-area {
   flex: 1 1 auto;
-  padding: 2.5rem 3.5rem 2rem;
+  /* tighter padding to push the grid up and increase scrollable height */
+  padding: 1.25rem 2.5rem 0.5rem;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
 
+  /* Keep inside the viewport and make inner content scrollable instead */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+
   @include bp.md-down {
-    padding: var(--space-5) var(--space-4);
+    padding: var(--space-4) var(--space-4) var(--space-3);
   }
+}
+
+/* Ensure the <app-board> fills remaining height under the header */
+.board-area app-board {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .board-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.4rem;
+  margin-bottom: 1.1rem;
   gap: 1.2rem;
 
   @include bp.sm-down {

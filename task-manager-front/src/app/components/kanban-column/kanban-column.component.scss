@@ -13,11 +13,33 @@
   min-width: var(--col-min);
   max-width: var(--col-max);
   width: 100%;
-  padding: 1rem 0 0 0;
+  /* Remove top padding so the sticky add button can touch the top */
+  padding: 0;
+
+  /* === Column becomes the scroll container === */
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Discreet brand-aligned scrollbar */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: color-mix(in oklab, var(--brand) 35%, #9fb6d44d) transparent;
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--brand) 35%, #9fb6d44d);
+    border-radius: 8px;
+  }
 
   .add-btn {
     align-self: center;
-    margin: 0.7rem 0;
+    /* No top margin so it sticks flush; keep only bottom spacing */
+    margin: 0 0 0.7rem 0;
     padding: 0.4rem 1rem;
     font-size: 1rem;
     background: var(--surface-1);
@@ -27,6 +49,13 @@
     transition: background 0.18s, border 0.18s;
     box-shadow: 0 1px 3px 0 #0001;
     width: 100%;
+
+    /* Keep “Add task” visible while scrolling the column */
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-clip: padding-box;
+    border-bottom: 1px solid var(--border-1);
 
     &:hover {
       background: var(--surface-2);
@@ -95,9 +124,9 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -72px; /* bleed outside the column to catch the cursor */
-  height: 112px; /* generous hit area at the very bottom */
-  z-index: 30; /* above placeholders/cards */
+  bottom: -72px;
+  height: 112px;
+  z-index: 30;
   pointer-events: none;
 }
 .task-drag-active .tail-slice {
@@ -108,7 +137,7 @@
 .empty-drop-wrapper {
   position: relative;
   /* Align top spacing with non-empty columns */
-  margin: var(--task-gap) 0; /* <-- updated */
+  margin: var(--task-gap) 0;
 }
 
 /* Slice placed over the whole empty state to capture dragover/drop */
@@ -182,12 +211,10 @@
     z-index: 1;
   }
 
-  /* Animate only on first entry from another column */
   &.open {
     animation: phOpen 140ms ease-out forwards;
   }
 
-  /* Within the same column: no animation, directly occupy space */
   &.open-static {
     height: var(--ph);
     animation: none;

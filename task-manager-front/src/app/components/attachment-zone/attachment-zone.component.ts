@@ -69,12 +69,30 @@ export class AttachmentZoneComponent implements OnDestroy {
   readonly previewLeft = signal(0);
 
   // ===== Internals =====
+  /** Token used to ignore late async preview responses. */
   private previewToken = 0;
+  /** Last created object URL (only for the currently displayed preview). */
   private lastObjectUrl: string | null = null;
+  /** Avoid duplicate HTTP calls while a preview is being fetched. */
+  private readonly inFlight = new Map<string, Promise<string>>();
+  /** Small LRU cache of object URLs to reuse across hovers. */
+  private readonly cache = new Map<string, string>();
+  private readonly cacheOrder: string[] = [];
+  private static readonly MAX_CACHE = 8;
 
   // ===== Lifecycle =====
   ngOnDestroy(): void {
     this.revokePreviewUrl();
+    // Revoke all cached object URLs to prevent memory leaks.
+    for (const url of this.cache.values()) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        // ignore
+      }
+    }
+    this.cache.clear();
+    this.cacheOrder.length = 0;
   }
 
   // ===== Track helpers (stable references for @for trackBy) =====
@@ -271,45 +289,64 @@ export class AttachmentZoneComponent implements OnDestroy {
     return this.attachmentService.buildAttachmentUrl(this.taskId, filename);
   }
 
+  /** Only updates the position of the preview popover (no network). */
+  onPreviewMove(event: MouseEvent): void {
+    if (!this.previewUrl()) return;
+    this.previewTop.set(event.clientY + 14);
+    this.previewLeft.set(event.clientX + 18);
+  }
+
   async showPreview(filename: string, event: MouseEvent): Promise<void> {
     if (!this.isImage(filename)) return;
 
-    // Update position live
+    // Always update position quickly.
     this.previewTop.set(event.clientY + 14);
     this.previewLeft.set(event.clientX + 18);
 
-    // Same file already shown → only move popover
-    if (this.previewFilename() === filename && this.previewUrl()) return;
+    const key = this.previewKey(this.taskId, filename);
 
-    // New file: fetch blob → object URL
-    this.previewFilename.set(filename);
-    const token = ++this.previewToken;
+    // Cache hit → reuse without new HTTP calls.
+    const cached = this.cache.get(key);
+    if (cached) {
+      this.previewFilename.set(filename);
+      this.previewUrl.set(cached);
+      return;
+    }
+
+    // If a request is already in-flight for this file, avoid starting another.
+    if (this.inFlight.has(key)) {
+      this.previewFilename.set(filename);
+      return;
+    }
+
+    // Start a single fetch for this preview and cache it when done.
+    const promise = this.attachmentService.getPreviewObjectUrl(
+      this.taskId,
+      filename
+    );
+    this.inFlight.set(key, promise);
 
     try {
-      const objectUrl = await this.attachmentService.getPreviewObjectUrl(
-        this.taskId,
-        filename
-      );
+      const objectUrl = await promise;
+      this.addToCache(key, objectUrl);
 
-      // Ignore late responses if another preview started in-between
-      if (this.previewToken !== token) {
-        URL.revokeObjectURL(objectUrl);
-        return;
+      // Only update the preview if the user is still hovering this file.
+      if (
+        this.previewFilename() === null ||
+        this.previewFilename() === filename
+      ) {
+        this.previewFilename.set(filename);
+        this.previewUrl.set(objectUrl);
       }
-
-      // Cleanup previous object URL
-      this.revokePreviewUrl();
-
-      this.lastObjectUrl = objectUrl;
-      this.previewUrl.set(objectUrl);
     } catch {
       // On error, ensure no stale preview stays
       this.hidePreview();
+    } finally {
+      this.inFlight.delete(key);
     }
   }
 
   hidePreview(): void {
-    this.revokePreviewUrl();
     this.previewUrl.set(null);
     this.previewFilename.set(null);
   }
@@ -333,5 +370,34 @@ export class AttachmentZoneComponent implements OnDestroy {
       seen.add(filename);
       return true;
     });
+  }
+
+  // ===== Cache helpers =====
+  private previewKey(taskId: number, filename: string): string {
+    return `${taskId}::${filename}`;
+  }
+
+  /** Simple LRU to cap memory usage from object URLs. */
+  private addToCache(key: string, url: string): void {
+    if (this.cache.has(key)) {
+      // Refresh LRU order
+      const idx = this.cacheOrder.indexOf(key);
+      if (idx >= 0) this.cacheOrder.splice(idx, 1);
+    }
+    this.cache.set(key, url);
+    this.cacheOrder.push(key);
+
+    if (this.cacheOrder.length > AttachmentZoneComponent.MAX_CACHE) {
+      const evictKey = this.cacheOrder.shift()!;
+      const evictUrl = this.cache.get(evictKey);
+      if (evictUrl) {
+        try {
+          URL.revokeObjectURL(evictUrl);
+        } catch {
+          // ignore
+        }
+      }
+      this.cache.delete(evictKey);
+    }
   }
 }

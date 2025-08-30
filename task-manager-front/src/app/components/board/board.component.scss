@@ -7,9 +7,10 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  --fab: 62px;
+  --fab-clearance: var(--space-7);
 }
 
-/* ===== Grid Kanban ===== */
 .task-columns {
   display: flex;
   align-items: flex-start;
@@ -19,32 +20,23 @@
   margin-right: auto;
   --gap: var(--space-6);
   gap: var(--gap);
-  /* tighter vertical padding to push grid up & increase inner height */
   padding: var(--space-2) var(--space-4);
-  --fab: 62px;
   flex-wrap: wrap;
-
-  /* occupy remaining height under the board header */
   flex: 1 1 auto;
   min-height: 0;
+  padding-right: calc(var(--fab) + var(--fab-clearance));
 
-  /* Always keep room on the right for the floating '+' button */
-  padding-right: calc(var(--space-4) + var(--fab));
-
-  /* -------- 1 column -------- */
   --col-max: 640px;
   --col-min: 280px;
   --col-w: min(var(--col-max), 100%);
 
-  /* -------- 2 columns -------- */
   &:has(.column-draggable:nth-of-type(2)):not(
       :has(.column-draggable:nth-of-type(3))
     ) {
-    --col-max: 520px; /* compact */
+    --col-max: 520px;
     --col-w: min(var(--col-max), calc((100% - var(--gap)) / 2));
   }
 
-  /* -------- 3 columns -------- */
   &:has(.column-draggable:nth-of-type(3)):not(
       :has(.column-draggable:nth-of-type(4))
     ) {
@@ -52,17 +44,14 @@
     --col-w: calc((100% - 2 * var(--gap)) / 3);
   }
 
-  /* -------- 4 columns -------- */
   &:has(.column-draggable:nth-of-type(4)):not(
       :has(.column-draggable:nth-of-type(5))
     ) {
     --col-min: 0px;
     --col-max: 9999px;
-    /* standard 4-cols: 3 gaps between items */
     --col-w: calc((100% - 3 * var(--gap)) / 4);
   }
 
-  /* -------- 5 columns -------- */
   &:has(.column-draggable:nth-of-type(5)) {
     --col-min: 0px;
     --col-max: 9999px;
@@ -74,14 +63,13 @@
   }
   @include bp.md-down {
     padding: var(--space-3) var(--space-3);
-    /* still reserve space for the floating '+' */
-    padding-right: calc(var(--space-3) + var(--fab));
+    --fab-clearance: var(--space-5);
+    padding-right: calc(var(--fab) + var(--fab-clearance));
     gap: var(--space-4);
     --col-w: min(100%, var(--col-max));
   }
 }
 
-/* === Column wrapper === */
 .column-draggable {
   position: relative;
   background: var(--surface-1);
@@ -91,14 +79,11 @@
   width: var(--col-w);
   min-width: var(--col-min);
   max-width: var(--col-max);
-
-  /* header fixed + body scrolls */
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
 
-  /* make the column body (app-kanban-column) consume remaining height */
   app-kanban-column {
     display: flex;
     flex: 1 1 auto;
@@ -201,16 +186,16 @@
   }
 }
 
-/* Floating “+” button pinned to the right of the columns area */
 .add-kanbanColumn-fab {
   position: absolute;
   top: var(--space-4);
-  right: var(--space-4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--fab);
-  height: var(--fab);
+  right: var(--space-2);
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--fab, 62px);
+  block-size: var(--fab, 62px);
+  aspect-ratio: 1 / 1;
+  padding: 0;
   border-radius: 50%;
   background: var(--brand);
   color: #fff;
@@ -270,7 +255,6 @@
   }
 }
 
-/* Drop pulse */
 @keyframes dropPulseColumn {
   0% {
     box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.22);
@@ -292,5 +276,5 @@
 }
 
 .columns-reordering .task-kanbanColumn {
-  pointer-events: none; /* prevent card hover/drag during column DnD */
+  pointer-events: none;
 }

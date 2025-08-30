@@ -78,6 +78,8 @@ export class TaskComponent implements OnChanges {
 
   /** Per-card debounce so we don't re-pulse on unrelated signal changes. */
   private readonly lastPulseToken = { drop: 0, created: 0, saved: 0 };
+  /** If a drop arrives while this card is still "dragging", defer until drag end. */
+  private _pendingDropToken: number | null = null;
 
   // === Drag overlay (custom ghost that follows the cursor) ===
   private _dragOverlayEl: HTMLElement | null = null;
@@ -97,16 +99,38 @@ export class TaskComponent implements OnChanges {
   readonly showFullDescription = signal(false);
 
   constructor() {
-    // Pulse exactly once per new token for drop/created/saved.
+    // Pulse for "drop" — ensure it fires only on the real card (not ghost) and not while hidden by .dragging.
     effect(() => {
       const me = this.localTask().id;
-      if (!me) return;
+      if (!me || this.ghost) return;
 
       const d = this.dragDropGlobal.lastDroppedTask();
       if (d && d.id === me && d.token !== this.lastPulseToken.drop) {
-        this.triggerPulse();
-        this.lastPulseToken.drop = d.token;
+        if (this.dragging()) {
+          // Defer until the native dragend cleanup makes the card visible again.
+          this._pendingDropToken = d.token;
+        } else {
+          this.triggerPulse();
+          this.lastPulseToken.drop = d.token;
+        }
       }
+    });
+
+    // Release a deferred drop pulse as soon as the card is no longer dragging.
+    effect(() => {
+      if (this.ghost) return;
+      if (!this.dragging() && this._pendingDropToken) {
+        this.triggerPulse();
+        this.lastPulseToken.drop = this._pendingDropToken;
+        this._pendingDropToken = null;
+      }
+    });
+
+    // Pulse for "created" / "saved" (not tied to dragging).
+    effect(() => {
+      if (this.ghost) return;
+      const me = this.localTask().id;
+      if (!me) return;
 
       const c = this.dragDropGlobal.lastCreatedTask();
       if (c && c.id === me && c.token !== this.lastPulseToken.created) {
@@ -202,10 +226,22 @@ export class TaskComponent implements OnChanges {
   }
 
   private triggerPulse(): void {
-    this.droppedPulse.set(false);
+    // Always restart the CSS animation reliably.
     if (this._pulseTimer) clearTimeout(this._pulseTimer);
-    this.droppedPulse.set(true);
-    this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
+    this.droppedPulse.set(false);
+
+    // Force a reflow so removing the class is flushed before re-adding.
+    const el = this.cardEl?.nativeElement;
+    if (el) {
+      el.classList.remove("dropped-pulse"); // safety: in case binding hasn't flushed yet
+      void el.offsetWidth; // reflow
+    }
+
+    // Next frame: set the boolean so the class is re-added and animation restarts.
+    requestAnimationFrame(() => {
+      this.droppedPulse.set(true);
+      this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
+    });
   }
 
   // === Drag & drop handlers (for the dragged card itself) ===

@@ -82,6 +82,10 @@ export class TaskComponent implements OnChanges {
   // === Drag overlay (custom ghost that follows the cursor) ===
   private _dragOverlayEl: HTMLElement | null = null;
   private _onDocDragOver: ((e: DragEvent) => void) | null = null;
+  /** Global fallbacks to guarantee cleanup on fast drops/Escape. */
+  private _onDocDragEnd: ((e: DragEvent) => void) | null = null;
+  private _onDocDrop: ((e: DragEvent) => void) | null = null;
+  private _onDocKeydown: ((e: KeyboardEvent) => void) | null = null;
   private _overlayOffset = { x: 12, y: 10 };
 
   // === Truncation logic ===
@@ -212,13 +216,13 @@ export class TaskComponent implements OnChanges {
     }
     this.dragging.set(true);
 
-    // 1) Init global + DataTransfer payload (single source of truth).
+    // Init global + DataTransfer payload (single source of truth).
     this.initDragState(event);
 
-    // 2) Capture size to drive placeholder height and smooth collapse.
+    // Capture size to drive placeholder height and smooth collapse.
     this.applyPlaceholderSizing();
 
-    // 3) Use a custom overlay that follows the cursor (no browser crop).
+    // Use a custom overlay that follows the cursor (no browser crop).
     this.applyDragOverlay(event);
   }
 
@@ -548,6 +552,23 @@ export class TaskComponent implements OnChanges {
       capture: true,
     });
 
+    // --- Global fallbacks to guarantee cleanup on fast drops / ESC ---
+    const end = () => {
+      // Ensure we don't leave a stuck overlay when dropping very fast.
+      this.dragging.set(false);
+      this.dragDropGlobal.endDrag();
+      this.cleanupDragOverlay();
+    };
+    this._onDocDragEnd = (_e: DragEvent) => end();
+    this._onDocDrop = (_e: DragEvent) => end();
+    this._onDocKeydown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") end();
+    };
+
+    document.addEventListener("dragend", this._onDocDragEnd, { capture: true });
+    document.addEventListener("drop", this._onDocDrop, { capture: true });
+    document.addEventListener("keydown", this._onDocKeydown, { capture: true });
+
     // Hide native drag image so ONLY our overlay is visible.
     const shim = document.createElement("canvas");
     shim.width = 1;
@@ -558,8 +579,28 @@ export class TaskComponent implements OnChanges {
   /** Remove the overlay and detach the document listener. */
   private cleanupDragOverlay(): void {
     if (this._onDocDragOver) {
-      document.removeEventListener("dragover", this._onDocDragOver);
+      document.removeEventListener("dragover", this._onDocDragOver, {
+        capture: true,
+      } as any);
       this._onDocDragOver = null;
+    }
+    if (this._onDocDragEnd) {
+      document.removeEventListener("dragend", this._onDocDragEnd, {
+        capture: true,
+      } as any);
+      this._onDocDragEnd = null;
+    }
+    if (this._onDocDrop) {
+      document.removeEventListener("drop", this._onDocDrop, {
+        capture: true,
+      } as any);
+      this._onDocDrop = null;
+    }
+    if (this._onDocKeydown) {
+      document.removeEventListener("keydown", this._onDocKeydown, {
+        capture: true,
+      } as any);
+      this._onDocKeydown = null;
     }
     if (this._dragOverlayEl?.parentNode) {
       this._dragOverlayEl.parentNode.removeChild(this._dragOverlayEl);

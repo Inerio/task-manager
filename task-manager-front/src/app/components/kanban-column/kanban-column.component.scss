@@ -136,7 +136,6 @@
 /* ===== Empty column: wrapper + overlay slice (captures drop ON the hint) ===== */
 .empty-drop-wrapper {
   position: relative;
-  /* Align top spacing with non-empty columns */
   margin: var(--task-gap) 0;
 }
 
@@ -172,7 +171,7 @@
 
 /* ===== Placeholder (preview) ===== */
 .task-placeholder {
-  --ph: 72px; /* fallback */
+  --ph: 72px;
   height: 0;
   margin: 0 0 var(--task-gap) 0;
   border-radius: var(--radius-3);
@@ -181,8 +180,8 @@
   box-shadow: none;
   position: relative;
   overflow: hidden;
-  pointer-events: none;
-  z-index: 10;
+  pointer-events: auto;
+  z-index: 25;
 
   &::before {
     content: "";
@@ -220,9 +219,17 @@
     animation: none;
   }
 
-  app-task .task-card {
-    margin: 0 !important;
+  /* Ghost preview must not intercept events */
+  app-task {
+    pointer-events: none;
   }
+}
+
+/* Full-area hit target inside placeholder so the whole preview accepts drop */
+.placeholder-slice {
+  position: absolute;
+  inset: 0;
+  z-index: 40; /* above ::before and neighboring slices */
 }
 
 @keyframes phOpen {

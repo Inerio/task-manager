@@ -48,7 +48,7 @@ export class KanbanColumnComponent {
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly i18n = inject(TranslocoService);
-  private readonly injector = inject(Injector); // for afterNextRender context
+  private readonly injector = inject(Injector);
 
   // ===== UI state =====
   readonly showForm = signal(false);
@@ -295,6 +295,8 @@ export class KanbanColumnComponent {
       this.hoveredZoneIndex.set(null);
       this.dragOverIndex.set(null);
       this.animateOnEnter.set(false);
+      // End the drag explicitly to make sure overlays are cleared fast.
+      this.dragDropGlobal.endDrag();
       return;
     }
 
@@ -310,6 +312,9 @@ export class KanbanColumnComponent {
 
     const insertAt = this.computeInsertIndex(zoneIndex, fromColumnId, taskId);
     await this.onTaskDrop(event, insertAt);
+
+    // Ensure global drag state is cleared even on very fast drops.
+    this.dragDropGlobal.endDrag();
   }
 
   // ===== Template utils =====
@@ -350,13 +355,14 @@ export class KanbanColumnComponent {
     const draggedTask = allTasks.find((t) => t.id === taskId);
     if (!draggedTask) return;
 
-    // Same-column reorder.
+    // Same-column reorder (optimistic + fast feedback).
     if (fromColumnId === this.kanbanColumnId) {
       const columnTasks = [...this.filteredTasks()];
       const fromIdx = columnTasks.findIndex((t) => t.id === taskId);
       if (fromIdx === -1) return;
 
       if (targetIndex === fromIdx) {
+        // no-op drop on own edge
         this.dragOverIndex.set(null);
         this.hoveredZoneIndex.set(null);
         this.animateOnEnter.set(false);
@@ -368,22 +374,30 @@ export class KanbanColumnComponent {
       columnTasks.splice(insertAt, 0, draggedTask);
 
       const reordered = columnTasks.map((t, idx) => ({ ...t, position: idx }));
-      await this.taskService.reorderTasks(reordered);
+
+      // Give feedback immediately; don't wait for the network.
+      this.dragDropGlobal.markTaskDropped(taskId);
+
+      // Clear local hover state right away (prevents flicker).
       this.dragOverIndex.set(null);
       this.hoveredZoneIndex.set(null);
       this.animateOnEnter.set(false);
-      this.dragDropGlobal.markTaskDropped(taskId);
+
+      // Optimistic update: sets local signal synchronously, then persists.
+      void this.taskService.reorderTasks(reordered).catch(() => {});
       return;
     }
 
-    // Move between columns.
+    // Cross-column move (optimistic state + concurrent persistence).
     const sourceTasks = allTasks.filter(
       (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
     );
     const targetTasks = [...this.filteredTasks()];
+
+    // Optimistically change the column of the dragged task.
     const newTask = { ...draggedTask, kanbanColumnId: this.kanbanColumnId };
-    const insertAt = Math.max(0, Math.min(targetIndex, targetTasks.length));
-    targetTasks.splice(insertAt, 0, newTask);
+    const clamped = Math.max(0, Math.min(targetIndex, targetTasks.length));
+    targetTasks.splice(clamped, 0, newTask);
 
     const reorderedSource = sourceTasks.map((t, idx) => ({
       ...t,
@@ -394,13 +408,21 @@ export class KanbanColumnComponent {
       position: idx,
     }));
 
-    await this.taskService.updateTask(newTask.id!, newTask);
-    await this.taskService.reorderTasks(reorderedSource);
-    await this.taskService.reorderTasks(reorderedTarget);
+    // Instant visual confirmation.
+    this.dragDropGlobal.markTaskDropped(taskId);
+
+    // Clear hover state immediately to remove placeholder.
     this.dragOverIndex.set(null);
     this.hoveredZoneIndex.set(null);
     this.animateOnEnter.set(false);
-    this.dragDropGlobal.markTaskDropped(taskId);
+
+    // Optimistic UI + fewer roundtrips:
+    // - Reordering pushes local state instantly (TaskService updates the signal before the HTTP call).
+    // - Column change is persisted in parallel.
+    await Promise.allSettled([
+      this.taskService.reorderTasks([...reorderedSource, ...reorderedTarget]),
+      this.taskService.updateTask(newTask.id!, newTask),
+    ]);
   }
 
   /** True if the hovered zone equals the dragged card own edges (no-op move). */

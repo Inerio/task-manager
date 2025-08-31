@@ -53,8 +53,15 @@ isTaskDragActive(); @let ph = placeholderHeight();
         [style.--ph.px]="ph"
         aria-hidden="true"
       >
+        <!-- Full-area hit target so the whole preview accepts drop -->
+        <div
+          class="drop-slice placeholder-slice"
+          (dragover)="onSliceDragOver($event, 0)"
+          (drop)="onSliceDrop($event, 0)"
+        ></div>
+
         @if (ghost) {
-        <app-task [task]="ghost"></app-task>
+        <app-task [task]="ghost" [ghost]="true"></app-task>
         }
       </div>
       }
@@ -84,8 +91,15 @@ isTaskDragActive(); @let ph = placeholderHeight();
         [style.--ph.px]="ph"
         aria-hidden="true"
       >
+        <!-- Full-area hit target so the whole preview accepts drop -->
+        <div
+          class="drop-slice placeholder-slice"
+          (dragover)="onSliceDragOver($event, idx + 1)"
+          (drop)="onSliceDrop($event, idx + 1)"
+        ></div>
+
         @if (ghost) {
-        <app-task [task]="ghost"></app-task>
+        <app-task [task]="ghost" [ghost]="true"></app-task>
         }
       </div>
       }
@@ -129,8 +143,15 @@ isTaskDragActive(); @let ph = placeholderHeight();
         [style.--ph.px]="ph"
         aria-hidden="true"
       >
+        <!-- Full-area hit target so the whole preview accepts drop -->
+        <div
+          class="drop-slice placeholder-slice"
+          (dragover)="onSliceDragOver($event, 0)"
+          (drop)="onSliceDrop($event, 0)"
+        ></div>
+
         @if (ghost) {
-        <app-task [task]="ghost"></app-task>
+        <app-task [task]="ghost" [ghost]="true"></app-task>
         }
       </div>
       } @else {

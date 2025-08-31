@@ -1,9 +1,4 @@
-/* =========================================================
-   Design Tokens (CSS variables) — shared across themes
-   - Colors are declared as CSS variables and overridden by themes.
-   - Also exposes spacing, radius, shadows, z-index, layout sizes.
-   ========================================================= */
-
+/* Design tokens (shared across themes) */
 :root {
   /* Brand & semantic */
   --brand: #1976d2;
@@ -11,17 +6,17 @@
   --danger: #b1001e;
   --warning: #f59e0b;
 
-  /* Text colors (overridden by themes) */
+  /* Text */
   --text-1: #1e1e1e;
   --text-2: #555;
 
-  /* Surfaces & background (overridden by themes) */
+  /* Surfaces */
   --bg-body: #f9f9f9;
-  --surface-1: #ffffff; /* cards, panels */
-  --surface-2: #f7f9fc; /* subtle panels */
-  --surface-3: #fafbfc; /* alt background */
-  --border-1: #e5e7eb; /* soft borders */
-  --border-2: #d7dbe7; /* emphasized borders */
+  --surface-1: #ffffff;
+  --surface-2: #f7f9fc;
+  --surface-3: #fafbfc;
+  --border-1: #e5e7eb;
+  --border-2: #d7dbe7;
 
   /* Shadows */
   --shadow-1: 0 2px 8px 0 #0001;
@@ -34,7 +29,7 @@
   --radius-3: 12px;
   --radius-round: 9999px;
 
-  /* Spacing scale */
+  /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -55,11 +50,13 @@
   --fs-24: 24px;
   --fs-32: 32px;
 
-  /* Layout variables */
+  /* Layout */
   --sidebar-w: 230px;
   --content-max: 1380px;
-  --col-min: 280px; /* min width of a Kanban column */
-  --col-max: 360px; /* max width of a Kanban column */
+
+  /* Column width caps (deprecated—width comes from --col-w) */
+  --col-min: 0px;
+  --col-max: 9999px;
 
   /* Z-index */
   --z-sidebar: 100;

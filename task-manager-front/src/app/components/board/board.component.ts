@@ -314,8 +314,6 @@ export class BoardComponent implements OnChanges {
       if (!column.id) {
         // Creating from a DRAFT.
         // createKanbanColumn() appends the created item to the array.
-        // To avoid NG0955 (duplicate keys), remove the draft and optionally
-        // move the created item to the draft index.
         const before = this.kanbanColumnService.kanbanColumns();
         const draftIndex = before.indexOf(currentlyEditing);
 
@@ -344,9 +342,10 @@ export class BoardComponent implements OnChanges {
     } catch {
       this.alert.show("error", this.i18n.translate("errors.updatingColumn"));
     } finally {
+      // No reload here to avoid triggering the scoped loading spinner.
+      // Services already update the signals locally.
       this.editingColumn.set(null);
       this.editingTitleValue.set("");
-      this.kanbanColumnService.loadKanbanColumns(boardId);
     }
   }
 

@@ -3,56 +3,61 @@
 .board-scope {
   position: relative;
   min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  --fab: 62px;
+  --fab-clearance: var(--space-7);
 }
 
-/* ===== Grid Kanban ===== */
 .task-columns {
   display: flex;
   align-items: flex-start;
   width: 100%;
-  max-width: var(--content-max);
+  /* remove global cap to let columns use the whole width */
+  max-width: none;
   margin-left: 0;
-  margin-right: auto;
+  margin-right: 0;
+
   --gap: var(--space-6);
   gap: var(--gap);
-  padding: var(--space-4);
-  --fab: 62px;
+  padding: var(--space-2) var(--space-4);
   flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-height: 0;
 
-  /* -------- 1 column -------- */
-  --col-max: 640px;
-  --col-min: 280px;
-  --col-w: min(var(--col-max), 100%);
+  /* no right padding reserve anymore; the "+" is now a flex item */
+  /* 1 column */
+  &:has(.column-draggable:nth-of-type(1)):not(
+      :has(.column-draggable:nth-of-type(2))
+    ) {
+    --col-w: min(760px, 86%);
+  }
 
-  /* -------- 2 columns -------- */
+  /* 2 columns */
   &:has(.column-draggable:nth-of-type(2)):not(
       :has(.column-draggable:nth-of-type(3))
     ) {
-    --col-max: 520px; /* compact */
-    --col-w: min(var(--col-max), calc((100% - var(--gap)) / 2));
+    --col-w: min(600px, calc((100% - var(--gap)) / 2));
   }
 
-  /* -------- 3 columns -------- */
+  /* 3 columns */
   &:has(.column-draggable:nth-of-type(3)):not(
       :has(.column-draggable:nth-of-type(4))
     ) {
-    --col-max: 360px;
-    --col-w: calc((100% - 2 * var(--gap)) / 3);
+    --col-w: min(480px, calc((100% - var(--gap)) / 3));
   }
 
-  /* -------- 4 columns -------- */
+  /* 4 columns */
   &:has(.column-draggable:nth-of-type(4)):not(
       :has(.column-draggable:nth-of-type(5))
     ) {
-    --col-min: 0px;
-    --col-max: 9999px;
-    --col-w: calc((100% - 4 * var(--gap) - var(--fab)) / 4);
+    --col-w: min(355px, calc((100% - var(--gap)) / 4));
   }
 
-  /* -------- 5 columns -------- */
+  /* 5 columns */
   &:has(.column-draggable:nth-of-type(5)) {
-    --col-min: 0px;
-    --col-max: 9999px;
     --col-w: calc((100% - 4 * var(--gap)) / 5);
   }
 
@@ -60,27 +65,45 @@
     --gap: var(--space-5);
   }
   @include bp.md-down {
-    padding: var(--space-4) var(--space-3);
+    padding: var(--space-3) var(--space-3);
+    --fab-clearance: var(--space-5);
     gap: var(--space-4);
-    --col-w: min(100%, var(--col-max));
+    /* On small screens, columns will naturally stack; keep definition simple */
+    --col-w: 100%;
   }
 }
 
-/* === Column wrapper === */
+/* Flex item for the "+" so it always appears after the last column.
+   Kept minimal so it never affects column width math. */
+.add-column-tile {
+  display: flex;
+  align-items: flex-start;
+  flex: 0 0 auto;
+}
+
 .column-draggable {
   position: relative;
   background: var(--surface-1);
   border-radius: var(--radius-3);
   box-shadow: var(--shadow-2);
+
+  /* Width comes only from --col-w (no caps, no content-based sizing) */
   flex: 0 0 var(--col-w);
   width: var(--col-w);
-  min-width: var(--col-min);
-  max-width: var(--col-max);
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  app-kanban-column {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 
   @include bp.sm-down {
     width: 100%;
-    max-width: 100%;
-    min-width: 0;
   }
 }
 
@@ -96,9 +119,6 @@
   z-index: 3;
 }
 
-/* (removed) .add-kanbanColumn-error — not used in the template */
-
-/* Optional hint copy retained if needed later */
 .add-kanbanColumn-max-warning {
   color: #6c757d;
   font-size: 0.9em;
@@ -119,6 +139,7 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--text-1);
+  flex: 0 0 auto;
 }
 
 .cancel-edit-btn-top {
@@ -175,14 +196,15 @@
   }
 }
 
-.add-kanbanColumn-fab-inline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 0;
-  margin-top: 0.5rem;
-  width: var(--fab);
-  height: var(--fab);
+/* Same visual style as before, but now in the flow (no absolute positioning). */
+.add-kanbanColumn-fab {
+  position: static;
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--fab, 62px);
+  block-size: var(--fab, 62px);
+  aspect-ratio: 1 / 1;
+  padding: 0;
   border-radius: 50%;
   background: var(--brand);
   color: #fff;
@@ -193,7 +215,10 @@
     0 1px 6px #0002;
   cursor: pointer;
   transition: background 0.17s, box-shadow 0.17s, transform 0.15s;
-  flex: 0 0 var(--fab);
+  z-index: 1; /* keep it simple; it’s in the flow */
+
+  /* slight vertical offset so it aligns with column headers visually */
+  margin-top: var(--space-4);
 
   &:hover:enabled {
     background: #1559b3;
@@ -207,7 +232,7 @@
   }
 
   @include bp.sm-down {
-    margin-left: 0;
+    margin-top: var(--space-3);
   }
 }
 
@@ -241,7 +266,6 @@
   }
 }
 
-/* Drop pulse */
 @keyframes dropPulseColumn {
   0% {
     box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.22);
@@ -263,5 +287,5 @@
 }
 
 .columns-reordering .task-kanbanColumn {
-  pointer-events: none; /* prevent card hover/drag during column DnD */
+  pointer-events: none;
 }

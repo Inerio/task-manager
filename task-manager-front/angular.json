@@ -71,7 +71,9 @@
               "buildTarget": "task-manager-front:build:production"
             },
             "development": {
-              "buildTarget": "task-manager-front:build:development"
+              "buildTarget": "task-manager-front:build:development",
+              "proxyConfig": "proxy.conf.json",
+              "host": "0.0.0.0"
             }
           },
           "defaultConfiguration": "development"

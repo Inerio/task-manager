@@ -48,7 +48,7 @@
           onDownloadAttachment(filename); $event.stopPropagation()
         "
         (mouseenter)="showPreview(filename, $event)"
-        (mousemove)="showPreview(filename, $event)"
+        (mousemove)="onPreviewMove($event)"
         (mouseleave)="hidePreview()"
         [attr.title]="
           previewFilename() === filename

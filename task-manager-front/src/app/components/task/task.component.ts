@@ -78,10 +78,16 @@ export class TaskComponent implements OnChanges {
 
   /** Per-card debounce so we don't re-pulse on unrelated signal changes. */
   private readonly lastPulseToken = { drop: 0, created: 0, saved: 0 };
+  /** If a drop arrives while this card is still "dragging", defer until drag end. */
+  private _pendingDropToken: number | null = null;
 
   // === Drag overlay (custom ghost that follows the cursor) ===
   private _dragOverlayEl: HTMLElement | null = null;
   private _onDocDragOver: ((e: DragEvent) => void) | null = null;
+  /** Global fallbacks to guarantee cleanup on fast drops/Escape. */
+  private _onDocDragEnd: ((e: DragEvent) => void) | null = null;
+  private _onDocDrop: ((e: DragEvent) => void) | null = null;
+  private _onDocKeydown: ((e: KeyboardEvent) => void) | null = null;
   private _overlayOffset = { x: 12, y: 10 };
 
   // === Truncation logic ===
@@ -93,16 +99,38 @@ export class TaskComponent implements OnChanges {
   readonly showFullDescription = signal(false);
 
   constructor() {
-    // Pulse exactly once per new token for drop/created/saved.
+    // Pulse for "drop" — ensure it fires only on the real card (not ghost) and not while hidden by .dragging.
     effect(() => {
       const me = this.localTask().id;
-      if (!me) return;
+      if (!me || this.ghost) return;
 
       const d = this.dragDropGlobal.lastDroppedTask();
       if (d && d.id === me && d.token !== this.lastPulseToken.drop) {
-        this.triggerPulse();
-        this.lastPulseToken.drop = d.token;
+        if (this.dragging()) {
+          // Defer until the native dragend cleanup makes the card visible again.
+          this._pendingDropToken = d.token;
+        } else {
+          this.triggerPulse();
+          this.lastPulseToken.drop = d.token;
+        }
       }
+    });
+
+    // Release a deferred drop pulse as soon as the card is no longer dragging.
+    effect(() => {
+      if (this.ghost) return;
+      if (!this.dragging() && this._pendingDropToken) {
+        this.triggerPulse();
+        this.lastPulseToken.drop = this._pendingDropToken;
+        this._pendingDropToken = null;
+      }
+    });
+
+    // Pulse for "created" / "saved" (not tied to dragging).
+    effect(() => {
+      if (this.ghost) return;
+      const me = this.localTask().id;
+      if (!me) return;
 
       const c = this.dragDropGlobal.lastCreatedTask();
       if (c && c.id === me && c.token !== this.lastPulseToken.created) {
@@ -198,10 +226,22 @@ export class TaskComponent implements OnChanges {
   }
 
   private triggerPulse(): void {
-    this.droppedPulse.set(false);
+    // Always restart the CSS animation reliably.
     if (this._pulseTimer) clearTimeout(this._pulseTimer);
-    this.droppedPulse.set(true);
-    this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
+    this.droppedPulse.set(false);
+
+    // Force a reflow so removing the class is flushed before re-adding.
+    const el = this.cardEl?.nativeElement;
+    if (el) {
+      el.classList.remove("dropped-pulse"); // safety: in case binding hasn't flushed yet
+      void el.offsetWidth; // reflow
+    }
+
+    // Next frame: set the boolean so the class is re-added and animation restarts.
+    requestAnimationFrame(() => {
+      this.droppedPulse.set(true);
+      this._pulseTimer = setTimeout(() => this.droppedPulse.set(false), 950);
+    });
   }
 
   // === Drag & drop handlers (for the dragged card itself) ===
@@ -212,13 +252,13 @@ export class TaskComponent implements OnChanges {
     }
     this.dragging.set(true);
 
-    // 1) Init global + DataTransfer payload (single source of truth).
+    // Init global + DataTransfer payload (single source of truth).
     this.initDragState(event);
 
-    // 2) Capture size to drive placeholder height and smooth collapse.
+    // Capture size to drive placeholder height and smooth collapse.
     this.applyPlaceholderSizing();
 
-    // 3) Use a custom overlay that follows the cursor (no browser crop).
+    // Use a custom overlay that follows the cursor (no browser crop).
     this.applyDragOverlay(event);
   }
 
@@ -548,6 +588,23 @@ export class TaskComponent implements OnChanges {
       capture: true,
     });
 
+    // --- Global fallbacks to guarantee cleanup on fast drops / ESC ---
+    const end = () => {
+      // Ensure we don't leave a stuck overlay when dropping very fast.
+      this.dragging.set(false);
+      this.dragDropGlobal.endDrag();
+      this.cleanupDragOverlay();
+    };
+    this._onDocDragEnd = (_e: DragEvent) => end();
+    this._onDocDrop = (_e: DragEvent) => end();
+    this._onDocKeydown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") end();
+    };
+
+    document.addEventListener("dragend", this._onDocDragEnd, { capture: true });
+    document.addEventListener("drop", this._onDocDrop, { capture: true });
+    document.addEventListener("keydown", this._onDocKeydown, { capture: true });
+
     // Hide native drag image so ONLY our overlay is visible.
     const shim = document.createElement("canvas");
     shim.width = 1;
@@ -558,8 +615,28 @@ export class TaskComponent implements OnChanges {
   /** Remove the overlay and detach the document listener. */
   private cleanupDragOverlay(): void {
     if (this._onDocDragOver) {
-      document.removeEventListener("dragover", this._onDocDragOver);
+      document.removeEventListener("dragover", this._onDocDragOver, {
+        capture: true,
+      } as any);
       this._onDocDragOver = null;
+    }
+    if (this._onDocDragEnd) {
+      document.removeEventListener("dragend", this._onDocDragEnd, {
+        capture: true,
+      } as any);
+      this._onDocDragEnd = null;
+    }
+    if (this._onDocDrop) {
+      document.removeEventListener("drop", this._onDocDrop, {
+        capture: true,
+      } as any);
+      this._onDocDrop = null;
+    }
+    if (this._onDocKeydown) {
+      document.removeEventListener("keydown", this._onDocKeydown, {
+        capture: true,
+      } as any);
+      this._onDocKeydown = null;
     }
     if (this._dragOverlayEl?.parentNode) {
       this._dragOverlayEl.parentNode.removeChild(this._dragOverlayEl);

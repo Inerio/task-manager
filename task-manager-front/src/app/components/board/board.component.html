@@ -1,4 +1,4 @@
-<div class="board-scope">
+<div class="board-scope" style="position: relative">
   <!-- Scoped spinner only for the board area -->
   <app-loading-overlay [scope]="'board'"></app-loading-overlay>
 
@@ -27,7 +27,7 @@
       <button
         type="button"
         class="cancel-edit-btn-top"
-        (mousedown)="cancelTitleEdit()"
+        (mousedown)="(cancelTitleEdit)"
         [attr.title]="'boards.column.cancelAdd' | transloco"
       >
         ✖ {{ "boards.column.cancelAdd" | transloco }}
@@ -126,16 +126,18 @@
       }
     </div>
     } @if (kanbanColumns().length < MAX_COLUMNS) {
-    <button
-      type="button"
-      class="add-kanbanColumn-fab-inline"
-      [disabled]="kanbanColumns().length >= MAX_COLUMNS"
-      (click)="addKanbanColumnAndEdit()"
-      [attr.title]="'boards.column.add' | transloco"
-      aria-label="{{ 'boards.column.add' | transloco }}"
-    >
-      +
-    </button>
+    <!-- Add-column button lives in the flow so it always sits after the last column -->
+    <div class="add-column-tile">
+      <button
+        type="button"
+        class="add-kanbanColumn-fab"
+        (click)="addKanbanColumnAndEdit()"
+        [attr.title]="'boards.column.add' | transloco"
+        aria-label="{{ 'boards.column.add' | transloco }}"
+      >
+        +
+      </button>
+    </div>
     }
   </div>
 </div>

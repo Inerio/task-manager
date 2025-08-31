@@ -6,7 +6,7 @@
   overflow: hidden;
   position: relative;
 
-  /* Decorative watermark (kept) */
+  /* Watermark */
   &::after {
     content: "";
     position: fixed;
@@ -23,8 +23,8 @@
 
   @include bp.md-down {
     &::after {
-      display: none;
-    } /* avoid overlap on small screens */
+      display: none; /* Hide on small screens */
+    }
   }
 }
 
@@ -92,6 +92,7 @@
     background: #e0edfa;
     color: var(--brand);
   }
+
   &.selected {
     background: var(--brand);
     color: #fff;
@@ -141,14 +142,11 @@
 
 .board-area {
   flex: 1 1 auto;
-  /* tighter padding to push the grid up and increase scrollable height */
-  padding: 1.25rem 2.5rem 0.5rem;
+  padding: 1.25rem 2.5rem 0.5rem; /* Tighter top/bottom for more viewport */
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
-
-  /* Keep inside the viewport and make inner content scrollable instead */
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -159,9 +157,10 @@
   }
 }
 
-/* Ensure the <app-board> fills remaining height under the header */
+/* Make <app-board> fill width/height; avoid flex shrink-to-fit */
 .board-area app-board {
-  display: flex;
+  display: block;
+  width: 100%;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -205,7 +204,7 @@
     max-width: 100%;
     color: var(--text-1);
 
-    & > span.board-title-text {
+    > span.board-title-text {
       flex: 1 1 auto;
       min-width: 0;
       max-width: 32vw;

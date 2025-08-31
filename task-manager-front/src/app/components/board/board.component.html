@@ -125,19 +125,19 @@
       <div class="column-blocker"></div>
       }
     </div>
+    } @if (kanbanColumns().length < MAX_COLUMNS) {
+    <!-- Add-column button lives in the flow so it always sits after the last column -->
+    <div class="add-column-tile">
+      <button
+        type="button"
+        class="add-kanbanColumn-fab"
+        (click)="addKanbanColumnAndEdit()"
+        [attr.title]="'boards.column.add' | transloco"
+        aria-label="{{ 'boards.column.add' | transloco }}"
+      >
+        +
+      </button>
+    </div>
     }
   </div>
-
-  @if (kanbanColumns().length < MAX_COLUMNS) {
-  <!-- Floating “+” kept at the right of the columns; never squeezed -->
-  <button
-    type="button"
-    class="add-kanbanColumn-fab"
-    (click)="addKanbanColumnAndEdit()"
-    [attr.title]="'boards.column.add' | transloco"
-    aria-label="{{ 'boards.column.add' | transloco }}"
-  >
-    +
-  </button>
-  }
 </div>

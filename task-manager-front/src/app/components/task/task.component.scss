@@ -7,11 +7,11 @@
   box-shadow: var(--shadow-1);
   margin-bottom: 1rem;
   padding: 1.9rem 1rem 0.32rem 1rem;
-  /* animate collapse when the card becomes the dragged one */
+  /* Smooth collapse when the card becomes the dragged one */
   transition: background-color 0.3s, box-shadow 0.2s, height 160ms ease,
     margin 160ms ease, padding 160ms ease;
   color: var(--text-1);
-  overflow: hidden;
+  overflow: hidden; /* <-- This was clipping the emoji picker in edit mode */
 
   &:not(.has-badge) {
     padding-top: 0.7rem;
@@ -103,6 +103,8 @@
   }
 
   &.editing {
+    /* Allow dropdowns (emoji picker) to overflow in edit mode */
+    overflow: visible;
     padding: 0 !important;
   }
 
@@ -186,7 +188,6 @@
 
 /* Edit mode harmonization */
 .task-card.editing {
-  padding: 0 !important;
   box-shadow: none !important;
   background: var(--surface-1) !important;
 }

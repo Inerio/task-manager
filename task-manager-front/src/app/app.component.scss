@@ -142,7 +142,7 @@
 
 .board-area {
   flex: 1 1 auto;
-  padding: 1.25rem 2.5rem 0.5rem; /* Tighter top/bottom for more viewport */
+  padding: 1.25rem 2.5rem 2.5rem; /* extra bottom space for scrollbar */
   display: flex;
   flex-direction: column;
   position: relative;
@@ -152,8 +152,25 @@
   overflow: hidden;
   box-sizing: border-box;
 
+  /* Thin styled horizontal scrollbar */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: color-mix(in oklab, var(--brand) 35%, #9fb6d44d) transparent;
+
+  &::-webkit-scrollbar {
+    height: 1px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--brand) 35%, #9fb6d44d);
+    border-radius: 1px;
+  }
+
   @include bp.md-down {
-    padding: var(--space-4) var(--space-4) var(--space-3);
+    padding: var(--space-4) var(--space-4) var(--space-4);
   }
 }
 

@@ -12,51 +12,46 @@
 }
 
 .task-columns {
+  /* Never wrap: keep all columns + the "+" on one line and scroll horizontally */
+  --gap: var(--space-6);
+  --col-min: 260px; /* minimum visual width for a column */
+
   display: flex;
   align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: var(--gap);
   width: 100%;
-  /* remove global cap to let columns use the whole width */
   max-width: none;
   margin-left: 0;
   margin-right: 0;
-
-  --gap: var(--space-6);
-  gap: var(--gap);
   padding: var(--space-2) var(--space-4);
-  flex-wrap: wrap;
-  flex: 1 1 auto;
-  min-height: 0;
 
-  /* no right padding reserve anymore; the "+" is now a flex item */
-  /* 1 column */
+  /* Horizontal scroll when columns overflow */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+
+  /* Width presets still apply on large screens (nice filling). */
   &:has(.column-draggable:nth-of-type(1)):not(
       :has(.column-draggable:nth-of-type(2))
     ) {
     --col-w: min(760px, 86%);
   }
-
-  /* 2 columns */
   &:has(.column-draggable:nth-of-type(2)):not(
       :has(.column-draggable:nth-of-type(3))
     ) {
     --col-w: min(600px, calc((100% - var(--gap)) / 2));
   }
-
-  /* 3 columns */
   &:has(.column-draggable:nth-of-type(3)):not(
       :has(.column-draggable:nth-of-type(4))
     ) {
-    --col-w: min(480px, calc((100% - var(--gap)) / 3));
+    --col-w: min(480px, calc((100% - 2 * var(--gap)) / 3));
   }
-
-  /* 4 columns */
   &:has(.column-draggable:nth-of-type(4)):not(
       :has(.column-draggable:nth-of-type(5))
     ) {
-    --col-w: min(355px, calc((100% - var(--gap)) / 4));
+    --col-w: min(355px, calc((100% - 3 * var(--gap)) / 4));
   }
-
-  /* 5 columns */
   &:has(.column-draggable:nth-of-type(5)) {
     --col-w: calc((100% - 4 * var(--gap)) / 5);
   }
@@ -68,13 +63,10 @@
     padding: var(--space-3) var(--space-3);
     --fab-clearance: var(--space-5);
     gap: var(--space-4);
-    /* On small screens, columns will naturally stack; keep definition simple */
-    --col-w: 100%;
   }
 }
 
-/* Flex item for the "+" so it always appears after the last column.
-   Kept minimal so it never affects column width math. */
+/* Flex item for the "+" so it always appears after the last column. */
 .add-column-tile {
   display: flex;
   align-items: flex-start;
@@ -87,9 +79,9 @@
   border-radius: var(--radius-3);
   box-shadow: var(--shadow-2);
 
-  /* Width comes only from --col-w (no caps, no content-based sizing) */
-  flex: 0 0 var(--col-w);
-  width: var(--col-w);
+  /* Columns never shrink below --col-min; on wide screens they can expand with --col-w */
+  flex: 0 0 max(var(--col-min), var(--col-w, var(--col-min)));
+  width: max(var(--col-min), var(--col-w, var(--col-min)));
 
   display: flex;
   flex-direction: column;
@@ -103,7 +95,8 @@
   }
 
   @include bp.sm-down {
-    width: 100%;
+    /* Keep horizontal scroll on mobile too */
+    width: max(var(--col-min), var(--col-w, var(--col-min)));
   }
 }
 
@@ -215,7 +208,7 @@
     0 1px 6px #0002;
   cursor: pointer;
   transition: background 0.17s, box-shadow 0.17s, transform 0.15s;
-  z-index: 1; /* keep it simple; it’s in the flow */
+  z-index: 1;
 
   /* slight vertical offset so it aligns with column headers visually */
   margin-top: var(--space-4);

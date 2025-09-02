@@ -3,6 +3,7 @@
 isTaskDragActive(); @let ph = placeholderHeight();
 
 <div
+  #scrollHost
   class="task-kanbanColumn"
   [class.task-drag-active]="isDrag"
   (dragenter)="onColumnDragEnter($event)"

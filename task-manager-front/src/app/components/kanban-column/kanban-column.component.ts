@@ -11,6 +11,7 @@ import {
   afterNextRender,
   Injector,
   runInInjectionContext,
+  ElementRef,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
@@ -41,6 +42,8 @@ export class KanbanColumnComponent {
 
   // ===== Child refs =====
   @ViewChild(TaskFormComponent) private taskForm?: TaskFormComponent;
+  @ViewChild("scrollHost", { static: true })
+  private scrollHost?: ElementRef<HTMLElement>; // vertical autoscroll container
 
   // ===== Injections =====
   private readonly taskService = inject(TaskService);
@@ -119,6 +122,7 @@ export class KanbanColumnComponent {
     // Clear preview when the drag ends globally.
     effect(() => {
       if (!this.isTaskDragActive()) {
+        this.stopAutoScrollLoop();
         this.dragOverIndex.set(null);
         this.hoveredZoneIndex.set(null);
         this.columnEnterCount = 0;
@@ -132,6 +136,7 @@ export class KanbanColumnComponent {
       if (!this.isTaskDragActive()) return;
       const hoveredCol = this.dragDropGlobal.hoveredTaskColumnId();
       if (hoveredCol !== this.kanbanColumnId && this.dragOverIndex() !== null) {
+        this.stopAutoScrollLoop();
         this.dragOverIndex.set(null);
         this.hoveredZoneIndex.set(null);
         this.animateOnEnter.set(false);
@@ -236,6 +241,7 @@ export class KanbanColumnComponent {
     if (!this.dragDropGlobal.isTaskDrag()) return;
     this.columnEnterCount = Math.max(0, this.columnEnterCount - 1);
     if (this.columnEnterCount === 0) {
+      this.stopAutoScrollLoop();
       this.dragOverIndex.set(null);
       this.hoveredZoneIndex.set(null);
       this.animateOnEnter.set(false);
@@ -265,6 +271,9 @@ export class KanbanColumnComponent {
       this.hoveredZoneIndex.set(null);
       this.dragOverIndex.set(null);
       this.animateOnEnter.set(false);
+      // also stop autoscroll when there's no active slice
+      this.lastDragY = event.clientY;
+      this.updateAutoScrollDirection();
       return;
     }
 
@@ -285,6 +294,10 @@ export class KanbanColumnComponent {
 
     this.hoveredZoneIndex.set(zoneIndex);
     this.dragOverIndex.set(zoneIndex);
+
+    // === Vertical auto-scroll near top/bottom edges ===
+    this.lastDragY = event.clientY;
+    this.updateAutoScrollDirection();
   }
 
   async onSliceDrop(event: DragEvent, zoneIndex: number): Promise<void> {
@@ -292,6 +305,7 @@ export class KanbanColumnComponent {
 
     if (this.isSelfEdge(zoneIndex)) {
       event.preventDefault();
+      this.stopAutoScrollLoop();
       this.hoveredZoneIndex.set(null);
       this.dragOverIndex.set(null);
       this.animateOnEnter.set(false);
@@ -314,6 +328,7 @@ export class KanbanColumnComponent {
     await this.onTaskDrop(event, insertAt);
 
     // Ensure global drag state is cleared even on very fast drops.
+    this.stopAutoScrollLoop();
     this.dragDropGlobal.endDrag();
   }
 
@@ -446,5 +461,72 @@ export class KanbanColumnComponent {
     return (
       fromIdx !== -1 && (zoneIndex === fromIdx || zoneIndex === fromIdx + 1)
     );
+  }
+
+  // ===== Auto-scroll (vertical) =====
+  private autoScrollFrame: number | null = null;
+  private autoScrollDir: -1 | 0 | 1 = 0;
+  private lastDragY = 0;
+
+  /** Compute desired scroll direction from last cursor Y and start/stop loop. */
+  private updateAutoScrollDirection(): void {
+    const host = this.scrollHost?.nativeElement;
+    if (!host) return;
+
+    const rect = host.getBoundingClientRect();
+    const threshold = 64; // px from top/bottom to trigger
+    const y = this.lastDragY;
+
+    let dir: -1 | 0 | 1 = 0;
+    const canUp = host.scrollTop > 0;
+    const canDown = host.scrollTop + host.clientHeight < host.scrollHeight;
+
+    if (y - rect.top < threshold && canUp) dir = -1;
+    else if (rect.bottom - y < threshold && canDown) dir = 1;
+
+    if (dir !== this.autoScrollDir) {
+      this.autoScrollDir = dir;
+      if (dir === 0) this.stopAutoScrollLoop();
+      else this.startAutoScrollLoop();
+    }
+  }
+
+  private startAutoScrollLoop(): void {
+    if (this.autoScrollFrame != null) return;
+
+    const step = () => {
+      const host = this.scrollHost?.nativeElement;
+      if (!host || this.autoScrollDir === 0) {
+        this.stopAutoScrollLoop();
+        return;
+      }
+
+      // Speed grows as cursor approaches the edge.
+      const rect = host.getBoundingClientRect();
+      const threshold = 64;
+      const y = this.lastDragY;
+      const edgeDist =
+        this.autoScrollDir < 0
+          ? Math.max(0, y - rect.top)
+          : Math.max(0, rect.bottom - y);
+      const ratio = Math.max(
+        0,
+        Math.min(1, (threshold - edgeDist) / threshold)
+      );
+      const delta = 4 + Math.round(ratio * 16); // 4..20 px per frame
+
+      host.scrollTop += this.autoScrollDir * delta;
+      this.autoScrollFrame = requestAnimationFrame(step);
+    };
+
+    this.autoScrollFrame = requestAnimationFrame(step);
+  }
+
+  private stopAutoScrollLoop(): void {
+    if (this.autoScrollFrame != null) {
+      cancelAnimationFrame(this.autoScrollFrame);
+      this.autoScrollFrame = null;
+    }
+    this.autoScrollDir = 0;
   }
 }

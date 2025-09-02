@@ -270,7 +270,7 @@ export class TaskFormComponent
     // Ensure the top of the task form (title/desc) is visible
     const contRect = container.getBoundingClientRect();
     if (contRect.top < FORM_TOP_SAFE) {
-      dy = contRect.top - FORM_TOP_SAFE; // negative → scroll up
+      dy = contRect.top - FORM_TOP_SAFE; // negative = scroll up
     } else {
       // Ensure the dropdown itself doesn'toverflow the viewport
       const dropRect = dropdown.getBoundingClientRect();

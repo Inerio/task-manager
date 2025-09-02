@@ -11,7 +11,7 @@
   transition: background-color 0.3s, box-shadow 0.2s, height 160ms ease,
     margin 160ms ease, padding 160ms ease;
   color: var(--text-1);
-  overflow: hidden; /* <-- This was clipping the emoji picker in edit mode */
+  overflow: hidden;
 
   &:not(.has-badge) {
     padding-top: 0.7rem;
@@ -103,7 +103,7 @@
   }
 
   &.editing {
-    /* Allow dropdowns (emoji picker) to overflow in edit mode */
+    /* Allow dropdowns (emoji picker) tooverflow in edit mode */
     overflow: visible;
     padding: 0 !important;
   }

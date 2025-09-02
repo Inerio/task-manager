@@ -71,7 +71,6 @@
       "deleteAll": "Delete all tasks in this column",
       "rename": "Rename this column",
       "add": "Add column",
-      "cancelAdd": "Cancel add",
       "editPlaceholder": "edit"
     },
     "editTitleHint": "Click to edit board title"

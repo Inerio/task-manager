@@ -272,7 +272,7 @@ export class TaskFormComponent
     if (contRect.top < FORM_TOP_SAFE) {
       dy = contRect.top - FORM_TOP_SAFE; // negative → scroll up
     } else {
-      // Ensure the dropdown itself doesn't overflow the viewport
+      // Ensure the dropdown itself doesn'toverflow the viewport
       const dropRect = dropdown.getBoundingClientRect();
 
       if (dropRect.top < TOP_MARGIN) {

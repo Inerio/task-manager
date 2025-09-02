@@ -23,17 +23,6 @@
       (dragover)="onColumnDragHover(idx, $event)"
       (drop)="onColumnDrop($event)"
     >
-      @if (isEditingTitle(kanbanColumn) && isDraft(kanbanColumn)) {
-      <button
-        type="button"
-        class="cancel-edit-btn-top"
-        (mousedown)="(cancelTitleEdit)"
-        [attr.title]="'boards.column.cancelAdd' | transloco"
-      >
-        ✖ {{ "boards.column.cancelAdd" | transloco }}
-      </button>
-      }
-
       <div
         class="column-header"
         [class.disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
@@ -47,19 +36,19 @@
           draggedKanbanColumnId() === kanbanColumn.id ? 'true' : 'false'
         "
       >
+        <!-- Trash first (delete all in column) -->
         <button
           type="button"
-          class="btn-close-kanbanColumn styled-x-btn"
-          (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
-          [attr.title]="'boards.column.delete' | transloco"
-          aria-label="{{ 'boards.column.delete' | transloco }}"
+          class="btn-delete-column styled-trash-btn"
+          (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
+          [attr.title]="'boards.column.deleteAll' | transloco"
           [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
         >
           <img
-            src="/svg/x.svg"
-            [attr.alt]="'boards.column.delete' | transloco"
-            width="17"
-            height="17"
+            src="/svg/trash.svg"
+            [attr.alt]="'boards.column.deleteAll' | transloco"
+            width="19"
+            height="19"
           />
         </button>
 
@@ -99,18 +88,20 @@
         />
         }
 
+        <!-- X button after the title (delete column) -->
         <button
           type="button"
-          class="btn-delete-column styled-trash-btn"
-          (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
-          [attr.title]="'boards.column.deleteAll' | transloco"
+          class="btn-close-kanbanColumn styled-x-btn"
+          (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
+          [attr.title]="'boards.column.delete' | transloco"
+          aria-label="{{ 'boards.column.delete' | transloco }}"
           [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
         >
           <img
-            src="/svg/trash.svg"
-            [attr.alt]="'boards.column.deleteAll' | transloco"
-            width="19"
-            height="19"
+            src="/svg/x.svg"
+            [attr.alt]="'boards.column.delete' | transloco"
+            width="17"
+            height="17"
           />
         </button>
       </div>
@@ -126,7 +117,6 @@
       }
     </div>
     } @if (kanbanColumns().length < MAX_COLUMNS) {
-    <!-- Add-column button lives in the flow so it always sits after the last column -->
     <div class="add-column-tile">
       <button
         type="button"

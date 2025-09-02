@@ -167,7 +167,7 @@ export class BoardComponent implements OnChanges {
     if (this.editingColumn()) return;
     // Engage only when a column drag is actually happening (avoid blocking other drags like files).
     if (!this.dragDropGlobal.isColumnDrag()) return;
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; // better cursor/UX
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
     e.preventDefault();
     this.dragOverIndex.set(idx);
   }
@@ -293,7 +293,6 @@ export class BoardComponent implements OnChanges {
     this.editingColumn.set(column);
     this.editingTitleValue.set(column.name);
 
-    // NOTE: direct DOM id focus is acceptable here (per-column dynamic input).
     setTimeout(() => {
       const el = document.getElementById(
         `edit-kanbanColumn-title-${column.id ?? "draft"}`
@@ -324,8 +323,6 @@ export class BoardComponent implements OnChanges {
 
         // Remove draft entry so we don't have two items with the same id.
         this.kanbanColumnService.removeColumnRef(currentlyEditing);
-
-        // Keep new column at the draft's previous index (UX nicety).
         const after = this.kanbanColumnService.kanbanColumns();
         const createdIdx = after.findIndex((c) => c.id === created.id);
         if (createdIdx !== -1 && draftIndex >= 0 && draftIndex !== createdIdx) {
@@ -352,9 +349,12 @@ export class BoardComponent implements OnChanges {
   cancelTitleEdit(): void {
     const editing = this.editingColumn();
     if (!editing) return;
+
+    // If we were editing a draft (no id yet), discard it.
     if (!editing.id) {
       this.kanbanColumnService.removeColumnRef(editing);
     }
+
     this.editingColumn.set(null);
     this.editingTitleValue.set("");
   }

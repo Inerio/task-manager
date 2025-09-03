@@ -6,24 +6,29 @@ import {
   effect,
   ViewChild,
   ElementRef,
+  OnDestroy,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
+
 import { AlertComponent } from "./components/alert/alert.component";
 import { ConfirmDialogComponent } from "./components/alert/confirm-dialog.component";
+import { LanguageSwitcherComponent } from "./components/language-switcher/language-switcher.component";
+import { ThemeSwitcherComponent } from "./components/theme-switcher/theme-switcher.component";
+import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
 import { BoardComponent } from "./components/board/board.component";
+import { TemplatePickerComponent } from "./components/template-picker/template-picker.component";
+
 import { BoardService } from "./services/board.service";
 import { ConfirmDialogService } from "./services/confirm-dialog.service";
 import { TaskService } from "./services/task.service";
-import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
 import { LoadingService } from "./services/loading.service";
 import { KanbanColumnService } from "./services/kanban-column.service";
-import { LanguageSwitcherComponent } from "./components/language-switcher/language-switcher.component";
-import { ThemeSwitcherComponent } from "./components/theme-switcher/theme-switcher.component";
-import { TemplatePickerComponent } from "./components/template-picker/template-picker.component";
 import { TemplatePickerService } from "./services/template-picker.service";
-import { applyBoardTemplate } from "./utils/board-templates";
 import { DragDropGlobalService } from "./services/drag-drop-global.service";
+import { AlertService } from "./services/alert.service";
+
+import { applyBoardTemplate } from "./utils/board-templates";
 import { getBoardDragData, setBoardDragData } from "./utils/drag-drop-utils";
 
 /** Minimal local typing for boards to improve readability. */
@@ -52,7 +57,7 @@ interface TempBoard {
     TemplatePickerComponent,
   ],
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
   // ===== Services =====
   private readonly boardService = inject(BoardService);
   private readonly confirmDialog = inject(ConfirmDialogService);
@@ -62,6 +67,7 @@ export class AppComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly templatePicker = inject(TemplatePickerService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
+  private readonly alert = inject(AlertService);
 
   // ===== Template refs (for focus management) =====
   @ViewChild("newBoardInput", { read: ElementRef })
@@ -72,6 +78,13 @@ export class AppComponent {
   // ===== State (signals) =====
   readonly boards = this.boardService.boards; // Signal<Array<BoardLike>>
   readonly selectedBoardId = signal<number | null>(null);
+
+  /** Responsive flag: true when viewport < md (matches SCSS $bp-md). */
+  private readonly _mql = window.matchMedia("(max-width: 768px)");
+  readonly isMdDown = signal<boolean>(this._mql.matches);
+
+  /** Drawer state (used only on mobile/tablet). */
+  readonly sidebarOpen = signal<boolean>(true);
 
   /** Max number of boards allowed in the sidebar. */
   readonly BOARD_LIMIT = 12;
@@ -117,6 +130,10 @@ export class AppComponent {
   constructor() {
     this.boardService.loadBoards();
 
+    // Keep isMdDown reactive with the media query.
+    this._onMqChange = this._onMqChange.bind(this); // stable ref for add/remove
+    this._mql.addEventListener("change", this._onMqChange);
+
     // Auto-select the first board once boards are loaded (only if none selected).
     effect(() => {
       const firstId = this.boards()[0]?.id;
@@ -124,6 +141,36 @@ export class AppComponent {
         this.selectedBoardId.set(firstId);
       }
     });
+
+    // Default drawer state depending on viewport and data.
+    // Mobile/tablet: open if no boards or no selection; otherwise closed.
+    // Desktop: always "open" (sidebar is docked).
+    effect(() => {
+      const small = this.isMdDown();
+      const hasBoards = this.boards().length > 0;
+      const selected = this.selectedBoardId();
+      if (!small) {
+        this.sidebarOpen.set(true);
+      } else {
+        this.sidebarOpen.set(!hasBoards || selected === null);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this._mql.removeEventListener("change", this._onMqChange);
+  }
+
+  private _onMqChange(e: MediaQueryListEvent): void {
+    this.isMdDown.set(e.matches);
+  }
+
+  // ===== Sidebar open/close (mobile/tablet only) =====
+  openSidebar(): void {
+    if (this.isMdDown()) this.sidebarOpen.set(true);
+  }
+  closeSidebar(): void {
+    if (this.isMdDown()) this.sidebarOpen.set(false);
   }
 
   // ===== Sidebar: board selection & inline add =====
@@ -132,6 +179,8 @@ export class AppComponent {
       this.selectedBoardId.set(id);
       this.cancelBoardEdit();
       this.cancelSelectedBoardEdit();
+      // Auto-close drawer after selection on small screens.
+      if (this.isMdDown()) this.sidebarOpen.set(false);
     }
   }
 
@@ -142,8 +191,8 @@ export class AppComponent {
     this.editingBoardId.set(-1); // sentinel value = "editing new board"
     this.editingBoardValue.set("");
 
-    // Focus the inline input as soon as it exists in the view.
-    setTimeout(() => this.newBoardInput?.nativeElement.focus());
+    // Focus the inline input on next frame when it is in the DOM.
+    requestAnimationFrame(() => this.newBoardInput?.nativeElement.focus());
   }
 
   onEditBoardInput(event: Event): void {
@@ -153,6 +202,7 @@ export class AppComponent {
   /**
    * Save new board, then open the Template Picker.
    * If a template is chosen, create its columns via the service.
+   * Drawer auto-closes on mobile *after* creation/template apply.
    */
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
@@ -180,6 +230,9 @@ export class AppComponent {
           );
           this.kanbanColumnService.loadKanbanColumns(newId);
         }
+
+        // Close drawer once creation flow is finished (mobile/tablet).
+        if (this.isMdDown()) this.sidebarOpen.set(false);
       },
       complete: () => this.cancelBoardEdit(),
       error: () => this.cancelBoardEdit(),
@@ -214,12 +267,18 @@ export class AppComponent {
 
   onBoardDrop(event: DragEvent, targetIndex: number): void {
     if (!this.dragDropGlobal.isBoardDrag()) return;
-    const drag = getBoardDragData(event);
-    if (!drag) return;
+
+    // Fallback: on some mobile engines DataTransfer can be empty.
+    const boardId =
+      getBoardDragData(event)?.boardId ??
+      this.dragDropGlobal.currentBoardDrag()?.boardId ??
+      null;
+    if (boardId == null) return;
 
     event.preventDefault();
+
     const current = [...this.boards()];
-    const fromIdx = current.findIndex((b) => b.id === drag.boardId);
+    const fromIdx = current.findIndex((b) => b.id === boardId);
     if (fromIdx === -1) return;
 
     const [moved] = current.splice(fromIdx, 1);
@@ -247,12 +306,18 @@ export class AppComponent {
 
   onBoardDropEnd(event: DragEvent): void {
     if (!this.dragDropGlobal.isBoardDrag()) return;
-    const drag = getBoardDragData(event);
-    if (!drag) return;
+
+    // Fallback to global context if DataTransfer is empty.
+    const boardId =
+      getBoardDragData(event)?.boardId ??
+      this.dragDropGlobal.currentBoardDrag()?.boardId ??
+      null;
+    if (boardId == null) return;
 
     event.preventDefault();
+
     const current = [...this.boards()];
-    const fromIdx = current.findIndex((b) => b.id === drag.boardId);
+    const fromIdx = current.findIndex((b) => b.id === boardId);
     if (fromIdx === -1) return;
 
     const [moved] = current.splice(fromIdx, 1);
@@ -279,8 +344,10 @@ export class AppComponent {
     this.editingSelectedBoard.set(true);
     this.editingSelectedBoardValue.set(board.name);
 
-    // Focus the title input when it appears.
-    setTimeout(() => this.editSelectedBoardInput?.nativeElement.focus());
+    // Focus the title input on next frame when it is in the DOM.
+    requestAnimationFrame(() =>
+      this.editSelectedBoardInput?.nativeElement.focus()
+    );
   }
 
   onEditSelectedBoardInput(event: Event): void {
@@ -326,7 +393,8 @@ export class AppComponent {
           this.boards().find((b) => b.id !== board.id)?.id ?? null
         );
       },
-      error: () => alert(this.i18n.translate("errors.deletingBoard")),
+      error: () =>
+        this.alert.show("error", this.i18n.translate("errors.deletingBoard")),
     });
   }
 
@@ -345,7 +413,10 @@ export class AppComponent {
       .deleteAllTasksByBoardId(selectedBoard.id)
       .then(() => this.taskService.loadTasks({ force: true }))
       .catch(() =>
-        alert(this.i18n.translate("errors.deletingAllTasksForBoard"))
+        this.alert.show(
+          "error",
+          this.i18n.translate("errors.deletingAllTasksForBoard")
+        )
       );
   }
 
@@ -355,6 +426,7 @@ export class AppComponent {
   }
 
   get selectedBoardName(): string {
+    // Only used when a board is selected; fallback is never shown in UI.
     return this.getSelectedBoard()?.name ?? "No board selected";
   }
 }

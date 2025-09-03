@@ -2,12 +2,28 @@
 <app-template-picker></app-template-picker>
 <app-alert></app-alert>
 
-<div class="main-layout">
-  <aside class="sidebar">
+<div class="main-layout" [class.sidebar-open]="isMdDown() && sidebarOpen()">
+  <aside
+    id="app-sidebar"
+    class="sidebar"
+    [class.open]="isMdDown() && sidebarOpen()"
+    [attr.aria-hidden]="isMdDown() ? (!sidebarOpen()).toString() : 'false'"
+  >
     <!-- Switchers row -->
     <div class="sidebar-header">
       <app-language-switcher></app-language-switcher>
       <app-theme-switcher></app-theme-switcher>
+
+      <!-- Close on mobile/tablet -->
+      <button
+        type="button"
+        class="sidebar-close styled-x-btn"
+        (click)="closeSidebar()"
+        [attr.aria-label]="'common.close' | transloco"
+        title="{{ 'common.close' | transloco }}"
+      >
+        <img src="/svg/x.svg" alt="close" width="16" height="16" />
+      </button>
     </div>
 
     <h1 class="tasukeru-title">
@@ -37,7 +53,6 @@
         (dragover)="onBoardDragOver($event, i)"
         (dragleave)="onBoardDragLeave(i)"
         (drop)="onBoardDrop($event, i)"
-        role="listitem"
       >
         {{ board.name }}
       </div>
@@ -55,14 +70,14 @@
         autofocus
         placeholder="{{ 'boards.namePlaceholder' | transloco }}"
         role="listitem"
-        aria-label="{{ 'boards.add' | transloco }}"
+        [attr.aria-label]="'boards.add' | transloco"
       />
       } } @if (canShowAdd()) {
       <button
         class="add-board-btn"
         (click)="addBoard()"
         [disabled]="editingBoardId() !== null"
-        aria-label="{{ 'boards.add' | transloco }}"
+        [attr.aria-label]="'boards.add' | transloco"
       >
         {{ "boards.add" | transloco }}
       </button>
@@ -79,9 +94,28 @@
     </nav>
   </aside>
 
+  <!-- Backdrop (mobile/tablet) -->
+  <div
+    class="sidebar-backdrop"
+    (click)="closeSidebar()"
+    [class.visible]="isMdDown() && sidebarOpen()"
+  ></div>
+
   @if (selectedBoardId() !== null) {
   <section class="board-area">
     <header class="board-header">
+      <!-- Burger (mobile/tablet) -->
+      <button
+        type="button"
+        class="sidebar-burger"
+        (click)="openSidebar()"
+        [attr.aria-controls]="'app-sidebar'"
+        [attr.aria-label]="'common.openMenu' | transloco"
+        title="{{ 'common.openMenu' | transloco }}"
+      >
+        <span aria-hidden="true"></span>
+      </button>
+
       <div class="board-title-wrapper">
         @if (!editingSelectedBoard()) {
         <h2
@@ -121,7 +155,7 @@
           required
           autofocus
           placeholder="{{ 'boards.namePlaceholder' | transloco }}"
-          aria-label="{{ 'boards.namePlaceholder' | transloco }}"
+          [attr.aria-label]="'boards.namePlaceholder' | transloco"
         />
         }
       </div>

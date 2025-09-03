@@ -12,51 +12,46 @@
 }
 
 .task-columns {
+  /* Never wrap: keep all columns + the "+" on one line and scroll horizontally */
+  --gap: var(--space-6);
+  --col-min: 296px; /* minimum visual width for a column */
+
   display: flex;
   align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: var(--gap);
   width: 100%;
-  /* remove global cap to let columns use the whole width */
   max-width: none;
   margin-left: 0;
   margin-right: 0;
-
-  --gap: var(--space-6);
-  gap: var(--gap);
   padding: var(--space-2) var(--space-4);
-  flex-wrap: wrap;
-  flex: 1 1 auto;
-  min-height: 0;
 
-  /* no right padding reserve anymore; the "+" is now a flex item */
-  /* 1 column */
+  /* Horizontal scroll when columns overflow */
+  overflow-inline: auto; /* horizontal scroll */
+  overflow-block: visible; /* vertical overflow visible */
+  -webkit-overflow-scrolling: touch;
+
+  /* Width presets still apply on large screens (nice filling). */
   &:has(.column-draggable:nth-of-type(1)):not(
       :has(.column-draggable:nth-of-type(2))
     ) {
     --col-w: min(760px, 86%);
   }
-
-  /* 2 columns */
   &:has(.column-draggable:nth-of-type(2)):not(
       :has(.column-draggable:nth-of-type(3))
     ) {
     --col-w: min(600px, calc((100% - var(--gap)) / 2));
   }
-
-  /* 3 columns */
   &:has(.column-draggable:nth-of-type(3)):not(
       :has(.column-draggable:nth-of-type(4))
     ) {
-    --col-w: min(480px, calc((100% - var(--gap)) / 3));
+    --col-w: min(480px, calc((100% - 2 * var(--gap)) / 3));
   }
-
-  /* 4 columns */
   &:has(.column-draggable:nth-of-type(4)):not(
       :has(.column-draggable:nth-of-type(5))
     ) {
-    --col-w: min(355px, calc((100% - var(--gap)) / 4));
+    --col-w: min(355px, calc((100% - 3 * var(--gap)) / 4));
   }
-
-  /* 5 columns */
   &:has(.column-draggable:nth-of-type(5)) {
     --col-w: calc((100% - 4 * var(--gap)) / 5);
   }
@@ -65,16 +60,15 @@
     --gap: var(--space-5);
   }
   @include bp.md-down {
-    padding: var(--space-3) var(--space-3);
+    /* Edge-to-edge on mobile: no side padding, keep only vertical */
+    padding-block: var(--space-3);
+    padding-inline: 0;
     --fab-clearance: var(--space-5);
     gap: var(--space-4);
-    /* On small screens, columns will naturally stack; keep definition simple */
-    --col-w: 100%;
   }
 }
 
-/* Flex item for the "+" so it always appears after the last column.
-   Kept minimal so it never affects column width math. */
+/* Flex item for the "+" so it always appears after the last column. */
 .add-column-tile {
   display: flex;
   align-items: flex-start;
@@ -87,9 +81,9 @@
   border-radius: var(--radius-3);
   box-shadow: var(--shadow-2);
 
-  /* Width comes only from --col-w (no caps, no content-based sizing) */
-  flex: 0 0 var(--col-w);
-  width: var(--col-w);
+  /* Columns never shrink below --col-min; on wide screens they can expand with --col-w */
+  flex: 0 0 max(var(--col-min), var(--col-w, var(--col-min)));
+  width: max(var(--col-min), var(--col-w, var(--col-min)));
 
   display: flex;
   flex-direction: column;
@@ -103,7 +97,8 @@
   }
 
   @include bp.sm-down {
-    width: 100%;
+    /* Keep horizontal scroll on mobile too */
+    width: max(var(--col-min), var(--col-w, var(--col-min)));
   }
 }
 
@@ -142,29 +137,6 @@
   flex: 0 0 auto;
 }
 
-.cancel-edit-btn-top {
-  position: absolute;
-  top: -34px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  background: #fff7f7;
-  color: #d32f2f;
-  border: 1.5px solid #f5c2c2;
-  border-radius: var(--radius-2);
-  font-size: 1.1em;
-  font-weight: 500;
-  padding: 0.33em 1.15em 0.33em 0.85em;
-  box-shadow: 0 4px 12px #c0392b23, 0 2px 8px #0001;
-  cursor: pointer;
-  white-space: nowrap;
-  &:hover {
-    background: #fee;
-    color: var(--danger);
-    border-color: #d32f2f;
-  }
-}
-
 .kanbanColumn-title,
 .kanbanColumn-title-input {
   flex: 1 1 0%;
@@ -196,7 +168,6 @@
   }
 }
 
-/* Same visual style as before, but now in the flow (no absolute positioning). */
 .add-kanbanColumn-fab {
   position: static;
   display: inline-grid;
@@ -215,9 +186,8 @@
     0 1px 6px #0002;
   cursor: pointer;
   transition: background 0.17s, box-shadow 0.17s, transform 0.15s;
-  z-index: 1; /* keep it simple; it’s in the flow */
+  z-index: 1;
 
-  /* slight vertical offset so it aligns with column headers visually */
   margin-top: var(--space-4);
 
   &:hover:enabled {

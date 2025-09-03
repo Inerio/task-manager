@@ -8,10 +8,10 @@ import {
   withInterceptors,
   withInterceptorsFromDi,
 } from "@angular/common/http";
+import { provideTransloco } from "@jsverse/transloco";
+
 import { provideUploadConfig } from "./tokens/upload.config";
 import { environment } from "../environments/environment";
-
-import { provideTransloco } from "@jsverse/transloco";
 import { AppTranslocoLoader } from "./transloco.loader";
 import { anonIdInterceptor } from "./core/interceptors/anon-id.interceptor";
 

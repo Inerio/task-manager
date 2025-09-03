@@ -4,16 +4,21 @@ import {
   computed,
   inject,
   signal,
-  OnChanges,
-  SimpleChanges,
-  type WritableSignal,
   ChangeDetectionStrategy,
   effect,
   ViewChild,
+} from "@angular/core";
+import type {
+  OnChanges,
+  SimpleChanges,
+  OnDestroy,
+  WritableSignal,
   ElementRef,
 } from "@angular/core";
+
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { toSignal } from "@angular/core/rxjs-interop";
+
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
 import { TaskService } from "../../services/task.service";
@@ -39,7 +44,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   styleUrls: ["./task.component.scss"],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TaskComponent implements OnChanges {
+export class TaskComponent implements OnChanges, OnDestroy {
   // === Inputs ===
   @Input({ required: true }) task!: Task;
   /** Ghost mode: visual-only clone (used in placeholder). */
@@ -86,8 +91,19 @@ export class TaskComponent implements OnChanges {
   private _onDocDragOver: ((e: DragEvent) => void) | null = null;
   /** Global fallbacks to guarantee cleanup on fast drops/Escape. */
   private _onDocDragEnd: ((e: DragEvent) => void) | null = null;
-  private _onDocDrop: ((e: DragEvent) => void) | null = null;
+  private _onDocDropCapture: ((e: DragEvent) => void) | null = null;
+  private _onDocDropBubble: ((e: DragEvent) => void) | null = null;
   private _onDocKeydown: ((e: KeyboardEvent) => void) | null = null;
+  private _onWindowBlur: ((e: FocusEvent) => void) | null = null;
+  private _onDocVisibilityChange: ((e: Event) => void) | null = null;
+  private _onWindowPageHide: ((e: PageTransitionEvent) => void) | null = null;
+  private _onDocPointerUp: ((e: PointerEvent) => void) | null = null;
+  private _onDocMouseUp: ((e: MouseEvent) => void) | null = null;
+
+  /** Reusable listener options to avoid mismatched removeEventListener. */
+  private readonly CAPTURE: AddEventListenerOptions = { capture: true };
+  private readonly BUBBLE: AddEventListenerOptions = { capture: false };
+
   private _overlayOffset = { x: 12, y: 10 };
 
   // === Truncation logic ===
@@ -149,6 +165,11 @@ export class TaskComponent implements OnChanges {
     effect(() => {
       if (this.localTask().isEditing) this.scheduleEnsureCardVisible();
     });
+
+    // Hard safety: if global task drag stops for any reason, remove any leftover overlay.
+    effect(() => {
+      if (!this.dragDropGlobal.isTaskDrag()) this.cleanupDragOverlay();
+    });
   }
 
   // === Computed (truncate) ===
@@ -195,6 +216,15 @@ export class TaskComponent implements OnChanges {
       this.localTask.set({ ...this.task });
       this.showFullTitle.set(false);
       this.showFullDescription.set(false);
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Defensive: never leave global listeners or overlay behind.
+    this.cleanupDragOverlay();
+    if (this._pulseTimer) {
+      clearTimeout(this._pulseTimer);
+      this._pulseTimer = null;
     }
   }
 
@@ -373,41 +403,41 @@ export class TaskComponent implements OnChanges {
     this.localTask.set({ ...this.localTask(), ...patch });
   }
 
-  onAttachmentUploaded(files: File[]): void {
+  async onAttachmentUploaded(files: File[]): Promise<void> {
     const taskId = this.localTask().id!;
-    if (!taskId) return;
+    if (!taskId || files.length === 0) return;
 
-    Promise.all(
+    await Promise.all(
       files.map((file) => this.attachmentService.uploadAttachment(taskId, file))
-    ).then(() => {
-      this.taskService.fetchTaskById(taskId).then((freshTask) => {
-        if (freshTask?.attachments) {
-          this.localTask.set({
-            ...this.localTask(),
-            attachments: freshTask.attachments,
-          });
-          this.taskService.updateTaskFromApi(freshTask);
-        }
-        this.taskService.refreshTaskById(taskId);
+    );
+
+    const freshTask = await this.taskService.fetchTaskById(taskId);
+    if (freshTask?.attachments) {
+      this.localTask.set({
+        ...this.localTask(),
+        attachments: freshTask.attachments,
       });
-    });
+      this.taskService.updateTaskFromApi(freshTask);
+    }
+    // Ensure any other subscribers get the latest.
+    await this.taskService.refreshTaskById(taskId);
   }
 
-  onAttachmentDeleted(filename: string): void {
+  async onAttachmentDeleted(filename: string): Promise<void> {
     const taskId = this.localTask().id!;
     if (!taskId) return;
 
-    this.attachmentService
-      .deleteAttachment(taskId, filename)
-      .then((updated) => {
-        if (updated?.attachments) {
-          this.localTask.set({
-            ...this.localTask(),
-            attachments: updated.attachments,
-          });
-          this.taskService.updateTaskFromApi(updated);
-        }
+    const updated = await this.attachmentService.deleteAttachment(
+      taskId,
+      filename
+    );
+    if (updated?.attachments) {
+      this.localTask.set({
+        ...this.localTask(),
+        attachments: updated.attachments,
       });
+      this.taskService.updateTaskFromApi(updated);
+    }
   }
 
   onAttachmentDownloaded(filename: string): void {
@@ -541,7 +571,6 @@ export class TaskComponent implements OnChanges {
       "dropped-pulse",
       "ghost"
     );
-    // Keep styling minimal; a dedicated class will make it translucent.
     overlay.classList.add("task-drag-overlay");
 
     // Frame & positioning controlled here; visuals handled by CSS class.
@@ -584,26 +613,56 @@ export class TaskComponent implements OnChanges {
       const y = (e.clientY ?? 0) - this._overlayOffset.y;
       overlay.style.transform = `translate(${x}px, ${y}px)`;
     };
-    document.addEventListener("dragover", this._onDocDragOver, {
-      capture: true,
-    });
+    document.addEventListener("dragover", this._onDocDragOver, this.CAPTURE);
 
     // --- Global fallbacks to guarantee cleanup on fast drops / ESC ---
-    const end = () => {
+    const hardEnd = () => {
       // Ensure we don't leave a stuck overlay when dropping very fast.
       this.dragging.set(false);
       this.dragDropGlobal.endDrag();
       this.cleanupDragOverlay();
     };
-    this._onDocDragEnd = (_e: DragEvent) => end();
-    this._onDocDrop = (_e: DragEvent) => end();
-    this._onDocKeydown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") end();
+    const softOverlayOnly = () => {
+      // Do not touch global drag state; lets column drop handlers run.
+      this.cleanupDragOverlay();
     };
 
-    document.addEventListener("dragend", this._onDocDragEnd, { capture: true });
-    document.addEventListener("drop", this._onDocDrop, { capture: true });
-    document.addEventListener("keydown", this._onDocKeydown, { capture: true });
+    this._onDocDragEnd = (_e: DragEvent) => hardEnd();
+
+    // Use BOTH capture + bubble:
+    // - capture: overlay cleanup even if targets stopPropagation()
+    // - bubble: full end after targets handled
+    this._onDocDropCapture = (_e: DragEvent) => softOverlayOnly();
+    this._onDocDropBubble = (_e: DragEvent) => hardEnd();
+
+    this._onDocKeydown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") hardEnd();
+    };
+
+    document.addEventListener("dragend", this._onDocDragEnd, this.CAPTURE);
+    document.addEventListener("drop", this._onDocDropCapture, this.CAPTURE);
+    document.addEventListener("drop", this._onDocDropBubble, this.BUBBLE);
+    document.addEventListener("keydown", this._onDocKeydown, this.CAPTURE);
+
+    // Extra safety for window/tab changes or odd pointer sequences.
+    this._onWindowBlur = (_e: FocusEvent) => hardEnd();
+    this._onDocVisibilityChange = () => {
+      if (document.hidden) hardEnd();
+    };
+    this._onWindowPageHide = (_e: PageTransitionEvent) => hardEnd();
+    window.addEventListener("blur", this._onWindowBlur, this.CAPTURE);
+    document.addEventListener(
+      "visibilitychange",
+      this._onDocVisibilityChange,
+      this.CAPTURE
+    );
+    window.addEventListener("pagehide", this._onWindowPageHide);
+
+    // Soft overlay removal if the platform emits only pointer/mouse up.
+    this._onDocPointerUp = () => softOverlayOnly();
+    this._onDocMouseUp = () => softOverlayOnly();
+    document.addEventListener("pointerup", this._onDocPointerUp, this.CAPTURE);
+    document.addEventListener("mouseup", this._onDocMouseUp, this.CAPTURE);
 
     // Hide native drag image so ONLY our overlay is visible.
     const shim = document.createElement("canvas");
@@ -612,32 +671,65 @@ export class TaskComponent implements OnChanges {
     event.dataTransfer?.setDragImage(shim, 0, 0);
   }
 
-  /** Remove the overlay and detach the document listener. */
+  /** Remove the overlay and detach the document listeners. */
   private cleanupDragOverlay(): void {
     if (this._onDocDragOver) {
-      document.removeEventListener("dragover", this._onDocDragOver, {
-        capture: true,
-      } as any);
+      document.removeEventListener(
+        "dragover",
+        this._onDocDragOver,
+        this.CAPTURE
+      );
       this._onDocDragOver = null;
     }
     if (this._onDocDragEnd) {
-      document.removeEventListener("dragend", this._onDocDragEnd, {
-        capture: true,
-      } as any);
+      document.removeEventListener("dragend", this._onDocDragEnd, this.CAPTURE);
       this._onDocDragEnd = null;
     }
-    if (this._onDocDrop) {
-      document.removeEventListener("drop", this._onDocDrop, {
-        capture: true,
-      } as any);
-      this._onDocDrop = null;
+    if (this._onDocDropCapture) {
+      document.removeEventListener(
+        "drop",
+        this._onDocDropCapture,
+        this.CAPTURE
+      );
+      this._onDocDropCapture = null;
+    }
+    if (this._onDocDropBubble) {
+      document.removeEventListener("drop", this._onDocDropBubble, this.BUBBLE);
+      this._onDocDropBubble = null;
     }
     if (this._onDocKeydown) {
-      document.removeEventListener("keydown", this._onDocKeydown, {
-        capture: true,
-      } as any);
+      document.removeEventListener("keydown", this._onDocKeydown, this.CAPTURE);
       this._onDocKeydown = null;
     }
+    if (this._onWindowBlur) {
+      window.removeEventListener("blur", this._onWindowBlur, this.CAPTURE);
+      this._onWindowBlur = null;
+    }
+    if (this._onDocVisibilityChange) {
+      document.removeEventListener(
+        "visibilitychange",
+        this._onDocVisibilityChange,
+        this.CAPTURE
+      );
+      this._onDocVisibilityChange = null;
+    }
+    if (this._onWindowPageHide) {
+      window.removeEventListener("pagehide", this._onWindowPageHide);
+      this._onWindowPageHide = null;
+    }
+    if (this._onDocPointerUp) {
+      document.removeEventListener(
+        "pointerup",
+        this._onDocPointerUp,
+        this.CAPTURE
+      );
+      this._onDocPointerUp = null;
+    }
+    if (this._onDocMouseUp) {
+      document.removeEventListener("mouseup", this._onDocMouseUp, this.CAPTURE);
+      this._onDocMouseUp = null;
+    }
+
     if (this._dragOverlayEl?.parentNode) {
       this._dragOverlayEl.parentNode.removeChild(this._dragOverlayEl);
     }

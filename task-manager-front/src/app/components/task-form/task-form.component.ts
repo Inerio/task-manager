@@ -4,25 +4,29 @@ import {
   Output,
   EventEmitter,
   signal,
-  type WritableSignal,
   ViewChild,
-  ElementRef,
-  AfterViewInit,
   Renderer2,
   CUSTOM_ELEMENTS_SCHEMA,
+  ChangeDetectionStrategy,
   inject,
+} from "@angular/core";
+import type {
+  WritableSignal,
+  ElementRef,
+  AfterViewInit,
   OnInit,
   OnChanges,
   SimpleChanges,
   OnDestroy,
-  ChangeDetectionStrategy,
 } from "@angular/core";
+
 import {
   ReactiveFormsModule,
   NonNullableFormBuilder,
   Validators,
 } from "@angular/forms";
 import { TranslocoModule } from "@jsverse/transloco";
+
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
 import { EmojiPickerComponent } from "../emoji-picker/emoji-picker.component";
@@ -40,6 +44,7 @@ import { TaskService } from "../../services/task.service";
   ],
   templateUrl: "./task-form.component.html",
   styleUrls: ["./task-form.component.scss"],
+  // Keep schema in case other custom elements appear inside the form.
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -121,7 +126,7 @@ export class TaskFormComponent
   }
 
   ngAfterViewInit(): void {
-    // Close emoji picker on true outside click
+    // Close emoji picker on true outside click.
     if (this.globalClickUnlisten) this.globalClickUnlisten();
     this.globalClickUnlisten = this.renderer.listen(
       "document",
@@ -139,16 +144,18 @@ export class TaskFormComponent
       }
     );
 
-    // Swallow global events while native file dialog is open
+    // Swallow global events while native file dialog is open.
     const swallowIfDialog = (e: Event) => {
       if (this.nativeDialogOpen()) {
+        // Stop handlers installed by the board/columns while the OS dialog is open.
         (
-          e as unknown as { stopImmediatePropagation?: () => void }
+          e as { stopImmediatePropagation?: () => void }
         ).stopImmediatePropagation?.();
         e.stopPropagation();
         e.preventDefault();
       }
     };
+
     this.unlisteners.push(
       this.renderer.listen("document", "mousedown", swallowIfDialog),
       this.renderer.listen("document", "mouseup", swallowIfDialog),
@@ -159,6 +166,7 @@ export class TaskFormComponent
       }),
       this.renderer.listen("window", "focus", () => {
         if (this.nativeDialogOpen()) {
+          // Let the browser fully close the file dialog before releasing the guard.
           setTimeout(() => this.nativeDialogOpen.set(false), 0);
         }
       })
@@ -166,11 +174,16 @@ export class TaskFormComponent
   }
 
   ngOnDestroy(): void {
-    if (this.globalClickUnlisten) this.globalClickUnlisten();
+    if (this.globalClickUnlisten) {
+      this.globalClickUnlisten();
+      this.globalClickUnlisten = null;
+    }
     this.unlisteners.forEach((u) => {
       try {
         u();
-      } catch {}
+      } catch {
+        // ignore listener cleanup errors
+      }
     });
     this.unlisteners = [];
   }
@@ -180,16 +193,18 @@ export class TaskFormComponent
   focusTitle(): void {
     const el = this.titleInput?.nativeElement;
     if (!el) {
-      // Late render fallback
+      // Late render fallback.
       queueMicrotask(() => this.titleInput?.nativeElement?.focus());
       return;
     }
     el.focus();
-    // Put caret at end (non-breaking)
+    // Put caret at end (non-breaking).
     try {
       const len = el.value.length;
       el.setSelectionRange(len, len);
-    } catch {}
+    } catch {
+      // Older browsers may throw — safe to ignore.
+    }
   }
 
   // ===== Brave detection =====
@@ -200,25 +215,20 @@ export class TaskFormComponent
    */
   private async detectBrave(): Promise<void> {
     try {
-      const nav: unknown = navigator as unknown;
-      const brave = (nav as { brave?: { isBrave?: () => Promise<boolean> } })
-        .brave;
-      if (brave && typeof brave.isBrave === "function") {
-        const res = await brave.isBrave();
-        this.isBrave.set(!!res);
+      const nav = navigator as unknown as {
+        brave?: { isBrave?: () => Promise<boolean> };
+        userAgentData?: { brands?: { brand: string }[] };
+        userAgent?: string;
+      };
+
+      const res = await nav.brave?.isBrave?.();
+      if (typeof res === "boolean") {
+        this.isBrave.set(res);
         return;
       }
-    } catch {}
-    try {
-      const brands =
-        (
-          navigator as unknown as {
-            userAgentData?: { brands?: { brand: string }[] };
-          }
-        )?.userAgentData?.brands?.map((b) => b.brand) ?? [];
-      const hay = `${brands.join(" ")} ${(
-        navigator.userAgent || ""
-      ).toLowerCase()}`;
+
+      const brands = nav.userAgentData?.brands?.map((b) => b.brand) ?? [];
+      const hay = `${brands.join(" ")} ${(nav.userAgent || "").toLowerCase()}`;
       this.isBrave.set(hay.includes("brave"));
     } catch {
       this.isBrave.set(false);
@@ -267,12 +277,12 @@ export class TaskFormComponent
 
     let dy = 0;
 
-    // Ensure the top of the task form (title/desc) is visible
+    // Ensure the top of the task form (title/desc) is visible.
     const contRect = container.getBoundingClientRect();
     if (contRect.top < FORM_TOP_SAFE) {
-      dy = contRect.top - FORM_TOP_SAFE; // negative → scroll up
+      dy = contRect.top - FORM_TOP_SAFE; // negative = scroll up
     } else {
-      // Ensure the dropdown itself doesn't overflow the viewport
+      // Ensure the dropdown itself doesn't overflow the viewport.
       const dropRect = dropdown.getBoundingClientRect();
 
       if (dropRect.top < TOP_MARGIN) {
@@ -298,6 +308,7 @@ export class TaskFormComponent
     const prevScroll = ta.scrollTop;
     const start = (ta.selectionStart ?? ta.value.length) as number;
     const end = (ta.selectionEnd ?? start) as number;
+
     if (typeof ta.setRangeText === "function") {
       ta.setRangeText(emoji, start, end, "end");
     } else {
@@ -307,6 +318,7 @@ export class TaskFormComponent
       ta.setSelectionRange(caret, caret);
     }
     ta.scrollTop = prevScroll;
+
     ctrl.setValue(ta.value);
     ctrl.markAsDirty();
     ctrl.markAsTouched();
@@ -315,10 +327,10 @@ export class TaskFormComponent
   // ===== Files =====
   onFilesBuffered(files: File[]): void {
     if (!this.localTask().id) {
-      // Creation mode: buffer + dedupe by name
+      // Creation mode: buffer + dedupe by name.
       const current = this.pendingFiles();
-      const names = current.map((f) => f.name);
-      const uniques = files.filter((f) => !names.includes(f.name));
+      const names = new Set(current.map((f) => f.name));
+      const uniques = files.filter((f) => !names.has(f.name));
       this.pendingFiles.set([...current, ...uniques]);
     } else {
       void this.uploadFilesInEditMode(files);
@@ -330,33 +342,34 @@ export class TaskFormComponent
     await Promise.all(
       files.map((file) => this.attachmentService.uploadAttachment(taskId, file))
     );
-    this.taskService.fetchTaskById(taskId).then((fresh) => {
-      if (fresh?.attachments) {
-        this.localTask.set({
-          ...this.localTask(),
-          attachments: fresh.attachments,
-        });
-      }
-    });
+
+    const fresh = await this.taskService.fetchTaskById(taskId);
+    if (fresh?.attachments) {
+      this.localTask.set({
+        ...this.localTask(),
+        attachments: fresh.attachments,
+      });
+      // Keep global store in sync for other views.
+      this.taskService.updateTaskFromApi(fresh);
+    }
   }
 
-  onBufferedFileDelete(filename: string): void {
+  async onBufferedFileDelete(filename: string): Promise<void> {
     if (!this.localTask().id) {
       this.pendingFiles.set(
         this.pendingFiles().filter((f) => f.name !== filename)
       );
-    } else {
-      const id = this.localTask().id!;
-      this.attachmentService.deleteAttachment(id, filename).then(() => {
-        this.taskService.fetchTaskById(id).then((fresh) => {
-          if (fresh?.attachments) {
-            this.localTask.set({
-              ...this.localTask(),
-              attachments: fresh.attachments,
-            });
-          }
-        });
+      return;
+    }
+
+    const id = this.localTask().id!;
+    const updated = await this.attachmentService.deleteAttachment(id, filename);
+    if (updated?.attachments) {
+      this.localTask.set({
+        ...this.localTask(),
+        attachments: updated.attachments,
       });
+      this.taskService.updateTaskFromApi(updated);
     }
   }
 

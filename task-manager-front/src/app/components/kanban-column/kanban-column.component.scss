@@ -21,14 +21,14 @@
   scrollbar-color: color-mix(in oklab, var(--brand) 35%, #9fb6d44d) transparent;
 
   &::-webkit-scrollbar {
-    width: 8px;
+    width: 1px;
   }
   &::-webkit-scrollbar-track {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
     background: color-mix(in oklab, var(--brand) 35%, #9fb6d44d);
-    border-radius: 8px;
+    border-radius: 1px;
   }
 
   .add-btn {

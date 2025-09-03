@@ -23,21 +23,10 @@
       (dragover)="onColumnDragHover(idx, $event)"
       (drop)="onColumnDrop($event)"
     >
-      @if (isEditingTitle(kanbanColumn) && isDraft(kanbanColumn)) {
-      <button
-        type="button"
-        class="cancel-edit-btn-top"
-        (mousedown)="(cancelTitleEdit)"
-        [attr.title]="'boards.column.cancelAdd' | transloco"
-      >
-        ✖ {{ "boards.column.cancelAdd" | transloco }}
-      </button>
-      }
-
       <div
         class="column-header"
         [class.disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
-        draggable="true"
+        [draggable]="!!kanbanColumn.id"
         (dragstart)="onColumnDragStart(kanbanColumn.id!, idx, $event)"
         (dragenter)="onColumnDragHover(idx, $event)"
         (dragover)="onColumnDragHover(idx, $event)"
@@ -47,23 +36,23 @@
           draggedKanbanColumnId() === kanbanColumn.id ? 'true' : 'false'
         "
       >
+        <!-- Trash first (delete all in column) -->
+        @if (kanbanColumn.id) {
         <button
           type="button"
-          class="btn-close-kanbanColumn styled-x-btn"
-          (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
-          [attr.title]="'boards.column.delete' | transloco"
-          aria-label="{{ 'boards.column.delete' | transloco }}"
+          class="btn-delete-column styled-trash-btn"
+          (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
+          [attr.title]="'boards.column.deleteAll' | transloco"
           [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
         >
           <img
-            src="/svg/x.svg"
-            [attr.alt]="'boards.column.delete' | transloco"
-            width="17"
-            height="17"
+            src="/svg/trash.svg"
+            [attr.alt]="'boards.column.deleteAll' | transloco"
+            width="19"
+            height="19"
           />
         </button>
-
-        @if (!isEditingTitle(kanbanColumn)) {
+        } @if (!isEditingTitle(kanbanColumn)) {
         <span
           class="kanbanColumn-title"
           (click)="startEditTitle(kanbanColumn)"
@@ -99,34 +88,41 @@
         />
         }
 
+        <!-- X button after the title (delete column) -->
+        @if (kanbanColumn.id) {
         <button
           type="button"
-          class="btn-delete-column styled-trash-btn"
-          (click)="deleteAllInColumn(kanbanColumn.id!, kanbanColumn.name)"
-          [attr.title]="'boards.column.deleteAll' | transloco"
+          class="btn-close-kanbanColumn styled-x-btn"
+          (click)="deleteKanbanColumn(kanbanColumn.id!, kanbanColumn.name)"
+          [attr.title]="'boards.column.delete' | transloco"
+          aria-label="{{ 'boards.column.delete' | transloco }}"
           [disabled]="!!editingColumn() && !isEditingTitle(kanbanColumn)"
         >
           <img
-            src="/svg/trash.svg"
-            [attr.alt]="'boards.column.deleteAll' | transloco"
-            width="19"
-            height="19"
+            src="/svg/x.svg"
+            [attr.alt]="'boards.column.delete' | transloco"
+            width="17"
+            height="17"
           />
         </button>
+        }
       </div>
 
+      <!-- Only mount the column component when we have a persisted id.
+           Drafts render an empty body to preserve spacing/layout. -->
+      @if (kanbanColumn.id) {
       <app-kanban-column
         [kanbanColumnId]="kanbanColumn.id!"
         [title]="kanbanColumn.name"
         [hasAnyTask]="hasAnyTask()"
       ></app-kanban-column>
-
-      @if (!!editingColumn() && !isEditingTitle(kanbanColumn)) {
+      } @else {
+      <div class="task-kanbanColumn empty" aria-hidden="true"></div>
+      } @if (!!editingColumn() && !isEditingTitle(kanbanColumn)) {
       <div class="column-blocker"></div>
       }
     </div>
     } @if (kanbanColumns().length < MAX_COLUMNS) {
-    <!-- Add-column button lives in the flow so it always sits after the last column -->
     <div class="add-column-tile">
       <button
         type="button"

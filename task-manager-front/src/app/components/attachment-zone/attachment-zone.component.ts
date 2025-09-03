@@ -69,10 +69,6 @@ export class AttachmentZoneComponent implements OnDestroy {
   readonly previewLeft = signal(0);
 
   // ===== Internals =====
-  /** Token used to ignore late async preview responses. */
-  private previewToken = 0;
-  /** Last created object URL (only for the currently displayed preview). */
-  private lastObjectUrl: string | null = null;
   /** Avoid duplicate HTTP calls while a preview is being fetched. */
   private readonly inFlight = new Map<string, Promise<string>>();
   /** Small LRU cache of object URLs to reuse across hovers. */
@@ -82,7 +78,6 @@ export class AttachmentZoneComponent implements OnDestroy {
 
   // ===== Lifecycle =====
   ngOnDestroy(): void {
-    this.revokePreviewUrl();
     // Revoke all cached object URLs to prevent memory leaks.
     for (const url of this.cache.values()) {
       try {
@@ -247,6 +242,7 @@ export class AttachmentZoneComponent implements OnDestroy {
   }
 
   private handleFileSelection(selectedFiles: File[]): void {
+    // Guard: dedupe by filename across persisted + pending files.
     const already = new Set([
       ...this.attachments,
       ...(this.creationMode ? this.pendingFiles.map((f) => f.name) : []),
@@ -282,11 +278,6 @@ export class AttachmentZoneComponent implements OnDestroy {
   // ===== Preview helpers (HttpClient -> blob -> object URL) =====
   isImage(filename: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
-  }
-
-  /** Build URL kept for downloads; do NOT bind directly as <img src>. */
-  buildAttachmentUrl(filename: string): string {
-    return this.attachmentService.buildAttachmentUrl(this.taskId, filename);
   }
 
   /** Only updates the position of the preview popover (no network). */
@@ -339,7 +330,7 @@ export class AttachmentZoneComponent implements OnDestroy {
         this.previewUrl.set(objectUrl);
       }
     } catch {
-      // On error, ensure no stale preview stays
+      // On error, ensure no stale preview stays.
       this.hidePreview();
     } finally {
       this.inFlight.delete(key);
@@ -349,17 +340,6 @@ export class AttachmentZoneComponent implements OnDestroy {
   hidePreview(): void {
     this.previewUrl.set(null);
     this.previewFilename.set(null);
-  }
-
-  private revokePreviewUrl(): void {
-    if (this.lastObjectUrl) {
-      try {
-        URL.revokeObjectURL(this.lastObjectUrl);
-      } catch {
-        // Ignore revoke errors
-      }
-      this.lastObjectUrl = null;
-    }
   }
 
   /** Return a deduplicated list of attached files, preserving order. */
@@ -380,7 +360,7 @@ export class AttachmentZoneComponent implements OnDestroy {
   /** Simple LRU to cap memory usage from object URLs. */
   private addToCache(key: string, url: string): void {
     if (this.cache.has(key)) {
-      // Refresh LRU order
+      // Refresh LRU order.
       const idx = this.cacheOrder.indexOf(key);
       if (idx >= 0) this.cacheOrder.splice(idx, 1);
     }

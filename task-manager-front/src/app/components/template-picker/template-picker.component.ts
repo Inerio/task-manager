@@ -5,7 +5,6 @@ import {
   computed,
   inject,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { TemplatePickerService } from "../../services/template-picker.service";
@@ -17,7 +16,7 @@ import {
 @Component({
   selector: "app-template-picker",
   standalone: true,
-  imports: [CommonModule, TranslocoModule],
+  imports: [TranslocoModule],
   templateUrl: "./template-picker.component.html",
   styleUrls: ["./template-picker.component.scss"],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,10 +50,10 @@ export class TemplatePickerComponent {
     });
   });
 
-  choose(id: BoardTemplateId) {
+  choose(id: BoardTemplateId): void {
     this.svc.choose(id);
   }
-  skip() {
+  skip(): void {
     this.svc.skip();
   }
 

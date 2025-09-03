@@ -9,6 +9,7 @@ import {
 } from "@angular/core";
 import { TranslocoService } from "@jsverse/transloco";
 import { firstValueFrom } from "rxjs";
+
 import { environment } from "../../environments/environment";
 import { type Task, type TaskId } from "../models/task.model";
 import { AlertService } from "./alert.service";
@@ -179,13 +180,13 @@ export class TaskService {
       ...tasks,
     ].sort((a, b) =>
       a.kanbanColumnId !== b.kanbanColumnId
-        ? (a.kanbanColumnId ?? 0) - (b.kanbanColumnId ?? 0)
+        ? a.kanbanColumnId - b.kanbanColumnId
         : (a.position ?? 0) - (b.position ?? 0)
     );
 
     this.tasksSignal.set(nextState);
 
-    // Filter out any item without a persisted id to avoid sending `undefined`.
+    // Guard: only send persisted ids to the backend.
     const dto = tasks
       .filter((t): t is Task & { id: number } => typeof t.id === "number")
       .map((t) => ({ id: t.id, position: t.position ?? 0 }));

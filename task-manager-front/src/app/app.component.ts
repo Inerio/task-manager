@@ -10,21 +10,25 @@ import {
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
+
 import { AlertComponent } from "./components/alert/alert.component";
 import { ConfirmDialogComponent } from "./components/alert/confirm-dialog.component";
+import { LanguageSwitcherComponent } from "./components/language-switcher/language-switcher.component";
+import { ThemeSwitcherComponent } from "./components/theme-switcher/theme-switcher.component";
+import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
 import { BoardComponent } from "./components/board/board.component";
+import { TemplatePickerComponent } from "./components/template-picker/template-picker.component";
+
 import { BoardService } from "./services/board.service";
 import { ConfirmDialogService } from "./services/confirm-dialog.service";
 import { TaskService } from "./services/task.service";
-import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
 import { LoadingService } from "./services/loading.service";
 import { KanbanColumnService } from "./services/kanban-column.service";
-import { LanguageSwitcherComponent } from "./components/language-switcher/language-switcher.component";
-import { ThemeSwitcherComponent } from "./components/theme-switcher/theme-switcher.component";
-import { TemplatePickerComponent } from "./components/template-picker/template-picker.component";
 import { TemplatePickerService } from "./services/template-picker.service";
-import { applyBoardTemplate } from "./utils/board-templates";
 import { DragDropGlobalService } from "./services/drag-drop-global.service";
+import { AlertService } from "./services/alert.service";
+
+import { applyBoardTemplate } from "./utils/board-templates";
 import { getBoardDragData, setBoardDragData } from "./utils/drag-drop-utils";
 
 /** Minimal local typing for boards to improve readability. */
@@ -63,6 +67,7 @@ export class AppComponent implements OnDestroy {
   private readonly i18n = inject(TranslocoService);
   private readonly templatePicker = inject(TemplatePickerService);
   private readonly dragDropGlobal = inject(DragDropGlobalService);
+  private readonly alert = inject(AlertService);
 
   // ===== Template refs (for focus management) =====
   @ViewChild("newBoardInput", { read: ElementRef })
@@ -126,6 +131,7 @@ export class AppComponent implements OnDestroy {
     this.boardService.loadBoards();
 
     // Keep isMdDown reactive with the media query.
+    this._onMqChange = this._onMqChange.bind(this); // stable ref for add/remove
     this._mql.addEventListener("change", this._onMqChange);
 
     // Auto-select the first board once boards are loaded (only if none selected).
@@ -155,9 +161,9 @@ export class AppComponent implements OnDestroy {
     this._mql.removeEventListener("change", this._onMqChange);
   }
 
-  private readonly _onMqChange = (e: MediaQueryListEvent) => {
+  private _onMqChange(e: MediaQueryListEvent): void {
     this.isMdDown.set(e.matches);
-  };
+  }
 
   // ===== Sidebar open/close (mobile/tablet only) =====
   openSidebar(): void {
@@ -185,8 +191,8 @@ export class AppComponent implements OnDestroy {
     this.editingBoardId.set(-1); // sentinel value = "editing new board"
     this.editingBoardValue.set("");
 
-    // Focus the inline input as soon as it exists in the view.
-    setTimeout(() => this.newBoardInput?.nativeElement.focus());
+    // Focus the inline input on next frame when it is in the DOM.
+    requestAnimationFrame(() => this.newBoardInput?.nativeElement.focus());
   }
 
   onEditBoardInput(event: Event): void {
@@ -326,8 +332,10 @@ export class AppComponent implements OnDestroy {
     this.editingSelectedBoard.set(true);
     this.editingSelectedBoardValue.set(board.name);
 
-    // Focus the title input when it appears.
-    setTimeout(() => this.editSelectedBoardInput?.nativeElement.focus());
+    // Focus the title input on next frame when it is in the DOM.
+    requestAnimationFrame(() =>
+      this.editSelectedBoardInput?.nativeElement.focus()
+    );
   }
 
   onEditSelectedBoardInput(event: Event): void {
@@ -373,7 +381,8 @@ export class AppComponent implements OnDestroy {
           this.boards().find((b) => b.id !== board.id)?.id ?? null
         );
       },
-      error: () => alert(this.i18n.translate("errors.deletingBoard")),
+      error: () =>
+        this.alert.show("error", this.i18n.translate("errors.deletingBoard")),
     });
   }
 
@@ -392,7 +401,10 @@ export class AppComponent implements OnDestroy {
       .deleteAllTasksByBoardId(selectedBoard.id)
       .then(() => this.taskService.loadTasks({ force: true }))
       .catch(() =>
-        alert(this.i18n.translate("errors.deletingAllTasksForBoard"))
+        this.alert.show(
+          "error",
+          this.i18n.translate("errors.deletingAllTasksForBoard")
+        )
       );
   }
 
@@ -402,6 +414,7 @@ export class AppComponent implements OnDestroy {
   }
 
   get selectedBoardName(): string {
+    // Only used when a board is selected; fallback is never shown in UI.
     return this.getSelectedBoard()?.name ?? "No board selected";
   }
 }

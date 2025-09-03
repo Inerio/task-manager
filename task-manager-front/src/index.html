@@ -23,6 +23,16 @@
         } catch (_) {}
       })();
     </script>
+    <!-- Sync <html lang> early to match Transloco saved language and avoid flicker/mismatch -->
+    <script>
+      (function () {
+        try {
+          var LKEY = "translocoLang";
+          var lang = localStorage.getItem(LKEY) || "en";
+          document.documentElement.setAttribute("lang", lang);
+        } catch (_) {}
+      })();
+    </script>
 
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap"

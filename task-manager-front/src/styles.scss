@@ -9,8 +9,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap");
 
 /* Base reset */
-* {
-  box-sizing: border-box;
+*,
+*::before,
+*::after {
+  box-sizing: border-box; /* include pseudo-elements */
 }
 html,
 body {

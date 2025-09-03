@@ -8,7 +8,6 @@ import {
   OnChanges,
   SimpleChanges,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { KanbanColumnComponent } from "../kanban-column/kanban-column.component";
 import { KanbanColumnService } from "../../services/kanban-column.service";
@@ -32,12 +31,7 @@ import { LoadingOverlayComponent } from "../loading-overlay/loading-overlay.comp
   standalone: true,
   templateUrl: "./board.component.html",
   styleUrls: ["./board.component.scss"],
-  imports: [
-    CommonModule,
-    TranslocoModule,
-    KanbanColumnComponent,
-    LoadingOverlayComponent,
-  ],
+  imports: [TranslocoModule, KanbanColumnComponent, LoadingOverlayComponent],
 })
 export class BoardComponent implements OnChanges {
   // --------------------
@@ -156,7 +150,7 @@ export class BoardComponent implements OnChanges {
   // DnD: columns
   // --------------------
   onColumnDragStart(id: KanbanColumnId, idx: number, e: DragEvent): void {
-    if (this.editingColumn()) return; // lock while editing
+    if (this.editingColumn()) return; // Guard: lock while editing
     setColumnDragData(e, id);
     this.dragDropGlobal.startColumnDrag(id);
     this.dragOverIndex.set(idx);
@@ -165,7 +159,7 @@ export class BoardComponent implements OnChanges {
 
   onColumnDragHover(idx: number, e: DragEvent): void {
     if (this.editingColumn()) return;
-    // Engage only when a column drag is actually happening (avoid blocking other drags like files).
+    // Guard: engage only on column drags (avoid blocking other drags like files).
     if (!this.dragDropGlobal.isColumnDrag()) return;
     if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
     e.preventDefault();
@@ -175,7 +169,7 @@ export class BoardComponent implements OnChanges {
   async onColumnDrop(e: DragEvent): Promise<void> {
     if (this.editingColumn()) return;
 
-    // Allow drop if either the global state OR the DataTransfer says "column"
+    // Allow drop if either the global state OR the DataTransfer says "column".
     if (!this.dragDropGlobal.isColumnDrag() && !isColumnDragEvent(e)) {
       this.resetDragState();
       return;
@@ -279,7 +273,7 @@ export class BoardComponent implements OnChanges {
     if (!confirmed) return;
 
     try {
-      this.taskService.deleteTasksByKanbanColumnId(id);
+      await this.taskService.deleteTasksByKanbanColumnId(id);
     } catch {
       this.alert.show(
         "error",
@@ -293,7 +287,8 @@ export class BoardComponent implements OnChanges {
     this.editingColumn.set(column);
     this.editingTitleValue.set(column.name);
 
-    setTimeout(() => {
+    // Delay focus until the input exists in the DOM.
+    queueMicrotask(() => {
       const el = document.getElementById(
         `edit-kanbanColumn-title-${column.id ?? "draft"}`
       ) as HTMLInputElement | null;
@@ -367,9 +362,9 @@ export class BoardComponent implements OnChanges {
   // --------------------
   // Template utilities
   // --------------------
-  trackByColumnId(_index: number, col: KanbanColumn): number | string {
+  trackByColumnId(index: number, col: KanbanColumn): number | string {
     // Use a stable unique key also for drafts.
-    return typeof col.id === "number" ? col.id : `draft-${_index}`;
+    return typeof col.id === "number" ? col.id : `draft-${index}`;
   }
 
   isEditingTitle(column: KanbanColumn): boolean {

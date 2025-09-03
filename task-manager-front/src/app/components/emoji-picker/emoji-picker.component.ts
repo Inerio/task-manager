@@ -15,12 +15,18 @@ import { Subscription } from "rxjs";
 import i18nEn from "emoji-picker-element/i18n/en";
 import i18nFr from "emoji-picker-element/i18n/fr";
 
-/** Narrow type for the <emoji-picker> element so we avoid 'any'. */
+/** Supported locales for the web component. */
+type Locale = "en" | "fr";
+
+/** Narrow i18n map used by the web component. */
+type EmojiPickerI18n = Record<string, string>;
+
+/** Minimal shape for the custom element to avoid `any`. */
 type EmojiPickerEl = HTMLElement & {
   shadowRoot: ShadowRoot | null;
-  locale?: string; // "en" | "fr"
-  dataSource?: string | any;
-  i18n?: Record<string, any>;
+  locale?: Locale;
+  dataSource?: string;
+  i18n?: EmojiPickerI18n;
 };
 
 @Component({
@@ -61,15 +67,10 @@ export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
   private langSub?: Subscription;
 
   /** Bound into the template as attributes so the custom element sees changes early. */
-  currentLocale: "en" | "fr" = (this.i18n.getActiveLang?.() || "").startsWith(
-    "fr"
-  )
+  currentLocale: Locale = (this.i18n.getActiveLang?.() || "").startsWith("fr")
     ? "fr"
     : "en";
   currentDataUrl = this.toDataUrl(this.currentLocale);
-
-  /** Prevent double-application of styles. */
-  private stylesApplied = false;
 
   ngAfterViewInit(): void {
     this.applyAllWithRetries();
@@ -83,11 +84,11 @@ export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.langSub?.unsubscribe();
+    this.langSub?.unsubscribe?.();
   }
 
   /** Build the public URL to the emojibase dataset under /public. */
-  private toDataUrl(locale: "en" | "fr"): string {
+  private toDataUrl(locale: Locale): string {
     return `/emoji-picker/${locale}/emojibase/data.json`;
   }
 
@@ -114,7 +115,7 @@ export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      // --- cosmetic tweaks inside the shadow DOM
+      // Cosmetic tweaks inside the shadow DOM (scoped to the picker only).
       searchInput.style.color = "#111";
       searchInput.style.caretColor = "#111";
       if (!sr.getElementById("custom-scrollbar-style")) {
@@ -132,11 +133,13 @@ export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
 
       // First full configuration (locale + dataset + placeholder + labels)
       this.configurePicker().then(() => {
-        picker.style.visibility = "visible";
-        this.stylesApplied = true;
+        const el = this.emojiPickerRef?.nativeElement;
+        if (el) el.style.visibility = "visible";
       });
     };
-    Promise.resolve().then(apply);
+
+    // Microtask: run after the current change detection turn.
+    queueMicrotask(apply);
   }
 
   /** Configure locale + dataset (+placeholder + labels) — called at init and on language change. */
@@ -147,10 +150,14 @@ export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
     const locale = this.currentLocale;
 
     // UI labels (category names, "Search", etc.)
-    const ui = locale === "fr" ? (i18nFr as any) : (i18nEn as any);
+    const ui = (locale === "fr"
+      ? i18nFr
+      : i18nEn) as unknown as EmojiPickerI18n;
     try {
       picker.i18n = ui;
-    } catch {}
+    } catch {
+      // Older picker versions may not expose a setter; ignore silently.
+    }
 
     // Make sure properties are also set on the element
     try {
@@ -163,7 +170,7 @@ export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
     // Placeholder (Transloco > UI fallback)
     const placeholder =
       this.i18n.translate("emoji.searchPlaceholder") ||
-      ui?.searchLabel ||
+      ui?.["searchLabel"] ||
       (locale === "fr" ? "Rechercher" : "Search");
 
     const input = picker.shadowRoot?.querySelector(
@@ -175,14 +182,27 @@ export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  onEmojiClick(event: any): void {
+  onEmojiClick(event: unknown): void {
     // Defensive extraction across picker versions.
-    const emoji =
-      event?.detail?.unicode ??
-      event?.emoji?.native ??
-      event?.emoji?.emoji ??
-      event?.detail ??
-      "";
-    if (emoji) this.emojiSelected.emit(emoji);
+    let out = "";
+
+    if (event && typeof event === "object") {
+      const e = event as {
+        detail?: unknown;
+        emoji?: { native?: string; emoji?: string };
+      };
+
+      const d = e.detail;
+      if (typeof d === "string") {
+        out = d;
+      } else if (d && typeof d === "object" && "unicode" in d) {
+        const u = (d as { unicode?: string }).unicode;
+        if (typeof u === "string") out = u;
+      } else if (e.emoji) {
+        out = e.emoji.native ?? e.emoji.emoji ?? "";
+      }
+    }
+
+    if (out) this.emojiSelected.emit(out);
   }
 }

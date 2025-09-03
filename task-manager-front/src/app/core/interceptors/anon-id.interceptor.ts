@@ -7,10 +7,8 @@ const LS_KEY = "tasukeru_uid" as const;
 
 /** Generate a UUID (fallback for older engines). */
 function createUid(): string {
-  try {
-    const c = (globalThis as any).crypto;
-    if (c && typeof c.randomUUID === "function") return c.randomUUID();
-  } catch {}
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return uuid;
   // Fallback: non-cryptographic but stable enough for anon id
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -51,7 +49,7 @@ function getOrCreateAnonId(): string {
  * - Does not override if header is already set upstream
  */
 export const anonIdInterceptor: HttpInterceptorFn = (req, next) => {
-  const headerName = environment.clientIdHeader || "X-Client-Id"; // TODO: clarify env presence contract
+  const headerName = environment.clientIdHeader ?? "X-Client-Id";
   if (req.headers.has(headerName)) return next(req); // respect upstream header
 
   const uid = getOrCreateAnonId();

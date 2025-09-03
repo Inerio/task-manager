@@ -11,6 +11,7 @@ import {
   effect,
   ViewChild,
   ElementRef,
+  OnDestroy,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { toSignal } from "@angular/core/rxjs-interop";
@@ -39,7 +40,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
   styleUrls: ["./task.component.scss"],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TaskComponent implements OnChanges {
+export class TaskComponent implements OnChanges, OnDestroy {
   // === Inputs ===
   @Input({ required: true }) task!: Task;
   /** Ghost mode: visual-only clone (used in placeholder). */
@@ -86,8 +87,15 @@ export class TaskComponent implements OnChanges {
   private _onDocDragOver: ((e: DragEvent) => void) | null = null;
   /** Global fallbacks to guarantee cleanup on fast drops/Escape. */
   private _onDocDragEnd: ((e: DragEvent) => void) | null = null;
-  private _onDocDrop: ((e: DragEvent) => void) | null = null;
+  private _onDocDropCapture: ((e: DragEvent) => void) | null = null;
+  private _onDocDropBubble: ((e: DragEvent) => void) | null = null;
   private _onDocKeydown: ((e: KeyboardEvent) => void) | null = null;
+  private _onWindowBlur: ((e: FocusEvent) => void) | null = null;
+  private _onDocVisibilityChange: ((e: Event) => void) | null = null;
+  private _onWindowPageHide: ((e: PageTransitionEvent) => void) | null = null;
+  private _onDocPointerUp: ((e: PointerEvent) => void) | null = null;
+  private _onDocMouseUp: ((e: MouseEvent) => void) | null = null;
+
   private _overlayOffset = { x: 12, y: 10 };
 
   // === Truncation logic ===
@@ -149,6 +157,11 @@ export class TaskComponent implements OnChanges {
     effect(() => {
       if (this.localTask().isEditing) this.scheduleEnsureCardVisible();
     });
+
+    // Hard safety: if global task drag stops for any reason, remove any leftover overlay.
+    effect(() => {
+      if (!this.dragDropGlobal.isTaskDrag()) this.cleanupDragOverlay();
+    });
   }
 
   // === Computed (truncate) ===
@@ -196,6 +209,11 @@ export class TaskComponent implements OnChanges {
       this.showFullTitle.set(false);
       this.showFullDescription.set(false);
     }
+  }
+
+  ngOnDestroy(): void {
+    // Defensive: never leave global listeners or overlay behind.
+    this.cleanupDragOverlay();
   }
 
   // === Ensure the edit form is fully visible ===
@@ -541,7 +559,6 @@ export class TaskComponent implements OnChanges {
       "dropped-pulse",
       "ghost"
     );
-    // Keep styling minimal; a dedicated class will make it translucent.
     overlay.classList.add("task-drag-overlay");
 
     // Frame & positioning controlled here; visuals handled by CSS class.
@@ -589,21 +606,59 @@ export class TaskComponent implements OnChanges {
     });
 
     // --- Global fallbacks to guarantee cleanup on fast drops / ESC ---
-    const end = () => {
+    const hardEnd = () => {
       // Ensure we don't leave a stuck overlay when dropping very fast.
       this.dragging.set(false);
       this.dragDropGlobal.endDrag();
       this.cleanupDragOverlay();
     };
-    this._onDocDragEnd = (_e: DragEvent) => end();
-    this._onDocDrop = (_e: DragEvent) => end();
+    const softOverlayOnly = () => {
+      // Do not touch global drag state; lets column drop handlers run.
+      this.cleanupDragOverlay();
+    };
+
+    this._onDocDragEnd = (_e: DragEvent) => hardEnd();
+
+    // Use BOTH capture + bubble:
+    // - capture: overlay cleanup even if targets stopPropagation()
+    // - bubble: full end after targets handled
+    this._onDocDropCapture = (_e: DragEvent) => softOverlayOnly();
+    this._onDocDropBubble = (_e: DragEvent) => hardEnd();
+
     this._onDocKeydown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") end();
+      if (e.key === "Escape") hardEnd();
     };
 
     document.addEventListener("dragend", this._onDocDragEnd, { capture: true });
-    document.addEventListener("drop", this._onDocDrop, { capture: true });
+    document.addEventListener("drop", this._onDocDropCapture, {
+      capture: true,
+    });
+    document.addEventListener("drop", this._onDocDropBubble, {
+      capture: false,
+    });
     document.addEventListener("keydown", this._onDocKeydown, { capture: true });
+
+    // Extra safety for window/tab changes or odd pointer sequences.
+    this._onWindowBlur = (_e: FocusEvent) => hardEnd();
+    this._onDocVisibilityChange = () => {
+      if (document.hidden) hardEnd();
+    };
+    this._onWindowPageHide = (_e: PageTransitionEvent) => hardEnd();
+    window.addEventListener("blur", this._onWindowBlur, { capture: true });
+    document.addEventListener("visibilitychange", this._onDocVisibilityChange, {
+      capture: true,
+    });
+    window.addEventListener("pagehide", this._onWindowPageHide);
+
+    // Soft overlay removal if the platform emits only pointer/mouse up.
+    this._onDocPointerUp = () => softOverlayOnly();
+    this._onDocMouseUp = () => softOverlayOnly();
+    document.addEventListener("pointerup", this._onDocPointerUp, {
+      capture: true,
+    });
+    document.addEventListener("mouseup", this._onDocMouseUp, {
+      capture: true,
+    });
 
     // Hide native drag image so ONLY our overlay is visible.
     const shim = document.createElement("canvas");
@@ -612,7 +667,7 @@ export class TaskComponent implements OnChanges {
     event.dataTransfer?.setDragImage(shim, 0, 0);
   }
 
-  /** Remove the overlay and detach the document listener. */
+  /** Remove the overlay and detach the document listeners. */
   private cleanupDragOverlay(): void {
     if (this._onDocDragOver) {
       document.removeEventListener("dragover", this._onDocDragOver, {
@@ -626,11 +681,17 @@ export class TaskComponent implements OnChanges {
       } as any);
       this._onDocDragEnd = null;
     }
-    if (this._onDocDrop) {
-      document.removeEventListener("drop", this._onDocDrop, {
+    if (this._onDocDropCapture) {
+      document.removeEventListener("drop", this._onDocDropCapture, {
         capture: true,
       } as any);
-      this._onDocDrop = null;
+      this._onDocDropCapture = null;
+    }
+    if (this._onDocDropBubble) {
+      document.removeEventListener("drop", this._onDocDropBubble, {
+        capture: false,
+      } as any);
+      this._onDocDropBubble = null;
     }
     if (this._onDocKeydown) {
       document.removeEventListener("keydown", this._onDocKeydown, {
@@ -638,6 +699,37 @@ export class TaskComponent implements OnChanges {
       } as any);
       this._onDocKeydown = null;
     }
+    if (this._onWindowBlur) {
+      window.removeEventListener("blur", this._onWindowBlur, {
+        capture: true,
+      } as any);
+      this._onWindowBlur = null;
+    }
+    if (this._onDocVisibilityChange) {
+      document.removeEventListener(
+        "visibilitychange",
+        this._onDocVisibilityChange,
+        { capture: true } as any
+      );
+      this._onDocVisibilityChange = null;
+    }
+    if (this._onWindowPageHide) {
+      window.removeEventListener("pagehide", this._onWindowPageHide as any);
+      this._onWindowPageHide = null;
+    }
+    if (this._onDocPointerUp) {
+      document.removeEventListener("pointerup", this._onDocPointerUp, {
+        capture: true,
+      } as any);
+      this._onDocPointerUp = null;
+    }
+    if (this._onDocMouseUp) {
+      document.removeEventListener("mouseup", this._onDocMouseUp, {
+        capture: true,
+      } as any);
+      this._onDocMouseUp = null;
+    }
+
     if (this._dragOverlayEl?.parentNode) {
       this._dragOverlayEl.parentNode.removeChild(this._dragOverlayEl);
     }

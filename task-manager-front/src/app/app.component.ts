@@ -267,12 +267,18 @@ export class AppComponent implements OnDestroy {
 
   onBoardDrop(event: DragEvent, targetIndex: number): void {
     if (!this.dragDropGlobal.isBoardDrag()) return;
-    const drag = getBoardDragData(event);
-    if (!drag) return;
+
+    // Fallback: on some mobile engines DataTransfer can be empty.
+    const boardId =
+      getBoardDragData(event)?.boardId ??
+      this.dragDropGlobal.currentBoardDrag()?.boardId ??
+      null;
+    if (boardId == null) return;
 
     event.preventDefault();
+
     const current = [...this.boards()];
-    const fromIdx = current.findIndex((b) => b.id === drag.boardId);
+    const fromIdx = current.findIndex((b) => b.id === boardId);
     if (fromIdx === -1) return;
 
     const [moved] = current.splice(fromIdx, 1);
@@ -300,12 +306,18 @@ export class AppComponent implements OnDestroy {
 
   onBoardDropEnd(event: DragEvent): void {
     if (!this.dragDropGlobal.isBoardDrag()) return;
-    const drag = getBoardDragData(event);
-    if (!drag) return;
+
+    // Fallback to global context if DataTransfer is empty.
+    const boardId =
+      getBoardDragData(event)?.boardId ??
+      this.dragDropGlobal.currentBoardDrag()?.boardId ??
+      null;
+    if (boardId == null) return;
 
     event.preventDefault();
+
     const current = [...this.boards()];
-    const fromIdx = current.findIndex((b) => b.id === drag.boardId);
+    const fromIdx = current.findIndex((b) => b.id === boardId);
     if (fromIdx === -1) return;
 
     const [moved] = current.splice(fromIdx, 1);

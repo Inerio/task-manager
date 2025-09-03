@@ -11,14 +11,25 @@
 }
 
 .picker {
+  --pad-x: 1.6rem;
+
   background: var(--surface-1);
   color: var(--text-1);
   border-radius: 14px;
   box-shadow: var(--shadow-3);
   width: min(920px, 92vw);
-  padding: 1.4rem 1.6rem 1rem;
+  max-height: min(88vh, 720px); /* keep dialog within viewport */
+  padding: 1.4rem var(--pad-x) 0.5rem;
+  overflow: auto; /* allow internal scroll on small screens */
   animation: popIn 0.17s cubic-bezier(0.5, 1.2, 0.5, 1.07);
   text-align: center;
+
+  @include bp.md-down {
+    --pad-x: 1rem;
+    width: min(560px, 96vw);
+    border-radius: 12px;
+    padding-top: 1rem;
+  }
 }
 
 .title {
@@ -36,8 +47,14 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.7rem;
 
+  /* Tighter grid under ~980px, then single column on phones. */
   @include bp.down(980px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  @include bp.sm-down {
+    grid-template-columns: 1fr; /* full-width cards on phones */
+    gap: 0.6rem;
   }
 }
 
@@ -45,7 +62,7 @@
   border: 1px solid var(--border-1);
   background: var(--surface-3);
   border-radius: var(--radius-3);
-  padding: 0.7rem 0.6rem;
+  padding: 0.8rem 0.7rem;
   text-align: left;
   cursor: pointer;
   transition: transform 0.14s ease, box-shadow 0.14s ease, border 0.14s ease;
@@ -53,12 +70,25 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  min-height: 112px; /* comfortable touch size */
 
   &:hover {
     transform: translateY(-1px);
     border-color: color-mix(in oklab, var(--brand) 35%, var(--border-1));
     box-shadow: 0 4px 14px 2px
       color-mix(in oklab, var(--brand) 15%, transparent);
+  }
+
+  &:focus-visible {
+    /* Clear, accessible focus */
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 35%, transparent),
+      0 1px 4px #0001;
+  }
+
+  @include bp.sm-down {
+    padding: 0.9rem 0.8rem;
+    gap: 0.5rem;
   }
 }
 
@@ -71,6 +101,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+
+  @include bp.sm-down {
+    gap: 0.3rem;
+  }
 }
 
 .col-pill {
@@ -88,17 +122,26 @@
   color: color-mix(in oklab, var(--text-2) 92%, #0000);
   min-height: 1.2em;
 }
+
 .use {
   margin-top: auto;
   align-self: flex-start;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  font-weight: 600;
   color: var(--brand);
 }
 
+/* Footer actions remain visible while scrolling templates on mobile. */
 .footer {
+  position: sticky; /* keeps the action reachable */
+  bottom: 0;
+  background: var(--surface-1);
+  border-top: 1px solid var(--border-1);
+  margin-inline: calc(-1 * var(--pad-x));
+  padding: 0.6rem var(--pad-x);
+  padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
   display: flex;
   justify-content: center;
-  margin-top: 0.8rem;
 }
 
 .btn-skip {
@@ -106,9 +149,10 @@
   border: none;
   color: #333;
   border-radius: var(--radius-2);
-  padding: 0.4rem 0.8rem;
+  padding: 0.5rem 0.9rem;
   cursor: pointer;
   transition: background 0.18s ease;
+
   &:hover {
     background: #c7c7c7;
   }

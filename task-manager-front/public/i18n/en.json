@@ -30,7 +30,7 @@
     "delete": "Delete board",
     "deleteBoardConfirm": "Delete board \"{{name}}\"? This action cannot be undone.",
     "deleteAll": "Delete all tasks",
-    "deleteAllTitle": "Board deletion",
+    "deleteAllTitle": "Board tasks deletion",
     "deleteAllConfirm": "Are you sure you want to delete all tasks in this board?",
     "columnsAria": "Kanban columns",
     "columns": {

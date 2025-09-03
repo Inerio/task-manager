@@ -30,7 +30,7 @@
     "delete": "Supprimer le tableau",
     "deleteBoardConfirm": "Supprimer le tableau « {{name}} » ? Cette action est irréversible.",
     "deleteAll": "Supprimer toutes les tâches",
-    "deleteAllTitle": "Suppression du tableau",
+    "deleteAllTitle": "Suppression des tâches du tableau",
     "deleteAllConfirm": "Voulez-vous vraiment supprimer toutes les tâches de ce tableau ?",
     "columnsAria": "Colonnes Kanban",
     "columns": {

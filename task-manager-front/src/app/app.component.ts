@@ -6,6 +6,7 @@ import {
   effect,
   ViewChild,
   ElementRef,
+  OnDestroy,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
@@ -52,7 +53,7 @@ interface TempBoard {
     TemplatePickerComponent,
   ],
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
   // ===== Services =====
   private readonly boardService = inject(BoardService);
   private readonly confirmDialog = inject(ConfirmDialogService);
@@ -72,6 +73,13 @@ export class AppComponent {
   // ===== State (signals) =====
   readonly boards = this.boardService.boards; // Signal<Array<BoardLike>>
   readonly selectedBoardId = signal<number | null>(null);
+
+  /** Responsive flag: true when viewport < md (matches SCSS $bp-md). */
+  private readonly _mql = window.matchMedia("(max-width: 768px)");
+  readonly isMdDown = signal<boolean>(this._mql.matches);
+
+  /** Drawer state (used only on mobile/tablet). */
+  readonly sidebarOpen = signal<boolean>(true);
 
   /** Max number of boards allowed in the sidebar. */
   readonly BOARD_LIMIT = 12;
@@ -117,6 +125,9 @@ export class AppComponent {
   constructor() {
     this.boardService.loadBoards();
 
+    // Keep isMdDown reactive with the media query.
+    this._mql.addEventListener("change", this._onMqChange);
+
     // Auto-select the first board once boards are loaded (only if none selected).
     effect(() => {
       const firstId = this.boards()[0]?.id;
@@ -124,6 +135,36 @@ export class AppComponent {
         this.selectedBoardId.set(firstId);
       }
     });
+
+    // Default drawer state depending on viewport and data.
+    // Mobile/tablet: open if no boards or no selection; otherwise closed.
+    // Desktop: always "open" (sidebar is docked).
+    effect(() => {
+      const small = this.isMdDown();
+      const hasBoards = this.boards().length > 0;
+      const selected = this.selectedBoardId();
+      if (!small) {
+        this.sidebarOpen.set(true);
+      } else {
+        this.sidebarOpen.set(!hasBoards || selected === null);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this._mql.removeEventListener("change", this._onMqChange);
+  }
+
+  private readonly _onMqChange = (e: MediaQueryListEvent) => {
+    this.isMdDown.set(e.matches);
+  };
+
+  // ===== Sidebar open/close (mobile/tablet only) =====
+  openSidebar(): void {
+    if (this.isMdDown()) this.sidebarOpen.set(true);
+  }
+  closeSidebar(): void {
+    if (this.isMdDown()) this.sidebarOpen.set(false);
   }
 
   // ===== Sidebar: board selection & inline add =====
@@ -132,6 +173,8 @@ export class AppComponent {
       this.selectedBoardId.set(id);
       this.cancelBoardEdit();
       this.cancelSelectedBoardEdit();
+      // Auto-close drawer after selection on small screens.
+      if (this.isMdDown()) this.sidebarOpen.set(false);
     }
   }
 
@@ -153,6 +196,7 @@ export class AppComponent {
   /**
    * Save new board, then open the Template Picker.
    * If a template is chosen, create its columns via the service.
+   * Drawer auto-closes on mobile *after* creation/template apply.
    */
   saveBoardEdit(): void {
     const name = this.editingBoardValue().trim();
@@ -180,6 +224,9 @@ export class AppComponent {
           );
           this.kanbanColumnService.loadKanbanColumns(newId);
         }
+
+        // Close drawer once creation flow is finished (mobile/tablet).
+        if (this.isMdDown()) this.sidebarOpen.set(false);
       },
       complete: () => this.cancelBoardEdit(),
       error: () => this.cancelBoardEdit(),

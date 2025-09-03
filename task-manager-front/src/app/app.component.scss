@@ -186,7 +186,7 @@
 
 .board-area {
   flex: 1 1 auto;
-  padding: 1.25rem 2.5rem 2.5rem; /* extra bottom space for scrollbar */
+  padding: 1.25rem 2.5rem 2.5rem;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -214,7 +214,8 @@
   }
 
   @include bp.md-down {
-    padding: var(--space-3);
+    /* No side padding on mobile to avoid the “cut” on both edges */
+    padding: var(--space-3) 0 var(--space-3);
   }
 }
 
@@ -238,6 +239,8 @@
   @include bp.md-down {
     margin-bottom: var(--space-3);
     gap: var(--space-3);
+    /* give the header its own breathing room since board-area has no side padding on mobile */
+    padding-inline: var(--space-3);
   }
 
   .sidebar-burger {
@@ -379,8 +382,8 @@
     @include bp.md-down {
       margin-left: 0;
       min-width: 0;
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       padding: 0;
       border-radius: 50%;
       display: inline-grid;
@@ -388,6 +391,12 @@
 
       .delete-all-label {
         display: none;
+      }
+
+      /* keep icon visually balanced in the smaller circle */
+      img {
+        width: 16px;
+        height: 16px;
       }
     }
   }
@@ -402,8 +411,11 @@
     line-height: 1.15;
     box-shadow: 0 2px 12px #0001;
 
+    /* Ensure we override the shared 36x36 size on mobile */
     @include bp.md-down {
-      min-height: 0;
+      width: 32px !important;
+      height: 32px !important;
+      min-height: 0 !important;
       padding: 0 !important;
       border-radius: 50% !important;
       box-shadow: 0 2px 12px #0001;

@@ -60,7 +60,9 @@
     --gap: var(--space-5);
   }
   @include bp.md-down {
-    padding: var(--space-3) var(--space-3);
+    /* Edge-to-edge on mobile: no side padding, keep only vertical */
+    padding-block: var(--space-3);
+    padding-inline: 0;
     --fab-clearance: var(--space-5);
     gap: var(--space-4);
   }

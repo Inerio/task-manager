@@ -3,96 +3,14 @@
 <app-alert></app-alert>
 
 <div class="main-layout" [class.sidebar-open]="isMdDown() && sidebarOpen()">
-  <aside
-    id="app-sidebar"
-    class="sidebar"
-    [class.open]="isMdDown() && sidebarOpen()"
-    [attr.aria-hidden]="isMdDown() ? (!sidebarOpen()).toString() : 'false'"
-  >
-    <!-- Switchers row -->
-    <div class="sidebar-header">
-      <app-language-switcher></app-language-switcher>
-      <app-theme-switcher></app-theme-switcher>
-
-      <!-- Close on mobile/tablet -->
-      <button
-        type="button"
-        class="sidebar-close styled-x-btn"
-        (click)="closeSidebar()"
-        [attr.aria-label]="'common.close' | transloco"
-        title="{{ 'common.close' | transloco }}"
-      >
-        <img src="/svg/x.svg" alt="close" width="16" height="16" />
-      </button>
-    </div>
-
-    <h1 class="tasukeru-title">
-      <span class="tasukeru-main">{{ "app.brand" | transloco }}</span>
-      <span class="tasukeru-sub">{{ "boards.title" | transloco }}</span>
-    </h1>
-
-    <nav
-      class="boards-list"
-      role="list"
-      [attr.aria-label]="'boards.title' | transloco"
-    >
-      @for (board of displayedBoards(); track board.id; let i = $index) { @if
-      (board.id !== null) {
-      <div
-        class="board-item"
-        role="button"
-        tabindex="0"
-        [class.selected]="selectedBoardId() === board.id"
-        [class.drag-over]="dragOverBoardIndex() === i"
-        [attr.aria-current]="selectedBoardId() === board.id ? 'page' : null"
-        [draggable]="editingBoardId() === null"
-        (click)="selectBoard(board.id)"
-        (keydown.enter)="selectBoard(board.id)"
-        (keydown.space)="selectBoard(board.id)"
-        (dragstart)="onBoardDragStart($event, board.id!)"
-        (dragover)="onBoardDragOver($event, i)"
-        (dragleave)="onBoardDragLeave(i)"
-        (drop)="onBoardDrop($event, i)"
-      >
-        {{ board.name }}
-      </div>
-      } @else {
-      <input
-        #newBoardInput
-        class="board-item board-edit-input"
-        type="text"
-        [value]="editingBoardValue()"
-        (input)="onEditBoardInput($event)"
-        (blur)="saveBoardEdit()"
-        (keydown.enter)="saveBoardEdit()"
-        (keydown.escape)="cancelBoardEdit()"
-        required
-        autofocus
-        placeholder="{{ 'boards.namePlaceholder' | transloco }}"
-        role="listitem"
-        [attr.aria-label]="'boards.add' | transloco"
-      />
-      } } @if (canShowAdd()) {
-      <button
-        class="add-board-btn"
-        (click)="addBoard()"
-        [disabled]="editingBoardId() !== null"
-        [attr.aria-label]="'boards.add' | transloco"
-      >
-        {{ "boards.add" | transloco }}
-      </button>
-      }
-
-      <div
-        class="board-dropzone-end"
-        [class.drag-over]="dropEndOver()"
-        (dragover)="onBoardDragOverEnd($event)"
-        (dragleave)="onBoardDragLeaveEnd()"
-        (drop)="onBoardDropEnd($event)"
-        aria-hidden="true"
-      ></div>
-    </nav>
-  </aside>
+  <!-- Sidebar -->
+  <app-board-sidebar
+    [isMdDown]="isMdDown()"
+    [open]="sidebarOpen()"
+    [selectedId]="selectedBoardId()"
+    (boardSelected)="onBoardSelected($event)"
+    (requestClose)="closeSidebar()"
+  ></app-board-sidebar>
 
   <!-- Backdrop (mobile/tablet) -->
   <div
@@ -103,80 +21,13 @@
 
   @if (selectedBoardId() !== null) {
   <section class="board-area">
-    <header class="board-header">
-      <!-- Burger (mobile/tablet) -->
-      <button
-        type="button"
-        class="sidebar-burger"
-        (click)="openSidebar()"
-        [attr.aria-controls]="'app-sidebar'"
-        [attr.aria-label]="'common.openMenu' | transloco"
-        title="{{ 'common.openMenu' | transloco }}"
-      >
-        <span aria-hidden="true"></span>
-      </button>
-
-      <div class="board-title-wrapper">
-        @if (!editingSelectedBoard()) {
-        <h2
-          class="selected-board-title"
-          tabindex="0"
-          (click)="startSelectedBoardEdit()"
-          (keydown.enter)="startSelectedBoardEdit()"
-          (keydown.space)="startSelectedBoardEdit()"
-          [attr.title]="'boards.editTitleHint' | transloco"
-        >
-          <span class="board-title-text">{{ selectedBoardName }}</span>
-          <button
-            class="styled-x-btn"
-            [title]="'boards.delete' | transloco"
-            (click)="deleteSelectedBoard(); $event.stopPropagation()"
-            [attr.aria-label]="'boards.delete' | transloco"
-          >
-            <img
-              src="/svg/x.svg"
-              [attr.alt]="'boards.delete' | transloco"
-              width="18"
-              height="18"
-            />
-          </button>
-        </h2>
-        } @else {
-        <input
-          #editSelectedBoardInput
-          class="selected-board-title-edit"
-          type="text"
-          [value]="editingSelectedBoardValue()"
-          (input)="onEditSelectedBoardInput($event)"
-          (blur)="saveSelectedBoardEdit()"
-          (keydown.enter)="saveSelectedBoardEdit()"
-          (keydown.escape)="cancelSelectedBoardEdit()"
-          maxlength="60"
-          required
-          autofocus
-          placeholder="{{ 'boards.namePlaceholder' | transloco }}"
-          [attr.aria-label]="'boards.namePlaceholder' | transloco"
-        />
-        }
-      </div>
-
-      <button
-        class="delete-btn styled-trash-btn delete-all-btn"
-        (click)="deleteAllTasks()"
-        [title]="'boards.deleteAll' | transloco"
-        [attr.aria-label]="'boards.deleteAll' | transloco"
-      >
-        <img
-          src="/svg/trash.svg"
-          [attr.alt]="'boards.deleteAll' | transloco"
-          width="19"
-          height="19"
-        />
-        <span class="delete-all-label">
-          {{ "boards.deleteAll" | transloco }}
-        </span>
-      </button>
-    </header>
+    <app-board-toolbar
+      [isMdDown]="isMdDown()"
+      [boardId]="selectedBoardId()!"
+      [boardName]="selectedBoardName()"
+      (requestOpenSidebar)="openSidebar()"
+      (boardChangeAfterDelete)="onAfterDelete($event)"
+    ></app-board-toolbar>
 
     <app-board [boardId]="selectedBoardId()!"></app-board>
   </section>

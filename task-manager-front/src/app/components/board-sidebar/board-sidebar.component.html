@@ -1,0 +1,90 @@
+<aside
+  id="app-sidebar"
+  class="sidebar"
+  [class.open]="isMdDown() && open()"
+  [attr.aria-hidden]="isMdDown() ? (!open()).toString() : 'false'"
+>
+  <!-- Switchers row -->
+  <div class="sidebar-header">
+    <app-language-switcher></app-language-switcher>
+    <app-theme-switcher></app-theme-switcher>
+
+    <!-- Close on mobile/tablet -->
+    <button
+      type="button"
+      class="sidebar-close styled-x-btn"
+      (click)="onCloseClicked()"
+      [attr.aria-label]="'common.close' | transloco"
+      title="{{ 'common.close' | transloco }}"
+    >
+      <img src="/svg/x.svg" alt="close" width="16" height="16" />
+    </button>
+  </div>
+
+  <h1 class="tasukeru-title">
+    <span class="tasukeru-main">{{ "app.brand" | transloco }}</span>
+    <span class="tasukeru-sub">{{ "boards.title" | transloco }}</span>
+  </h1>
+
+  <nav
+    class="boards-list"
+    role="list"
+    [attr.aria-label]="'boards.title' | transloco"
+  >
+    @for (board of displayedBoards(); track board.id; let i = $index) { @if
+    (board.id !== null) {
+    <div
+      class="board-item"
+      role="button"
+      tabindex="0"
+      [class.selected]="selectedId() === board.id"
+      [class.drag-over]="dragOverBoardIndex() === i"
+      [attr.aria-current]="selectedId() === board.id ? 'page' : null"
+      [draggable]="editingBoardId() === null"
+      (click)="selectBoard(board.id)"
+      (keydown.enter)="selectBoard(board.id)"
+      (keydown.space)="selectBoard(board.id)"
+      (dragstart)="onBoardDragStart($event, board.id!)"
+      (dragover)="onBoardDragOver($event, i)"
+      (dragleave)="onBoardDragLeave(i)"
+      (drop)="onBoardDrop($event, i)"
+    >
+      {{ board.name }}
+    </div>
+    } @else {
+    <input
+      #newBoardInput
+      class="board-item board-edit-input"
+      type="text"
+      [value]="editingBoardValue()"
+      (input)="onEditBoardInput($event)"
+      (blur)="saveBoardEdit()"
+      (keydown.enter)="saveBoardEdit()"
+      (keydown.escape)="cancelBoardEdit()"
+      required
+      autofocus
+      placeholder="{{ 'boards.namePlaceholder' | transloco }}"
+      role="listitem"
+      [attr.aria-label]="'boards.add' | transloco"
+    />
+    } } @if (canShowAdd()) {
+    <button
+      class="add-board-btn"
+      (click)="addBoard()"
+      [disabled]="editingBoardId() !== null"
+      [attr.aria-label]="'boards.add' | transloco"
+    >
+      {{ "boards.add" | transloco }}
+    </button>
+    }
+
+    <div
+      class="board-dropzone-end"
+      [class.drag-over]="dropEndOver()"
+      (dragover)="onBoardDragOverEnd($event)"
+      (dragleave)="onBoardDragLeaveEnd()"
+      (drop)="onBoardDropEnd($event)"
+      aria-hidden="true"
+    ></div>
+  </nav>
+</aside>

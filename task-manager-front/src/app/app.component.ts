@@ -1,8 +1,6 @@
 import {
   Component,
   OnDestroy,
-  ViewChild,
-  ElementRef,
   inject,
   signal,
   computed,

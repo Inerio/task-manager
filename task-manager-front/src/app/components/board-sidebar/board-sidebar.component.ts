@@ -2,7 +2,6 @@ import { CommonModule } from "@angular/common";
 import {
   Component,
   ElementRef,
-  EventEmitter,
   ViewChild,
   computed,
   inject,

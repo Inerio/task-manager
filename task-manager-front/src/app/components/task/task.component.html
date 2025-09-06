@@ -5,6 +5,7 @@
   [appTaskPulseTaskId]="localTask().id ?? null"
   [appTaskPulseGhost]="ghost"
   [appTaskPulseDeferWhile]="dragging()"
+  [ensureVisible]="localTask().isEditing === true"
   [class.has-badge]="hasDue()"
   [class.completed]="localTask().completed"
   [class.dragging]="dragging()"

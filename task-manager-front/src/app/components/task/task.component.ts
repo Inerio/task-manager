@@ -31,6 +31,7 @@ import { UPLOAD_CONFIG } from "../../tokens/upload.config";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { TaskDueBadgeComponent } from "../task-due-badge/task-due-badge.component";
 import { TaskPulseDirective } from "./task-pulse.directive";
+import { EnsureVisibleDirective } from "./ensure-visible.directive";
 
 @Component({
   selector: "app-task",
@@ -42,6 +43,7 @@ import { TaskPulseDirective } from "./task-pulse.directive";
     TaskFormComponent,
     TaskDueBadgeComponent,
     TaskPulseDirective,
+    EnsureVisibleDirective,
   ],
   templateUrl: "./task.component.html",
   styleUrls: ["./task.component.scss"],
@@ -104,11 +106,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
   readonly showFullDescription = signal(false);
 
   constructor() {
-    // When a task switches to edit mode, ensure the whole form is visible.
-    effect(() => {
-      if (this.localTask().isEditing) this.scheduleEnsureCardVisible();
-    });
-
     // Hard safety: if global task drag stops for any reason, remove any leftover overlay.
     effect(() => {
       if (!this.dragDropGlobal.isTaskDrag()) this.cleanupDragOverlay();
@@ -174,33 +171,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
     this.cleanupDragOverlay();
   }
 
-  // === Ensure the edit form is fully visible ===
-  private ensureCardFullyVisible(): void {
-    const el = this.cardEl?.nativeElement;
-    if (!el) return;
-
-    const rect = el.getBoundingClientRect();
-    const vpH = window.innerHeight || document.documentElement.clientHeight;
-
-    const TOP_MARGIN = 8;
-    const BOTTOM_SAFE = 0;
-
-    let dy = 0;
-    if (rect.top < TOP_MARGIN) {
-      dy = rect.top - TOP_MARGIN;
-    } else if (rect.bottom > vpH - BOTTOM_SAFE) {
-      dy = rect.bottom - (vpH - BOTTOM_SAFE);
-    }
-
-    if (dy !== 0) window.scrollBy({ top: dy, behavior: "smooth" });
-  }
-
-  private scheduleEnsureCardVisible(): void {
-    // Simple spaced retries to cover transitions.
-    const runs = [0, 80, 160, 260, 360] as const;
-    runs.forEach((t) => setTimeout(() => this.ensureCardFullyVisible(), t));
-  }
-
   // === Drag & drop handlers (for the dragged card itself) ===
   onTaskDragStart(event: DragEvent): void {
     if (this.ghost || this.localTask().isEditing) {
@@ -235,7 +205,7 @@ export class TaskComponent implements OnChanges, OnDestroy {
   // === CRUD & editing (delegated to TaskForm) ===
   startEdit(): void {
     this.patchLocalTask({ isEditing: true });
-    this.scheduleEnsureCardVisible();
+    // Visibility handled by [ensureVisible] on the host.
   }
 
   async saveEdit(payload: TaskWithPendingFiles): Promise<void> {

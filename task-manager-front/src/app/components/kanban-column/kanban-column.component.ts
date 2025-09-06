@@ -6,12 +6,13 @@ import {
   Input,
   signal,
   type Signal,
-  effect,
+  runInInjectionContext,
   ViewChild,
   afterNextRender,
   Injector,
-  runInInjectionContext,
   ElementRef,
+  OnChanges,
+  SimpleChanges,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
@@ -20,12 +21,12 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { DragDropGlobalService } from "../../services/drag-drop-global.service";
 import { TaskComponent } from "../task/task.component";
 import { TaskFormComponent } from "../task-form/task-form.component";
-import { getTaskDragData, isFileDragEvent } from "../../utils/drag-drop-utils";
 import { AttachmentService } from "../../services/attachment.service";
+import { KanbanColumnDndService } from "../../services/kanban-column-dnd.service";
 
 /**
- * Kanban column with inter-task dropzones ("slices").
- * Cards are not drop targets → no flicker; preview appears exactly under cursor.
+ * Kanban column (UI + form). Pure DnD logic is delegated to KanbanColumnDndService.
+ * Behavior is 1:1 with the previous monolithic component.
  */
 @Component({
   selector: "app-kanban-column",
@@ -33,8 +34,9 @@ import { AttachmentService } from "../../services/attachment.service";
   imports: [CommonModule, TranslocoModule, TaskComponent, TaskFormComponent],
   templateUrl: "./kanban-column.component.html",
   styleUrls: ["./kanban-column.component.scss"],
+  providers: [KanbanColumnDndService],
 })
-export class KanbanColumnComponent {
+export class KanbanColumnComponent implements OnChanges {
   // ===== Inputs =====
   @Input({ required: true }) title!: string;
   @Input({ required: true }) kanbanColumnId!: number;
@@ -43,7 +45,7 @@ export class KanbanColumnComponent {
   // ===== Child refs =====
   @ViewChild(TaskFormComponent) private taskForm?: TaskFormComponent;
   @ViewChild("scrollHost", { static: true })
-  private scrollHost?: ElementRef<HTMLElement>; // vertical autoscroll container
+  private scrollHost?: ElementRef<HTMLElement>;
 
   // ===== Injections =====
   private readonly taskService = inject(TaskService);
@@ -53,30 +55,14 @@ export class KanbanColumnComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly injector = inject(Injector);
 
-  // ===== UI state =====
+  /** Local DnD service (scoped to this column instance). */
+  readonly dnd = inject(KanbanColumnDndService);
+
+  // ===== UI state (non-DnD) =====
   readonly showForm = signal(false);
   readonly editingTask = signal<null | Task>(null);
-  readonly dragOverIndex = signal<number | null>(null);
-  readonly hoveredZoneIndex = signal<number | null>(null);
 
-  /** Animate placeholder only on first entry from another column. */
-  readonly animateOnEnter = signal(false);
-
-  // ===== Derived =====
-  readonly isTaskDragActive = computed(() => this.dragDropGlobal.isTaskDrag());
-
-  /** The dragged task object (for ghost preview). */
-  readonly ghostTask = computed<Task | null>(() => {
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    if (!ctx) return null;
-    const all = this.taskService.tasks();
-    return all.find((t) => t.id === ctx.taskId) ?? null;
-  });
-
-  /** Guard to differentiate true leave vs. bubbling from children. */
-  private columnEnterCount = 0;
-
-  /** Tasks for this column, sorted by position. */
+  // Keep a direct ref for trackBy (no behavior change)
   readonly filteredTasks: Signal<Task[]> = computed(() =>
     this.taskService
       .tasks()
@@ -84,65 +70,17 @@ export class KanbanColumnComponent {
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
   );
 
-  /**
-   * Visible order during dragover. We reorder *only* for same-column drags,
-   * so cards already shift into their final position before drop.
-   * (When dragging from another column, the placeholder alone is enough.)
-   */
-  readonly displayedTasks: Signal<Task[]> = computed(() => {
-    const base = this.filteredTasks();
-    const zone = this.dragOverIndex();
-    if (zone == null) return base;
-
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    if (!ctx || ctx.columnId !== this.kanbanColumnId) return base;
-
-    const fromIdx = base.findIndex((t) => t.id === ctx.taskId);
-    if (fromIdx === -1) return base;
-
-    const insertAt = this.computeInsertIndex(zone, ctx.columnId, ctx.taskId);
-    if (insertAt === fromIdx) return base;
-
-    const copy = base.slice();
-    const [dragged] = copy.splice(fromIdx, 1);
-    // Clamp to bounds; defensive in case of transient indices.
-    const clamped = Math.max(0, Math.min(insertAt, copy.length));
-    copy.splice(clamped, 0, dragged);
-    return copy;
-  });
-
-  /** Placeholder height uses drag preview size when available. */
-  readonly placeholderHeight = computed(() => {
-    const size = this.dragDropGlobal.taskDragPreviewSize();
-    return Math.max(48, Math.round(size?.height ?? 72));
-  });
-
-  // ===== Effects =====
   constructor() {
-    // Clear preview when the drag ends globally.
-    effect(() => {
-      if (!this.isTaskDragActive()) {
-        this.stopAutoScrollLoop();
-        this.dragOverIndex.set(null);
-        this.hoveredZoneIndex.set(null);
-        this.columnEnterCount = 0;
-        this.animateOnEnter.set(false);
-      }
-    });
+    // Attach the scroll host for autoscroll once the view is ready.
+    afterNextRender(() =>
+      this.dnd.attachScrollHost(this.scrollHost?.nativeElement ?? null)
+    );
+  }
 
-    // Ensure only ONE column shows a placeholder at any time.
-    // If another column becomes hovered, immediately clear this one.
-    effect(() => {
-      if (!this.isTaskDragActive()) return;
-      const hoveredCol = this.dragDropGlobal.hoveredTaskColumnId();
-      if (hoveredCol !== this.kanbanColumnId && this.dragOverIndex() !== null) {
-        this.stopAutoScrollLoop();
-        this.dragOverIndex.set(null);
-        this.hoveredZoneIndex.set(null);
-        this.animateOnEnter.set(false);
-        this.columnEnterCount = 0;
-      }
-    });
+  ngOnChanges(changes: SimpleChanges): void {
+    if ("kanbanColumnId" in changes && this.kanbanColumnId != null) {
+      this.dnd.setColumnId(this.kanbanColumnId);
+    }
   }
 
   // ===== Form actions =====
@@ -229,304 +167,8 @@ export class KanbanColumnComponent {
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
-  // ===== DnD: column-level enter/leave =====
-  onColumnDragEnter(_: DragEvent): void {
-    if (!this.dragDropGlobal.isTaskDrag()) return;
-    this.columnEnterCount++;
-    // Inform global "hovered column" as early as possible.
-    this.dragDropGlobal.setTaskHoverColumn(this.kanbanColumnId);
-  }
-
-  onColumnDragLeave(_: DragEvent): void {
-    if (!this.dragDropGlobal.isTaskDrag()) return;
-    this.columnEnterCount = Math.max(0, this.columnEnterCount - 1);
-    if (this.columnEnterCount === 0) {
-      this.stopAutoScrollLoop();
-      this.dragOverIndex.set(null);
-      this.hoveredZoneIndex.set(null);
-      this.animateOnEnter.set(false);
-    }
-  }
-
-  // ===== DnD: inter-task slices =====
-  /**
-   * Dragging over a slice (top/bottom half of a card, or head/tail).
-   * IMPORTANT: rely on global drag state, not custom DT during dragover.
-   */
-  onSliceDragOver(event: DragEvent, zoneIndex: number): void {
-    if (!this.dragDropGlobal.isTaskDrag()) return;
-
-    // Ignore real file drags.
-    if (isFileDragEvent(event)) return;
-
-    // Improve cursor/UX.
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-
-    // This column is the active hover owner now.
-    this.dragDropGlobal.setTaskHoverColumn(this.kanbanColumnId);
-
-    // If hovering the dragged card's own edges, suppress preview/animation.
-    if (this.isSelfEdge(zoneIndex)) {
-      event.preventDefault();
-      this.hoveredZoneIndex.set(null);
-      this.dragOverIndex.set(null);
-      this.animateOnEnter.set(false);
-      // also stop autoscroll when there's no active slice
-      this.lastDragY = event.clientY;
-      this.updateAutoScrollDirection();
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    // Animate only when entering this column from another one (first time).
-    const firstInColumn = this.dragOverIndex() === null;
-    if (firstInColumn) {
-      const ctx = this.dragDropGlobal.currentTaskDrag();
-      const isForeign = !!ctx && ctx.columnId !== this.kanbanColumnId;
-      this.animateOnEnter.set(isForeign);
-      if (isForeign) {
-        // Let the first render use ".open", then disable for subsequent moves.
-        setTimeout(() => this.animateOnEnter.set(false), 0);
-      }
-    }
-
-    this.hoveredZoneIndex.set(zoneIndex);
-    this.dragOverIndex.set(zoneIndex);
-
-    // === Vertical auto-scroll near top/bottom edges ===
-    this.lastDragY = event.clientY;
-    this.updateAutoScrollDirection();
-  }
-
-  async onSliceDrop(event: DragEvent, zoneIndex: number): Promise<void> {
-    if (isFileDragEvent(event)) return;
-
-    if (this.isSelfEdge(zoneIndex)) {
-      event.preventDefault();
-      this.stopAutoScrollLoop();
-      this.hoveredZoneIndex.set(null);
-      this.dragOverIndex.set(null);
-      this.animateOnEnter.set(false);
-      // End the drag explicitly to make sure overlays are cleared fast.
-      this.dragDropGlobal.endDrag();
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    // Prefer global context (source of truth); fallback to DT for resilience.
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    const fromColumnId =
-      ctx?.columnId ?? getTaskDragData(event)?.kanbanColumnId ?? null;
-    const taskId = ctx?.taskId ?? getTaskDragData(event)?.taskId ?? null;
-    if (fromColumnId == null || taskId == null) return;
-
-    const insertAt = this.computeInsertIndex(zoneIndex, fromColumnId, taskId);
-    await this.onTaskDrop(event, insertAt);
-
-    // Ensure global drag state is cleared even on very fast drops.
-    this.stopAutoScrollLoop();
-    this.dragDropGlobal.endDrag();
-  }
-
-  // ===== Template utils =====
+  // ===== Template utils kept local (no behavior change) =====
   trackById(_index: number, task: Task): number | undefined {
     return task.id;
-  }
-
-  sliceIsActive(zoneIndex: number): boolean {
-    return this.hoveredZoneIndex() === zoneIndex;
-  }
-
-  // ===== Private helpers =====
-  private computeInsertIndex(
-    zoneIndex: number,
-    fromColumnId: number,
-    taskId: number
-  ): number {
-    if (fromColumnId !== this.kanbanColumnId) return zoneIndex;
-    const arr = this.filteredTasks();
-    const fromIdx = arr.findIndex((t) => t.id === taskId);
-    if (fromIdx === -1) return zoneIndex;
-    return zoneIndex > fromIdx ? zoneIndex - 1 : zoneIndex;
-  }
-
-  private async onTaskDrop(
-    event: DragEvent,
-    targetIndex: number
-  ): Promise<void> {
-    event.preventDefault();
-
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    const dtData = getTaskDragData(event);
-    const taskId = ctx?.taskId ?? dtData?.taskId ?? null;
-    const fromColumnId = ctx?.columnId ?? dtData?.kanbanColumnId ?? null;
-    if (taskId == null || fromColumnId == null) return;
-
-    const allTasks = this.taskService.tasks();
-    const draggedTask = allTasks.find((t) => t.id === taskId);
-    if (!draggedTask) return;
-
-    // Same-column reorder (optimistic + fast feedback).
-    if (fromColumnId === this.kanbanColumnId) {
-      const columnTasks = [...this.filteredTasks()];
-      const fromIdx = columnTasks.findIndex((t) => t.id === taskId);
-      if (fromIdx === -1) return;
-
-      if (targetIndex === fromIdx) {
-        // no-op drop on own edge
-        this.dragOverIndex.set(null);
-        this.hoveredZoneIndex.set(null);
-        this.animateOnEnter.set(false);
-        return;
-      }
-
-      columnTasks.splice(fromIdx, 1);
-      const insertAt = Math.max(0, Math.min(targetIndex, columnTasks.length));
-      columnTasks.splice(insertAt, 0, draggedTask);
-
-      const reordered = columnTasks.map((t, idx) => ({ ...t, position: idx }));
-
-      // Give feedback immediately; don't wait for the network.
-      this.dragDropGlobal.markTaskDropped(taskId);
-
-      // Clear local hover state right away (prevents flicker).
-      this.dragOverIndex.set(null);
-      this.hoveredZoneIndex.set(null);
-      this.animateOnEnter.set(false);
-
-      // Optimistic update: sets local signal synchronously, then persists.
-      void this.taskService.reorderTasks(reordered).catch(() => {});
-      return;
-    }
-
-    // Cross-column move (optimistic state + concurrent persistence).
-    const sourceTasks = allTasks.filter(
-      (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
-    );
-    const targetTasks = [...this.filteredTasks()];
-
-    // Optimistically change the column of the dragged task.
-    const newTask = { ...draggedTask, kanbanColumnId: this.kanbanColumnId };
-    const clamped = Math.max(0, Math.min(targetIndex, targetTasks.length));
-    targetTasks.splice(clamped, 0, newTask);
-
-    const reorderedSource = sourceTasks.map((t, idx) => ({
-      ...t,
-      position: idx,
-    }));
-    const reorderedTarget = targetTasks.map((t, idx) => ({
-      ...t,
-      position: idx,
-    }));
-
-    // Instant visual confirmation.
-    this.dragDropGlobal.markTaskDropped(taskId);
-
-    // Clear hover state immediately to remove placeholder.
-    this.dragOverIndex.set(null);
-    this.hoveredZoneIndex.set(null);
-    this.animateOnEnter.set(false);
-
-    // Optimistic UI + fewer roundtrips:
-    // - Reordering pushes local state instantly (TaskService updates the signal before the HTTP call).
-    // - Column change is persisted in parallel.
-    await Promise.allSettled([
-      this.taskService.reorderTasks([...reorderedSource, ...reorderedTarget]),
-      this.taskService.updateTask(newTask.id!, newTask),
-    ]);
-  }
-
-  /** True if the hovered zone equals the dragged card own edges (no-op move). */
-  private isSelfEdge(zoneIndex: number): boolean {
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
-
-    const arr = this.filteredTasks();
-    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
-    if (fromIdx === -1) return false;
-
-    return zoneIndex === fromIdx || zoneIndex === fromIdx + 1;
-  }
-
-  /** Hide slices that match the dragged card own edges (remove no-op targets). */
-  suppressZone(zoneIndex: number): boolean {
-    const ctx = this.dragDropGlobal.currentTaskDrag();
-    if (!ctx || ctx.columnId !== this.kanbanColumnId) return false;
-    const arr = this.filteredTasks();
-    const fromIdx = arr.findIndex((t) => t.id === ctx.taskId);
-    return (
-      fromIdx !== -1 && (zoneIndex === fromIdx || zoneIndex === fromIdx + 1)
-    );
-  }
-
-  // ===== Auto-scroll (vertical) =====
-  private autoScrollFrame: number | null = null;
-  private autoScrollDir: -1 | 0 | 1 = 0;
-  private lastDragY = 0;
-
-  /** Compute desired scroll direction from last cursor Y and start/stop loop. */
-  private updateAutoScrollDirection(): void {
-    const host = this.scrollHost?.nativeElement;
-    if (!host) return;
-
-    const rect = host.getBoundingClientRect();
-    const threshold = 64; // px from top/bottom to trigger
-    const y = this.lastDragY;
-
-    let dir: -1 | 0 | 1 = 0;
-    const canUp = host.scrollTop > 0;
-    const canDown = host.scrollTop + host.clientHeight < host.scrollHeight;
-
-    if (y - rect.top < threshold && canUp) dir = -1;
-    else if (rect.bottom - y < threshold && canDown) dir = 1;
-
-    if (dir !== this.autoScrollDir) {
-      this.autoScrollDir = dir;
-      if (dir === 0) this.stopAutoScrollLoop();
-      else this.startAutoScrollLoop();
-    }
-  }
-
-  private startAutoScrollLoop(): void {
-    if (this.autoScrollFrame != null) return;
-
-    const step = () => {
-      const host = this.scrollHost?.nativeElement;
-      if (!host || this.autoScrollDir === 0) {
-        this.stopAutoScrollLoop();
-        return;
-      }
-
-      // Speed grows as cursor approaches the edge.
-      const rect = host.getBoundingClientRect();
-      const threshold = 64;
-      const y = this.lastDragY;
-      const edgeDist =
-        this.autoScrollDir < 0
-          ? Math.max(0, y - rect.top)
-          : Math.max(0, rect.bottom - y);
-      const ratio = Math.max(
-        0,
-        Math.min(1, (threshold - edgeDist) / threshold)
-      );
-      const delta = 4 + Math.round(ratio * 16); // 4..20 px per frame
-
-      host.scrollTop += this.autoScrollDir * delta;
-      this.autoScrollFrame = requestAnimationFrame(step);
-    };
-
-    this.autoScrollFrame = requestAnimationFrame(step);
-  }
-
-  private stopAutoScrollLoop(): void {
-    if (this.autoScrollFrame != null) {
-      cancelAnimationFrame(this.autoScrollFrame);
-      this.autoScrollFrame = null;
-    }
-    this.autoScrollDir = 0;
   }
 }

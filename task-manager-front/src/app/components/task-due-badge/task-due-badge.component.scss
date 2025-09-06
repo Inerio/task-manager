@@ -1,0 +1,40 @@
+.due-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 11;
+  padding-right: 2.6rem;
+}
+
+.due-badge {
+  background: var(--surface-2);
+  color: #1a283d;
+  font-size: 0.73rem;
+  font-weight: 600;
+  padding: 0.09em 0.6em;
+  border-radius: 10px;
+  box-shadow: 0 0 2px #bbb;
+  border: 1px solid #e2e6f3;
+  pointer-events: none;
+  line-height: 1.5;
+
+  &.late {
+    background: #ffeaea;
+    color: #d32f2f;
+    font-weight: bold;
+    border: 1.1px solid #d32f2f;
+  }
+}
+
+.due-date {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #757b88;
+  background: none;
+  margin-left: 0.18em;
+  user-select: text;
+  letter-spacing: 0.01em;
+}

@@ -1,0 +1,8 @@
+@if (badgeText()) {
+<div class="due-row">
+  <span class="due-badge" [class.late]="isLate()">{{ badgeText() }}</span>
+  @if (formattedDate()) {
+  <span class="due-date">{{ formattedDate() }}</span>
+  }
+</div>
+}

@@ -17,7 +17,6 @@ import type {
 } from "@angular/core";
 
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
-import { toSignal } from "@angular/core/rxjs-interop";
 
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
 import { LinkifyPipe } from "../../pipes/linkify.pipe";
@@ -30,6 +29,7 @@ import { setTaskDragData } from "../../utils/drag-drop-utils";
 import { TaskFormComponent } from "../task-form/task-form.component";
 import { UPLOAD_CONFIG } from "../../tokens/upload.config";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
+import { TaskDueBadgeComponent } from "../task-due-badge/task-due-badge.component";
 
 @Component({
   selector: "app-task",
@@ -39,6 +39,7 @@ import { ConfirmDialogService } from "../../services/confirm-dialog.service";
     LinkifyPipe,
     AttachmentZoneComponent,
     TaskFormComponent,
+    TaskDueBadgeComponent,
   ],
   templateUrl: "./task.component.html",
   styleUrls: ["./task.component.scss"],
@@ -61,11 +62,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
   private readonly uploadCfg = inject(UPLOAD_CONFIG);
   private readonly i18n = inject(TranslocoService);
   private readonly confirmDialog = inject(ConfirmDialogService);
-
-  /** React to Transloco language changes as a signal (hot reactivity). */
-  private readonly lang = toSignal(this.i18n.langChanges$, {
-    initialValue: this.i18n.getActiveLang(),
-  });
 
   // === Local state ===
   readonly localTask: WritableSignal<Task> = signal({} as Task);
@@ -173,8 +169,15 @@ export class TaskComponent implements OnChanges, OnDestroy {
   }
 
   // === Computed (truncate) ===
+  /** True if the task has a valid due date (drives top padding + title width). */
+  readonly hasDue = computed<boolean>(() => {
+    const raw = this.localTask().dueDate;
+    if (!raw) return false;
+    return !!this.parseLocalISO(raw);
+  });
+
   readonly titleTruncateLength = computed(() =>
-    this.dueBadge() ? this.TITLE_TRUNCATE_WITH_BADGE : this.TITLE_TRUNCATE_BASE
+    this.hasDue() ? this.TITLE_TRUNCATE_WITH_BADGE : this.TITLE_TRUNCATE_BASE
   );
 
   readonly displayedTitle = computed(() => {
@@ -263,7 +266,7 @@ export class TaskComponent implements OnChanges, OnDestroy {
     // Force a reflow so removing the class is flushed before re-adding.
     const el = this.cardEl?.nativeElement;
     if (el) {
-      el.classList.remove("dropped-pulse"); // safety: in case binding hasn't flushed yet
+      el.classList.remove("dropped-pulse"); // safety
       void el.offsetWidth; // reflow
     }
 
@@ -455,7 +458,7 @@ export class TaskComponent implements OnChanges, OnDestroy {
     }
   }
 
-  // ===== DUE BADGE + DATE (language-reactive) =====
+  // ===== Date helpers =====
 
   /** Parse YYYY-MM-DD as a *local* date (avoid TZ shifts). */
   private parseLocalISO(iso: string): Date | null {
@@ -466,61 +469,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
     dt.setHours(0, 0, 0, 0);
     return dt;
   }
-
-  /** Compute day difference (due - today), or null if unavailable. */
-  private computeDueDiffDays(): number | null {
-    const dueRaw = this.localTask().dueDate;
-    if (!dueRaw) return null;
-
-    const dueDate = this.parseLocalISO(dueRaw);
-    if (!dueDate) return null;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return Math.ceil(
-      (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
-  }
-
-  /** Localized badge text that recomputes when the language changes. */
-  readonly dueBadge = computed(() => {
-    // Recompute when language changes.
-    this.lang();
-
-    const diffDays = this.computeDueDiffDays();
-    if (diffDays == null) return null;
-
-    if (diffDays < 0) return this.i18n.translate("task.due.late");
-    if (diffDays === 0) return this.i18n.translate("task.due.today");
-    if (diffDays === 1) return this.i18n.translate("task.due.oneDay");
-    return this.i18n.translate("task.due.nDays", { count: diffDays });
-  });
-
-  /** True if due date is in the past (separate from i18n). */
-  readonly isDueLate = computed(() => {
-    const diff = this.computeDueDiffDays();
-    return diff != null && diff < 0;
-  });
-
-  /** Localized due date text (en: month/day/year, fr: day/month/year). */
-  readonly formattedDueDate = computed(() => {
-    const lang = (this.lang() as string) || "en";
-
-    const raw = this.localTask().dueDate;
-    if (!raw) return null;
-
-    const date = this.parseLocalISO(raw);
-    if (!date) return null;
-
-    const locale = lang.startsWith("fr") ? "fr-FR" : "en-US";
-    // Use short month + 2-digit day for compact badge row.
-    return new Intl.DateTimeFormat(locale, {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-    }).format(date);
-  });
 
   // ===== DnD helpers =====
 

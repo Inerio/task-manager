@@ -1,7 +1,7 @@
 <div
   #cardEl
   class="task-card"
-  [class.has-badge]="dueBadge()"
+  [class.has-badge]="hasDue()"
   [class.completed]="localTask().completed"
   [class.dragging]="dragging()"
   [class.editing]="localTask().isEditing"
@@ -13,7 +13,7 @@
   <!-- ==== READ-ONLY MODE ==== -->
   @if (!localTask().isEditing) {
   <div class="task-content-readonly">
-    @if (!dueBadge()) {
+    @if (!hasDue()) {
     <div class="task-title-row">
       <h4
         [innerHTML]="displayedTitle() | linkify"
@@ -38,14 +38,7 @@
       />
     </div>
     } @else {
-    <div class="due-row">
-      <span class="due-badge" [class.late]="isDueLate()">
-        {{ dueBadge() }}
-      </span>
-      @if (formattedDueDate()) {
-      <span class="due-date">{{ formattedDueDate() }}</span>
-      }
-    </div>
+    <app-task-due-badge [dueDate]="localTask().dueDate"></app-task-due-badge>
     <input
       type="checkbox"
       class="task-checkbox-icon"

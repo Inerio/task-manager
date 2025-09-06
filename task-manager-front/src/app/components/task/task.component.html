@@ -1,11 +1,14 @@
 <div
   #cardEl
   class="task-card"
+  appTaskPulse
+  [appTaskPulseTaskId]="localTask().id ?? null"
+  [appTaskPulseGhost]="ghost"
+  [appTaskPulseDeferWhile]="dragging()"
   [class.has-badge]="hasDue()"
   [class.completed]="localTask().completed"
   [class.dragging]="dragging()"
   [class.editing]="localTask().isEditing"
-  [class.dropped-pulse]="droppedPulse()"
   draggable="true"
   (dragstart)="onTaskDragStart($event)"
   (dragend)="onTaskDragEnd()"

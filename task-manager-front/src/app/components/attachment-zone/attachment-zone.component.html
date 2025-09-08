@@ -4,9 +4,10 @@
     attachments.length || (creationMode && pendingFiles.length)
   "
   [class.drag-over]="isDragging()"
-  (drop)="onFileDrop($event)"
-  (dragover)="onDragOver($event)"
-  (dragleave)="onDragLeave()"
+  appDropzone
+  [dzAccept]="acceptTypes"
+  (dzFiles)="onFilesSelected($event)"
+  (dzStateChange)="isDragging.set($event)"
   (pointerdown)="onZonePointerDown($event)"
   (mousedown)="onZoneMouseDown($event)"
   (mouseup)="onZoneMouseUp($event)"

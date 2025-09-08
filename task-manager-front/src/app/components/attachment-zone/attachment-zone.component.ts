@@ -11,11 +11,11 @@ import {
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertService } from "../../services/alert.service";
-import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { PreviewHoverDirective } from "./preview-hover.directive";
 import { ImagePreviewPopoverComponent } from "./image-preview-popover.component";
 import { FileSelectionService } from "../../services/file-selection.service";
+import { DropzoneDirective } from "./dropzone.directive";
 
 /** Minimal local types to avoid `any` while staying framework-agnostic. */
 type FSFileHandle = { getFile(): Promise<File> };
@@ -31,6 +31,7 @@ type OpenFilePickerOptions = {
  * Preview hover is delegated to PreviewHoverDirective.
  * Popover rendering is isolated in ImagePreviewPopoverComponent.
  * File selection/validation is centralized in FileSelectionService.
+ * Drag & drop is delegated to DropzoneDirective.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -42,6 +43,7 @@ type OpenFilePickerOptions = {
     TranslocoModule,
     PreviewHoverDirective,
     ImagePreviewPopoverComponent,
+    DropzoneDirective,
   ],
 })
 export class AttachmentZoneComponent {
@@ -161,26 +163,13 @@ export class AttachmentZoneComponent {
     this.dialogOpen.emit(false);
   }
 
-  // ===== Drag & drop =====
-  onDragOver(event: DragEvent): void {
-    if (!isFileDragEvent(event)) return;
-    event.preventDefault();
-    this.isDragging.set(true);
-  }
-  onDragLeave(): void {
-    this.isDragging.set(false);
-  }
-  onFileDrop(event: DragEvent): void {
-    if (!isFileDragEvent(event)) return;
-    event.preventDefault();
-    const files = event.dataTransfer?.files;
-    if (files?.length) {
-      this.handleSelectionWithAlerts(Array.from(files));
-    }
-    this.isDragging.set(false);
+  // ===== Dropzone integration =====
+  onFilesSelected(files: File[]): void {
+    if (!files?.length) return;
+    this.handleSelectionWithAlerts(files);
   }
 
-  // ===== Common selection handling (now centralized) =====
+  // ===== Common selection handling (centralized) =====
   private handleSelectionWithAlerts(selectedFiles: File[]): void {
     const existing = [
       ...this.attachments,

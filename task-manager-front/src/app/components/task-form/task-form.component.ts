@@ -17,6 +17,7 @@ import type {
   OnChanges,
   SimpleChanges,
   OnDestroy,
+  Signal,
 } from "@angular/core";
 
 import {
@@ -29,11 +30,10 @@ import { TranslocoModule } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../models/task.model";
 import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.component";
 import { EmojiPickerComponent } from "../emoji-picker/emoji-picker.component";
-import { AttachmentService } from "../../services/attachment.service";
-import { TaskService } from "../../services/task.service";
 import { StopBubblingDirective } from "./stop-bubbling.directive";
 import { ClickOutsideDirective } from "./click-outside.directive";
 import { NativeDialogGuardService } from "../../services/native-dialog-guard.service";
+import { TaskAttachmentsFacade } from "../../services/task-attachments.facade";
 
 @Component({
   selector: "app-task-form",
@@ -77,8 +77,7 @@ export class TaskFormComponent
   // ===== Injections / form =====
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly guard = inject(NativeDialogGuardService);
-  private readonly attachmentService = inject(AttachmentService);
-  private readonly taskService = inject(TaskService);
+  private readonly attachments = inject(TaskAttachmentsFacade);
 
   readonly form = this.fb.group({
     title: this.fb.control<string>("", { validators: [Validators.required] }),
@@ -101,14 +100,14 @@ export class TaskFormComponent
     isEditing: false,
   };
 
-  /** Buffer of files to upload after creation only. */
-  readonly pendingFiles: WritableSignal<File[]> = signal([]);
-
   /** Local working copy of the task (id, attachments, etc.). */
   readonly localTask: WritableSignal<Partial<Task>> = signal({
     ...this.emptyTask,
     ...this.task,
   });
+
+  /** Expose buffered files from the facade to the template. */
+  readonly pendingFiles: Signal<File[]> = this.attachments.pendingFiles();
 
   /** True when the browser is Brave (used to hide attachment zone). */
   readonly isBrave = signal(false);
@@ -126,11 +125,11 @@ export class TaskFormComponent
   }
 
   ngAfterViewInit(): void {
-    // Nothing here anymore (global listeners handled by directives/services).
+    // No global listeners here (handled by directives/services).
   }
 
   ngOnDestroy(): void {
-    // Nothing to clean up locally (service handles its own teardown).
+    // Nothing local to clean up.
   }
 
   // ===== Public imperative API =====
@@ -270,14 +269,11 @@ export class TaskFormComponent
     ctrl.markAsTouched();
   }
 
-  // ===== Files =====
+  // ===== Files (delegated to facade) =====
   onFilesBuffered(files: File[]): void {
     if (!this.localTask().id) {
       // Creation mode: buffer + dedupe by name.
-      const current = this.pendingFiles();
-      const names = new Set(current.map((f) => f.name));
-      const uniques = files.filter((f) => !names.has(f.name));
-      this.pendingFiles.set([...current, ...uniques]);
+      this.attachments.buffer(files);
     } else {
       void this.uploadFilesInEditMode(files);
     }
@@ -285,49 +281,39 @@ export class TaskFormComponent
 
   private async uploadFilesInEditMode(files: File[]): Promise<void> {
     const taskId = this.localTask().id!;
-    await Promise.all(
-      files.map((file) => this.attachmentService.uploadAttachment(taskId, file))
-    );
-
-    const fresh = await this.taskService.fetchTaskById(taskId);
+    const fresh = await this.attachments.uploadForTask(taskId, files);
     if (fresh?.attachments) {
       this.localTask.set({
         ...this.localTask(),
         attachments: fresh.attachments,
       });
-      // Keep global store in sync for other views.
-      this.taskService.updateTaskFromApi(fresh);
     }
   }
 
   async onBufferedFileDelete(filename: string): Promise<void> {
     if (!this.localTask().id) {
-      this.pendingFiles.set(
-        this.pendingFiles().filter((f) => f.name !== filename)
-      );
+      this.attachments.removeFromBuffer(filename);
       return;
     }
-
     const id = this.localTask().id!;
-    const updated = await this.attachmentService.deleteAttachment(id, filename);
+    const updated = await this.attachments.delete(id, filename);
     if (updated?.attachments) {
       this.localTask.set({
         ...this.localTask(),
         attachments: updated.attachments,
       });
-      this.taskService.updateTaskFromApi(updated);
     }
   }
 
   onFileDownload(filename: string): void {
     const id = this.localTask().id;
     if (!id) return;
-    this.attachmentService.downloadAttachment(id, filename);
+    this.attachments.download(id, filename);
   }
 
   // ===== Save / Cancel =====
   private clearBufferIfNeeded(): void {
-    if (!this.localTask().id) this.pendingFiles.set([]);
+    if (!this.localTask().id) this.attachments.flushBuffer();
   }
 
   handleSave(): void {
@@ -350,7 +336,7 @@ export class TaskFormComponent
   private applyTaskToState(task: Partial<Task>): void {
     const t: Task = { ...this.emptyTask, ...task };
     this.localTask.set(t);
-    this.pendingFiles.set([]);
+    this.attachments.flushBuffer();
     this.form.setValue(
       {
         title: t.title ?? "",

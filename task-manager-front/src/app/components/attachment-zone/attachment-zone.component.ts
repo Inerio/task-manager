@@ -14,6 +14,7 @@ import { AlertService } from "../../services/alert.service";
 import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { PreviewHoverDirective } from "./preview-hover.directive";
+import { ImagePreviewPopoverComponent } from "./image-preview-popover.component";
 
 /** Minimal local types to avoid `any` while staying framework-agnostic. */
 type FSFileHandle = { getFile(): Promise<File> };
@@ -27,6 +28,7 @@ type OpenFilePickerOptions = {
  * and deferred uploads (creation mode).
  *
  * Preview hover is delegated to PreviewHoverDirective.
+ * Popover rendering is isolated in ImagePreviewPopoverComponent.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -34,7 +36,11 @@ type OpenFilePickerOptions = {
   styleUrls: ["./attachment-zone.component.scss"],
   templateUrl: "./attachment-zone.component.html",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoModule, PreviewHoverDirective],
+  imports: [
+    TranslocoModule,
+    PreviewHoverDirective,
+    ImagePreviewPopoverComponent,
+  ],
 })
 export class AttachmentZoneComponent {
   // ===== Inputs =====

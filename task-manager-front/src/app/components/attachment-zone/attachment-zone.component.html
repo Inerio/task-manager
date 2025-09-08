@@ -79,9 +79,9 @@
   <div class="attachment-tags">
     @for (file of pendingFiles; track trackByFile($index, file)) {
     <span class="attachment-tag pending">
-      <span class="filename" [attr.title]="'common.toBeUploaded' | transloco">{{
-        file.name
-      }}</span>
+      <span class="filename" [attr.title]="'common.toBeUploaded' | transloco">
+        {{ file.name }}
+      </span>
       <button
         class="remove-btn"
         (click)="onDeletePendingFile(file.name); $event.stopPropagation()"
@@ -99,14 +99,11 @@
   </div>
   }
 
-  <!-- Image preview popover -->
-  @if (previewUrl() && previewFilename() && isImage(previewFilename()!)) {
-  <div
-    class="preview-popover"
-    [style.top.px]="previewTop()"
-    [style.left.px]="previewLeft()"
-  >
-    <img [src]="previewUrl()" alt="preview" />
-  </div>
-  }
+  <!-- Image preview popover (presentational) -->
+  <app-image-preview-popover
+    [url]="previewUrl()"
+    [x]="previewLeft()"
+    [y]="previewTop()"
+    [visible]="!!previewUrl()"
+  />
 </div>

@@ -8,13 +8,12 @@ import {
   ViewChild,
   inject,
   signal,
-  OnDestroy,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertService } from "../../services/alert.service";
 import { isFileDragEvent } from "../../utils/drag-drop-utils";
-import { AttachmentService } from "../../services/attachment.service";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
+import { AttachmentPreviewService } from "../../services/attachment-preview.service";
 
 /** Minimal local types to avoid `any` while staying framework-agnostic. */
 type FSFileHandle = { getFile(): Promise<File> };
@@ -27,7 +26,7 @@ type OpenFilePickerOptions = {
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
  * and deferred uploads (creation mode).
  *
- * Preview: fetch blob via HttpClient (with header) → create object URL.
+ * Preview rendering uses AttachmentPreviewService (LRU + in-flight dedupe).
  */
 @Component({
   selector: "app-attachment-zone",
@@ -37,7 +36,7 @@ type OpenFilePickerOptions = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslocoModule],
 })
-export class AttachmentZoneComponent implements OnDestroy {
+export class AttachmentZoneComponent {
   // ===== Inputs =====
   @Input({ required: true }) attachments!: ReadonlyArray<string>;
   @Input({ required: true }) taskId!: number;
@@ -56,10 +55,10 @@ export class AttachmentZoneComponent implements OnDestroy {
   @ViewChild("fileInput") fileInput!: ElementRef<HTMLInputElement>;
 
   // ===== Injections =====
-  private readonly attachmentService = inject(AttachmentService);
   private readonly alertService = inject(AlertService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly i18n = inject(TranslocoService);
+  private readonly preview = inject(AttachmentPreviewService);
 
   // ===== UI state =====
   readonly isDragging = signal(false);
@@ -67,28 +66,6 @@ export class AttachmentZoneComponent implements OnDestroy {
   readonly previewFilename = signal<string | null>(null);
   readonly previewTop = signal(0);
   readonly previewLeft = signal(0);
-
-  // ===== Internals =====
-  /** Avoid duplicate HTTP calls while a preview is being fetched. */
-  private readonly inFlight = new Map<string, Promise<string>>();
-  /** Small LRU cache of object URLs to reuse across hovers. */
-  private readonly cache = new Map<string, string>();
-  private readonly cacheOrder: string[] = [];
-  private static readonly MAX_CACHE = 8;
-
-  // ===== Lifecycle =====
-  ngOnDestroy(): void {
-    // Revoke all cached object URLs to prevent memory leaks.
-    for (const url of this.cache.values()) {
-      try {
-        URL.revokeObjectURL(url);
-      } catch {
-        // ignore
-      }
-    }
-    this.cache.clear();
-    this.cacheOrder.length = 0;
-  }
 
   // ===== Track helpers (stable references for @for trackBy) =====
   trackByFilename(_index: number, filename: string): string {
@@ -275,7 +252,7 @@ export class AttachmentZoneComponent implements OnDestroy {
     this.fileDeleted.emit(filename);
   }
 
-  // ===== Preview helpers (HttpClient -> blob -> object URL) =====
+  // ===== Preview helpers (service -> Object URL) =====
   isImage(filename: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
   }
@@ -290,50 +267,19 @@ export class AttachmentZoneComponent implements OnDestroy {
   async showPreview(filename: string, event: MouseEvent): Promise<void> {
     if (!this.isImage(filename)) return;
 
-    // Always update position quickly.
+    // Fast UI: update position first.
     this.previewTop.set(event.clientY + 14);
     this.previewLeft.set(event.clientX + 18);
 
-    const key = this.previewKey(this.taskId, filename);
-
-    // Cache hit → reuse without new HTTP calls.
-    const cached = this.cache.get(key);
-    if (cached) {
-      this.previewFilename.set(filename);
-      this.previewUrl.set(cached);
-      return;
-    }
-
-    // If a request is already in-flight for this file, avoid starting another.
-    if (this.inFlight.has(key)) {
-      this.previewFilename.set(filename);
-      return;
-    }
-
-    // Start a single fetch for this preview and cache it when done.
-    const promise = this.attachmentService.getPreviewObjectUrl(
-      this.taskId,
-      filename
-    );
-    this.inFlight.set(key, promise);
-
+    this.previewFilename.set(filename);
     try {
-      const objectUrl = await promise;
-      this.addToCache(key, objectUrl);
-
-      // Only update the preview if the user is still hovering this file.
-      if (
-        this.previewFilename() === null ||
-        this.previewFilename() === filename
-      ) {
-        this.previewFilename.set(filename);
-        this.previewUrl.set(objectUrl);
+      const url = await this.preview.get(this.taskId, filename);
+      // Only set if still hovering the same file.
+      if (this.previewFilename() === filename) {
+        this.previewUrl.set(url);
       }
     } catch {
-      // On error, ensure no stale preview stays.
       this.hidePreview();
-    } finally {
-      this.inFlight.delete(key);
     }
   }
 
@@ -350,34 +296,5 @@ export class AttachmentZoneComponent implements OnDestroy {
       seen.add(filename);
       return true;
     });
-  }
-
-  // ===== Cache helpers =====
-  private previewKey(taskId: number, filename: string): string {
-    return `${taskId}::${filename}`;
-  }
-
-  /** Simple LRU to cap memory usage from object URLs. */
-  private addToCache(key: string, url: string): void {
-    if (this.cache.has(key)) {
-      // Refresh LRU order.
-      const idx = this.cacheOrder.indexOf(key);
-      if (idx >= 0) this.cacheOrder.splice(idx, 1);
-    }
-    this.cache.set(key, url);
-    this.cacheOrder.push(key);
-
-    if (this.cacheOrder.length > AttachmentZoneComponent.MAX_CACHE) {
-      const evictKey = this.cacheOrder.shift()!;
-      const evictUrl = this.cache.get(evictKey);
-      if (evictUrl) {
-        try {
-          URL.revokeObjectURL(evictUrl);
-        } catch {
-          // ignore
-        }
-      }
-      this.cache.delete(evictKey);
-    }
   }
 }

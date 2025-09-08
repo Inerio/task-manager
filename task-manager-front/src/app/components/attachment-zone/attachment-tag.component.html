@@ -1,0 +1,25 @@
+<span class="attachment-tag" [class.pending]="pending">
+  <span
+    class="filename"
+    [attr.role]="pending ? null : 'button'"
+    [attr.tabindex]="pending ? -1 : 0"
+    (click)="onDownload($event)"
+    (keydown.enter)="onDownload($event)"
+    (keydown.space)="onDownload($event)"
+    [attr.title]="pending ? null : ('common.download' | transloco)"
+    [attr.aria-label]="pending ? null : ('common.download' | transloco)"
+  >
+    {{ filename }}
+  </span>
+
+  <button
+    class="remove-btn"
+    (click)="onDelete($event)"
+    [attr.title]="(pending ? 'common.remove' : 'common.delete') | transloco"
+    [attr.aria-label]="
+      (pending ? 'common.remove' : 'common.delete') | transloco
+    "
+  >
+    ✖
+  </button>
+</span>

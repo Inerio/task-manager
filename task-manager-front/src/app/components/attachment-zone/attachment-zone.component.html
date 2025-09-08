@@ -36,41 +36,17 @@
   <div class="attachment-tags">
     @for (filename of getUniqueAttachments(); track trackByFilename($index,
     filename)) {
-    <span class="attachment-tag">
-      <span
-        class="filename"
-        role="button"
-        tabindex="0"
-        appPreviewHover
-        [phTaskId]="taskId"
-        [phFilename]="filename"
-        (phShow)="onPreviewShow($event)"
-        (phMove)="onPreviewMove($event)"
-        (phHide)="onPreviewHide()"
-        (click)="onDownloadAttachment(filename); $event.stopPropagation()"
-        (keydown.enter)="
-          onDownloadAttachment(filename); $event.stopPropagation()
-        "
-        (keydown.space)="
-          onDownloadAttachment(filename); $event.stopPropagation()
-        "
-        [attr.title]="
-          previewFilename() === filename
-            ? null
-            : ('common.download' | transloco)
-        "
-        [attr.aria-label]="'common.download' | transloco"
-      >
-        {{ filename }}
-      </span>
-      <button
-        class="remove-btn"
-        (click)="onDeleteAttachment(filename); $event.stopPropagation()"
-        [attr.title]="'common.delete' | transloco"
-      >
-        ✖
-      </button>
-    </span>
+    <app-attachment-tag
+      [filename]="filename"
+      (download)="onDownloadAttachment(filename)"
+      (delete)="onDeleteAttachment(filename)"
+      appPreviewHover
+      [phTaskId]="taskId"
+      [phFilename]="filename"
+      (phShow)="onPreviewShow($event)"
+      (phMove)="onPreviewMove($event)"
+      (phHide)="onPreviewHide()"
+    />
     }
   </div>
   }
@@ -79,18 +55,11 @@
   @if (creationMode && pendingFiles.length > 0) {
   <div class="attachment-tags">
     @for (file of pendingFiles; track trackByFile($index, file)) {
-    <span class="attachment-tag pending">
-      <span class="filename" [attr.title]="'common.toBeUploaded' | transloco">
-        {{ file.name }}
-      </span>
-      <button
-        class="remove-btn"
-        (click)="onDeletePendingFile(file.name); $event.stopPropagation()"
-        [attr.title]="'common.remove' | transloco"
-      >
-        ✖
-      </button>
-    </span>
+    <app-attachment-tag
+      [filename]="file.name"
+      [pending]="true"
+      (delete)="onDeletePendingFile(file.name)"
+    />
     }
   </div>
   } @if ((attachments.length === 0) && (!creationMode || pendingFiles.length ===

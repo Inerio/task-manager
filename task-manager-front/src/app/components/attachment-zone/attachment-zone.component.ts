@@ -16,6 +16,7 @@ import { PreviewHoverDirective } from "./preview-hover.directive";
 import { ImagePreviewPopoverComponent } from "./image-preview-popover.component";
 import { FileSelectionService } from "../../services/file-selection.service";
 import { DropzoneDirective } from "./dropzone.directive";
+import { AttachmentTagComponent } from "./attachment-tag.component";
 
 /** Minimal local types to avoid `any` while staying framework-agnostic. */
 type FSFileHandle = { getFile(): Promise<File> };
@@ -32,6 +33,7 @@ type OpenFilePickerOptions = {
  * Popover rendering is isolated in ImagePreviewPopoverComponent.
  * File selection/validation is centralized in FileSelectionService.
  * Drag & drop is delegated to DropzoneDirective.
+ * Tag rendering is delegated to AttachmentTagComponent.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -44,6 +46,7 @@ type OpenFilePickerOptions = {
     PreviewHoverDirective,
     ImagePreviewPopoverComponent,
     DropzoneDirective,
+    AttachmentTagComponent,
   ],
 })
 export class AttachmentZoneComponent {

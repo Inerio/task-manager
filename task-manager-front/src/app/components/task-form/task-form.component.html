@@ -1,13 +1,7 @@
 <div
   #formContainer
   class="task-form editing-task-form"
-  (pointerdown)="$event.stopPropagation()"
-  (mousedown)="$event.stopPropagation()"
-  (mouseup)="$event.stopPropagation()"
-  (click)="$event.stopPropagation()"
-  (focusin)="$event.stopPropagation()"
-  (focusout)="$event.stopPropagation()"
-  (keydown.escape)="$event.stopPropagation()"
+  appStopBubbling
   [formGroup]="form"
 >
   <input

@@ -32,6 +32,7 @@ import { AttachmentZoneComponent } from "../attachment-zone/attachment-zone.comp
 import { EmojiPickerComponent } from "../emoji-picker/emoji-picker.component";
 import { AttachmentService } from "../../services/attachment.service";
 import { TaskService } from "../../services/task.service";
+import { StopBubblingDirective } from "./stop-bubbling.directive";
 
 @Component({
   selector: "app-task-form",
@@ -41,6 +42,7 @@ import { TaskService } from "../../services/task.service";
     TranslocoModule,
     AttachmentZoneComponent,
     EmojiPickerComponent,
+    StopBubblingDirective,
   ],
   templateUrl: "./task-form.component.html",
   styleUrls: ["./task-form.component.scss"],

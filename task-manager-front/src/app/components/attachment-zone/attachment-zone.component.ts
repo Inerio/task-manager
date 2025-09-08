@@ -17,23 +17,18 @@ import { ImagePreviewPopoverComponent } from "./image-preview-popover.component"
 import { FileSelectionService } from "../../services/file-selection.service";
 import { DropzoneDirective } from "./dropzone.directive";
 import { AttachmentTagComponent } from "./attachment-tag.component";
-
-/** Minimal local types to avoid `any` while staying framework-agnostic. */
-type FSFileHandle = { getFile(): Promise<File> };
-type OpenFilePickerOptions = {
-  multiple?: boolean;
-  excludeAcceptAllOption?: boolean;
-};
+import { AttachmentPickerService } from "../../services/attachment-picker.service";
 
 /**
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
  * and deferred uploads (creation mode).
  *
- * Preview hover is delegated to PreviewHoverDirective.
- * Popover rendering is isolated in ImagePreviewPopoverComponent.
- * File selection/validation is centralized in FileSelectionService.
- * Drag & drop is delegated to DropzoneDirective.
- * Tag rendering is delegated to AttachmentTagComponent.
+ * Preview hover -> PreviewHoverDirective.
+ * Popover rendering -> ImagePreviewPopoverComponent.
+ * File selection/validation -> FileSelectionService.
+ * Drag & drop -> DropzoneDirective.
+ * Tag rendering -> AttachmentTagComponent.
+ * Opening picker (FS Access vs <input>) -> AttachmentPickerService.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -72,6 +67,7 @@ export class AttachmentZoneComponent {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly i18n = inject(TranslocoService);
   private readonly fileSelection = inject(FileSelectionService);
+  private readonly picker = inject(AttachmentPickerService);
 
   // ===== UI state =====
   readonly isDragging = signal(false);
@@ -79,6 +75,9 @@ export class AttachmentZoneComponent {
   readonly previewFilename = signal<string | null>(null);
   readonly previewTop = signal(0);
   readonly previewLeft = signal(0);
+
+  // Promise resolver used by the hidden input fallback.
+  private inputResolve: ((files: File[]) => void) | undefined;
 
   // ===== Track helpers (stable references for @for trackBy) =====
   trackByFilename(_index: number, filename: string): string {
@@ -102,68 +101,62 @@ export class AttachmentZoneComponent {
     this.stop(e);
   }
 
-  // ===== Open dialog =====
+  // ===== Open dialog (via service) =====
   onZoneClick(e: MouseEvent): void {
     this.stop(e);
-    void this.openFileDialog();
+    void this.openWithService();
   }
 
-  /** Decide which picker to use. */
-  private async openFileDialog(): Promise<void> {
-    if (this.canUseFSAccess()) {
-      await this.openViaFSAccess();
-      return;
-    }
-    // Fallback to the hidden input (keeps existing behavior).
-    this.dialogOpen.emit(true);
+  private async openWithService(): Promise<void> {
+    const files = await this.picker.pick({
+      accept: this.acceptTypes,
+      multiple: true,
+      beforeOpen: () => this.dialogOpen.emit(true),
+      afterClose: () => this.dialogOpen.emit(false),
+      openWithInput: () => this.openHiddenInputAsPromise(),
+    });
+    if (files?.length) this.onFilesSelected(files);
+  }
+
+  // Wrap hidden file input into a Promise and resolve on "change".
+  private openHiddenInputAsPromise(): Promise<File[]> {
     const input = this.fileInput?.nativeElement;
-    if (input) input.click();
+    if (!input) return Promise.resolve([]);
+
+    return new Promise<File[]>((resolve) => {
+      let settled = false;
+
+      const onFocusBack = () => {
+        // If the user cancels, "change" won't fire; resolve with [] on focus return.
+        setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          window.removeEventListener("focus", onFocusBack, true);
+          resolve([]);
+        }, 0);
+      };
+
+      window.addEventListener("focus", onFocusBack, true);
+
+      this.inputResolve = (files) => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener("focus", onFocusBack, true);
+        resolve(files);
+      };
+
+      input.click();
+    });
   }
 
-  /** FS Access support check. */
-  private canUseFSAccess(): boolean {
-    return "showOpenFilePicker" in window && isSecureContext === true;
-  }
-
-  /**
-   * Open using File System Access API.
-   * Do not emit `dialogOpen` here (avoid upstream native picker guards).
-   */
-  private async openViaFSAccess(): Promise<void> {
-    try {
-      const picker = (
-        window as unknown as {
-          showOpenFilePicker: (
-            options: OpenFilePickerOptions
-          ) => Promise<FSFileHandle[]>;
-        }
-      ).showOpenFilePicker;
-      if (!picker) return;
-
-      const handles = await picker({
-        multiple: true,
-        excludeAcceptAllOption: false,
-      });
-      const files = await Promise.all(handles.map((h) => h.getFile()));
-
-      // Let FileSelectionService handle accept/size/dedupe.
-      this.handleSelectionWithAlerts(files);
-    } catch {
-      // User cancelled or API blocked: no-op.
-    }
-  }
-
-  // ===== <input type="file"> fallback =====
+  // ===== Hidden input change handler (used by the fallback Promise) =====
   onFileSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const files = input.files;
-    if (!files || files.length === 0) {
-      this.dialogOpen.emit(false);
-      return;
-    }
-    this.handleSelectionWithAlerts(Array.from(files));
+    const list = input.files;
+    const files = list && list.length ? Array.from(list) : [];
+    this.inputResolve?.(files);
+    this.inputResolve = undefined;
     input.value = "";
-    this.dialogOpen.emit(false);
   }
 
   // ===== Dropzone integration =====

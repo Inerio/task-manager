@@ -18,6 +18,7 @@ import { FileSelectionService } from "../../services/file-selection.service";
 import { DropzoneDirective } from "./dropzone.directive";
 import { AttachmentTagComponent } from "./attachment-tag.component";
 import { AttachmentPickerService } from "../../services/attachment-picker.service";
+import { StopBubblingDirective } from "../task-form/stop-bubbling.directive";
 
 /**
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
@@ -29,6 +30,7 @@ import { AttachmentPickerService } from "../../services/attachment-picker.servic
  * Drag & drop -> DropzoneDirective.
  * Tag rendering -> AttachmentTagComponent.
  * Opening picker (FS Access vs <input>) -> AttachmentPickerService.
+ * Event propagation shielding -> StopBubblingDirective.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -42,6 +44,7 @@ import { AttachmentPickerService } from "../../services/attachment-picker.servic
     ImagePreviewPopoverComponent,
     DropzoneDirective,
     AttachmentTagComponent,
+    StopBubblingDirective,
   ],
 })
 export class AttachmentZoneComponent {
@@ -87,23 +90,8 @@ export class AttachmentZoneComponent {
     return file.name;
   }
 
-  // ===== Event suppression inside the zone =====
-  public stop(e: Event): void {
-    e.stopPropagation();
-  }
-  onZonePointerDown(e: PointerEvent): void {
-    this.stop(e);
-  }
-  onZoneMouseDown(e: MouseEvent): void {
-    this.stop(e);
-  }
-  onZoneMouseUp(e: MouseEvent): void {
-    this.stop(e);
-  }
-
   // ===== Open dialog (via service) =====
-  onZoneClick(e: MouseEvent): void {
-    this.stop(e);
+  onZoneClick(): void {
     void this.openWithService();
   }
 

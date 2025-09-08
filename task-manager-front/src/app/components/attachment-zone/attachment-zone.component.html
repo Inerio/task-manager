@@ -4,16 +4,12 @@
     attachments.length || (creationMode && pendingFiles.length)
   "
   [class.drag-over]="isDragging()"
+  appStopBubbling
   appDropzone
   [dzAccept]="acceptTypes"
   (dzFiles)="onFilesSelected($event)"
   (dzStateChange)="isDragging.set($event)"
-  (pointerdown)="onZonePointerDown($event)"
-  (mousedown)="onZoneMouseDown($event)"
-  (mouseup)="onZoneMouseUp($event)"
-  (click)="onZoneClick($event)"
-  (focusin)="stop($event)"
-  (focusout)="stop($event)"
+  (click)="onZoneClick()"
 >
   <!-- Hidden file input -->
   <input
@@ -23,12 +19,6 @@
     [accept]="acceptTypes"
     multiple
     hidden
-    (pointerdown)="stop($event)"
-    (mousedown)="stop($event)"
-    (mouseup)="stop($event)"
-    (click)="stop($event)"
-    (focusin)="stop($event)"
-    (focusout)="stop($event)"
   />
 
   <!-- Attached files -->

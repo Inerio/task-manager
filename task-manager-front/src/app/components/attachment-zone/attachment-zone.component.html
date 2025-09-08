@@ -40,6 +40,12 @@
         class="filename"
         role="button"
         tabindex="0"
+        appPreviewHover
+        [phTaskId]="taskId"
+        [phFilename]="filename"
+        (phShow)="onPreviewShow($event)"
+        (phMove)="onPreviewMove($event)"
+        (phHide)="onPreviewHide()"
         (click)="onDownloadAttachment(filename); $event.stopPropagation()"
         (keydown.enter)="
           onDownloadAttachment(filename); $event.stopPropagation()
@@ -47,9 +53,6 @@
         (keydown.space)="
           onDownloadAttachment(filename); $event.stopPropagation()
         "
-        (mouseenter)="showPreview(filename, $event)"
-        (mousemove)="onPreviewMove($event)"
-        (mouseleave)="hidePreview()"
         [attr.title]="
           previewFilename() === filename
             ? null

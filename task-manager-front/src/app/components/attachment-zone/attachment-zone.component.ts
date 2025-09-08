@@ -13,7 +13,7 @@ import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertService } from "../../services/alert.service";
 import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
-import { AttachmentPreviewService } from "../../services/attachment-preview.service";
+import { PreviewHoverDirective } from "./preview-hover.directive";
 
 /** Minimal local types to avoid `any` while staying framework-agnostic. */
 type FSFileHandle = { getFile(): Promise<File> };
@@ -26,7 +26,7 @@ type OpenFilePickerOptions = {
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
  * and deferred uploads (creation mode).
  *
- * Preview rendering uses AttachmentPreviewService (LRU + in-flight dedupe).
+ * Preview hover is delegated to PreviewHoverDirective.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -34,7 +34,7 @@ type OpenFilePickerOptions = {
   styleUrls: ["./attachment-zone.component.scss"],
   templateUrl: "./attachment-zone.component.html",
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoModule],
+  imports: [TranslocoModule, PreviewHoverDirective],
 })
 export class AttachmentZoneComponent {
   // ===== Inputs =====
@@ -58,7 +58,6 @@ export class AttachmentZoneComponent {
   private readonly alertService = inject(AlertService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly i18n = inject(TranslocoService);
-  private readonly preview = inject(AttachmentPreviewService);
 
   // ===== UI state =====
   readonly isDragging = signal(false);
@@ -252,38 +251,30 @@ export class AttachmentZoneComponent {
     this.fileDeleted.emit(filename);
   }
 
-  // ===== Preview helpers (service -> Object URL) =====
+  // ===== Preview popover state =====
   isImage(filename: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
   }
 
-  /** Only updates the position of the preview popover (no network). */
-  onPreviewMove(event: MouseEvent): void {
+  onPreviewShow(e: {
+    url: string;
+    x: number;
+    y: number;
+    filename: string;
+  }): void {
+    this.previewUrl.set(e.url);
+    this.previewFilename.set(e.filename);
+    this.previewLeft.set(e.x);
+    this.previewTop.set(e.y);
+  }
+
+  onPreviewMove(e: { x: number; y: number }): void {
     if (!this.previewUrl()) return;
-    this.previewTop.set(event.clientY + 14);
-    this.previewLeft.set(event.clientX + 18);
+    this.previewLeft.set(e.x);
+    this.previewTop.set(e.y);
   }
 
-  async showPreview(filename: string, event: MouseEvent): Promise<void> {
-    if (!this.isImage(filename)) return;
-
-    // Fast UI: update position first.
-    this.previewTop.set(event.clientY + 14);
-    this.previewLeft.set(event.clientX + 18);
-
-    this.previewFilename.set(filename);
-    try {
-      const url = await this.preview.get(this.taskId, filename);
-      // Only set if still hovering the same file.
-      if (this.previewFilename() === filename) {
-        this.previewUrl.set(url);
-      }
-    } catch {
-      this.hidePreview();
-    }
-  }
-
-  hidePreview(): void {
+  onPreviewHide(): void {
     this.previewUrl.set(null);
     this.previewFilename.set(null);
   }

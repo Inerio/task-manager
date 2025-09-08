@@ -15,6 +15,7 @@ import { isFileDragEvent } from "../../utils/drag-drop-utils";
 import { ConfirmDialogService } from "../../services/confirm-dialog.service";
 import { PreviewHoverDirective } from "./preview-hover.directive";
 import { ImagePreviewPopoverComponent } from "./image-preview-popover.component";
+import { FileSelectionService } from "../../services/file-selection.service";
 
 /** Minimal local types to avoid `any` while staying framework-agnostic. */
 type FSFileHandle = { getFile(): Promise<File> };
@@ -29,6 +30,7 @@ type OpenFilePickerOptions = {
  *
  * Preview hover is delegated to PreviewHoverDirective.
  * Popover rendering is isolated in ImagePreviewPopoverComponent.
+ * File selection/validation is centralized in FileSelectionService.
  */
 @Component({
   selector: "app-attachment-zone",
@@ -64,6 +66,7 @@ export class AttachmentZoneComponent {
   private readonly alertService = inject(AlertService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly i18n = inject(TranslocoService);
+  private readonly fileSelection = inject(FileSelectionService);
 
   // ===== UI state =====
   readonly isDragging = signal(false);
@@ -137,33 +140,12 @@ export class AttachmentZoneComponent {
         excludeAcceptAllOption: false,
       });
       const files = await Promise.all(handles.map((h) => h.getFile()));
-      const accepted = files.filter((f) => this.matchesAccept(f));
-      if (!accepted.length) return;
 
-      this.handleSelectionWithAlerts(accepted);
+      // Let FileSelectionService handle accept/size/dedupe.
+      this.handleSelectionWithAlerts(files);
     } catch {
       // User cancelled or API blocked: no-op.
     }
-  }
-
-  /** Accept filter supporting ".png,.pdf,image/*,application/pdf". */
-  private matchesAccept(file: File): boolean {
-    const accept = (this.acceptTypes || "").trim();
-    if (!accept) return true;
-
-    const rules = accept
-      .split(",")
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
-
-    const name = file.name.toLowerCase();
-    const type = (file.type || "").toLowerCase();
-
-    return rules.some((rule) => {
-      if (rule.startsWith(".")) return name.endsWith(rule);
-      if (rule.endsWith("/*")) return type.startsWith(rule.slice(0, -1));
-      return type === rule;
-    });
   }
 
   // ===== <input type="file"> fallback =====
@@ -198,45 +180,42 @@ export class AttachmentZoneComponent {
     this.isDragging.set(false);
   }
 
-  // ===== Common selection handling =====
+  // ===== Common selection handling (now centralized) =====
   private handleSelectionWithAlerts(selectedFiles: File[]): void {
-    const sized = this.filterBySize(selectedFiles);
-    if (sized.rejectedCount > 0) {
+    const existing = [
+      ...this.attachments,
+      ...(this.creationMode ? this.pendingFiles.map((f) => f.name) : []),
+    ];
+
+    const { accepted, rejected } = this.fileSelection.select(selectedFiles, {
+      accept: this.acceptTypes,
+      maxSize: this.maxSize,
+      existing,
+    });
+
+    // Raise alerts based on counters (keep messages short and independent).
+    if (rejected.notAccepted > 0) {
+      this.alertService.show(
+        "error",
+        this.i18n.translate("attachments.errors.notAccepted")
+      );
+    }
+    if (rejected.tooLarge > 0) {
       this.alertService.show(
         "error",
         this.i18n.translate("attachments.errors.tooLarge")
       );
     }
-    this.handleFileSelection(sized.accepted);
-  }
-
-  private filterBySize(files: File[]): {
-    accepted: File[];
-    rejectedCount: number;
-  } {
-    let rejectedCount = 0;
-    const accepted = files.filter((f) => {
-      const ok = f.size <= this.maxSize;
-      if (!ok) rejectedCount++;
-      return ok;
-    });
-    return { accepted, rejectedCount };
-  }
-
-  private handleFileSelection(selectedFiles: File[]): void {
-    // Guard: dedupe by filename across persisted + pending files.
-    const already = new Set([
-      ...this.attachments,
-      ...(this.creationMode ? this.pendingFiles.map((f) => f.name) : []),
-    ]);
-    const uniques = selectedFiles.filter((file) => !already.has(file.name));
-    if (uniques.length < selectedFiles.length) {
+    if (rejected.duplicated > 0) {
       this.alertService.show(
         "error",
         this.i18n.translate("attachments.errors.alreadyAttached")
       );
     }
-    if (uniques.length) this.filesUploaded.emit(uniques);
+
+    if (accepted.length) {
+      this.filesUploaded.emit(accepted);
+    }
   }
 
   // ===== Attachment actions =====

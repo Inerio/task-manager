@@ -33,6 +33,7 @@ import { EmojiPickerComponent } from "../emoji-picker/emoji-picker.component";
 import { AttachmentService } from "../../services/attachment.service";
 import { TaskService } from "../../services/task.service";
 import { StopBubblingDirective } from "./stop-bubbling.directive";
+import { ClickOutsideDirective } from "./click-outside.directive";
 
 @Component({
   selector: "app-task-form",
@@ -43,6 +44,7 @@ import { StopBubblingDirective } from "./stop-bubbling.directive";
     AttachmentZoneComponent,
     EmojiPickerComponent,
     StopBubblingDirective,
+    ClickOutsideDirective,
   ],
   templateUrl: "./task-form.component.html",
   styleUrls: ["./task-form.component.scss"],
@@ -82,7 +84,6 @@ export class TaskFormComponent
   // ===== Local state =====
   readonly showEmojiPicker = signal(false);
   private readonly renderer = inject(Renderer2);
-  private globalClickUnlisten: (() => void) | null = null;
 
   private readonly attachmentService = inject(AttachmentService);
   private readonly taskService = inject(TaskService);
@@ -128,24 +129,6 @@ export class TaskFormComponent
   }
 
   ngAfterViewInit(): void {
-    // Close emoji picker on true outside click.
-    if (this.globalClickUnlisten) this.globalClickUnlisten();
-    this.globalClickUnlisten = this.renderer.listen(
-      "document",
-      "mousedown",
-      (event: MouseEvent) => {
-        if (!this.showEmojiPicker()) return;
-        const container = this.formContainer?.nativeElement;
-        if (
-          container &&
-          !container.contains(event.target as Node) &&
-          !(event.target as HTMLElement).closest(".emoji-picker-dropdown")
-        ) {
-          this.showEmojiPicker.set(false);
-        }
-      }
-    );
-
     // Swallow global events while native file dialog is open.
     const swallowIfDialog = (e: Event) => {
       if (this.nativeDialogOpen()) {
@@ -176,10 +159,6 @@ export class TaskFormComponent
   }
 
   ngOnDestroy(): void {
-    if (this.globalClickUnlisten) {
-      this.globalClickUnlisten();
-      this.globalClickUnlisten = null;
-    }
     this.unlisteners.forEach((u) => {
       try {
         u();

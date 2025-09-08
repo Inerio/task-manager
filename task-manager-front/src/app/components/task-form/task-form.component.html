@@ -2,6 +2,9 @@
   #formContainer
   class="task-form editing-task-form"
   appStopBubbling
+  appClickOutside
+  (clickOutside)="showEmojiPicker.set(false)"
+  coIgnore=".emoji-picker-dropdown"
   [formGroup]="form"
 >
   <input

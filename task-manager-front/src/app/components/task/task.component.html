@@ -6,13 +6,17 @@
   [appTaskPulseGhost]="ghost"
   [appTaskPulseDeferWhile]="dragging()"
   [ensureVisible]="localTask().isEditing === true"
+  appTaskDnd
+  [appTaskDndTaskId]="localTask().id ?? null"
+  [appTaskDndColumnId]="localTask().kanbanColumnId"
+  [appTaskDndDisabled]="ghost || localTask().isEditing"
+  [appTaskDndGhost]="ghost"
+  (taskDraggingChange)="onDndDraggingChange($event)"
+  (taskPreviewSize)="onTaskPreviewSize($event)"
   [class.has-badge]="hasDue()"
   [class.completed]="localTask().completed"
   [class.dragging]="dragging()"
   [class.editing]="localTask().isEditing"
-  draggable="true"
-  (dragstart)="onTaskDragStart($event)"
-  (dragend)="onTaskDragEnd()"
 >
   <!-- ==== READ-ONLY MODE ==== -->
   @if (!localTask().isEditing) {

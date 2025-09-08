@@ -34,6 +34,8 @@ import { StopBubblingDirective } from "./stop-bubbling.directive";
 import { ClickOutsideDirective } from "./click-outside.directive";
 import { NativeDialogGuardService } from "../../services/native-dialog-guard.service";
 import { TaskAttachmentsFacade } from "../../services/task-attachments.facade";
+import { BrowserInfoService } from "../../services/browser-info.service";
+import { insertAtCaret } from "../../utils/dom-text";
 
 @Component({
   selector: "app-task-form",
@@ -78,6 +80,7 @@ export class TaskFormComponent
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly guard = inject(NativeDialogGuardService);
   private readonly attachments = inject(TaskAttachmentsFacade);
+  private readonly browserInfo = inject(BrowserInfoService);
 
   readonly form = this.fb.group({
     title: this.fb.control<string>("", { validators: [Validators.required] }),
@@ -115,7 +118,11 @@ export class TaskFormComponent
   // ===== Lifecycle =====
   ngOnInit(): void {
     this.applyTaskToState(this.task);
-    void this.detectBrave();
+    // Delegate Brave detection to service (result cached in service).
+    void this.browserInfo
+      .isBrave()
+      .then((v) => this.isBrave.set(v))
+      .catch(() => this.isBrave.set(false));
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -148,34 +155,6 @@ export class TaskFormComponent
       el.setSelectionRange(len, len);
     } catch {
       // Older browsers may throw — safe to ignore.
-    }
-  }
-
-  // ===== Brave detection =====
-  /**
-   * Detect Brave browser.
-   * Primary: navigator.brave.isBrave() when available.
-   * Fallback: userAgent/brands may contain "Brave".
-   */
-  private async detectBrave(): Promise<void> {
-    try {
-      const nav = navigator as unknown as {
-        brave?: { isBrave?: () => Promise<boolean> };
-        userAgentData?: { brands?: { brand: string }[] };
-        userAgent?: string;
-      };
-
-      const res = await nav.brave?.isBrave?.();
-      if (typeof res === "boolean") {
-        this.isBrave.set(res);
-        return;
-      }
-
-      const brands = nav.userAgentData?.brands?.map((b) => b.brand) ?? [];
-      const hay = `${brands.join(" ")} ${(nav.userAgent || "").toLowerCase()}`;
-      this.isBrave.set(hay.includes("brave"));
-    } catch {
-      this.isBrave.set(false);
     }
   }
 
@@ -245,24 +224,17 @@ export class TaskFormComponent
   onEmojiSelected(emoji: string): void {
     const ta = this.descTextarea?.nativeElement;
     const ctrl = this.form.controls.description;
+
     if (!ta) {
+      // Fallback when textarea isn't available yet.
       ctrl.setValue((ctrl.value ?? "") + emoji);
+      ctrl.markAsDirty();
+      ctrl.markAsTouched();
       return;
     }
-    ta.focus();
-    const prevScroll = ta.scrollTop;
-    const start = (ta.selectionStart ?? ta.value.length) as number;
-    const end = (ta.selectionEnd ?? start) as number;
 
-    if (typeof ta.setRangeText === "function") {
-      ta.setRangeText(emoji, start, end, "end");
-    } else {
-      const v = ta.value;
-      ta.value = v.slice(0, start) + emoji + v.slice(end);
-      const caret = start + emoji.length;
-      ta.setSelectionRange(caret, caret);
-    }
-    ta.scrollTop = prevScroll;
+    // Use shared DOM utility to insert at caret.
+    insertAtCaret(ta, emoji);
 
     ctrl.setValue(ta.value);
     ctrl.markAsDirty();

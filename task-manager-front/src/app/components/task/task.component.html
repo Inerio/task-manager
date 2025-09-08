@@ -24,18 +24,17 @@
     @if (!hasDue()) {
     <div class="task-title-row">
       <h4
-        [innerHTML]="displayedTitle() | linkify"
-        [class.truncated]="canTruncateTitle() && !showFullTitle()"
-        (click)="toggleTitleTruncate()"
-        [style.cursor]="canTruncateTitle() ? 'pointer' : 'auto'"
-        [attr.aria-expanded]="showFullTitle()"
-        role="button"
-        [attr.title]="
-          canTruncateTitle()
-            ? showFullTitle()
-              ? ('task.showFullTitle.hide' | transloco)
-              : ('task.showFullTitle.show' | transloco)
-            : null
+        appToggleTruncate
+        #ttTitle="appToggleTruncate"
+        [ttContent]="localTask().title"
+        [ttMaxLen]="titleTruncateLength()"
+        [ttResetKey]="localTask().id"
+        [ttShowLabelKey]="'task.showFullTitle.show'"
+        [ttHideLabelKey]="'task.showFullTitle.hide'"
+        [innerHTML]="
+          localTask().title
+            | truncateSmart : ttTitle.expanded : titleTruncateLength()
+            | linkify
         "
       ></h4>
       <input
@@ -54,30 +53,32 @@
       (change)="toggleCompleted()"
     />
     <h4
-      [innerHTML]="displayedTitle() | linkify"
-      [class.truncated]="canTruncateTitle() && !showFullTitle()"
-      (click)="toggleTitleTruncate()"
-      [style.cursor]="canTruncateTitle() ? 'pointer' : 'auto'"
-      [attr.title]="
-        canTruncateTitle()
-          ? showFullTitle()
-            ? ('task.showFullTitle.hide' | transloco)
-            : ('task.showFullTitle.show' | transloco)
-          : null
+      appToggleTruncate
+      #ttTitle2="appToggleTruncate"
+      [ttContent]="localTask().title"
+      [ttMaxLen]="titleTruncateLength()"
+      [ttResetKey]="localTask().id"
+      [ttShowLabelKey]="'task.showFullTitle.show'"
+      [ttHideLabelKey]="'task.showFullTitle.hide'"
+      [innerHTML]="
+        localTask().title
+          | truncateSmart : ttTitle2.expanded : titleTruncateLength()
+          | linkify
       "
     ></h4>
     }
     <p
-      [innerHTML]="displayedDescription() | linkify"
-      [class.truncated]="canTruncateDescription() && !showFullDescription()"
-      (click)="onDescriptionClick($event)"
-      [style.cursor]="canTruncateDescription() ? 'pointer' : 'auto'"
-      [attr.title]="
-        canTruncateDescription()
-          ? showFullDescription()
-            ? ('task.showFullDescription.hide' | transloco)
-            : ('task.showFullDescription.show' | transloco)
-          : null
+      appToggleTruncate
+      #ttDesc="appToggleTruncate"
+      [ttContent]="localTask().description"
+      [ttMaxLen]="DESC_TRUNCATE"
+      [ttResetKey]="localTask().id"
+      [ttShowLabelKey]="'task.showFullDescription.show'"
+      [ttHideLabelKey]="'task.showFullDescription.hide'"
+      [innerHTML]="
+        localTask().description
+          | truncateSmart : ttDesc.expanded : DESC_TRUNCATE
+          | linkify
       "
     ></p>
 

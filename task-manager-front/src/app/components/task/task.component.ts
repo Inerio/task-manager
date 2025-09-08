@@ -31,6 +31,8 @@ import { TaskDueBadgeComponent } from "../task-due-badge/task-due-badge.componen
 import { TaskPulseDirective } from "./task-pulse.directive";
 import { EnsureVisibleDirective } from "./ensure-visible.directive";
 import { TaskDndDirective } from "./task-dnd.directive";
+import { ToggleTruncateDirective } from "./toggle-truncate.directive";
+import { TruncateSmartPipe } from "../../pipes/truncate-smart.pipe";
 
 @Component({
   selector: "app-task",
@@ -44,6 +46,8 @@ import { TaskDndDirective } from "./task-dnd.directive";
     TaskPulseDirective,
     EnsureVisibleDirective,
     TaskDndDirective,
+    ToggleTruncateDirective,
+    TruncateSmartPipe,
   ],
   templateUrl: "./task.component.html",
   styleUrls: ["./task.component.scss"],
@@ -77,13 +81,10 @@ export class TaskComponent implements OnChanges, OnDestroy {
   // DnD (own card)
   readonly dragging = signal(false);
 
-  // === Truncation logic ===
-  private readonly TITLE_TRUNCATE_BASE = 18;
-  private readonly TITLE_TRUNCATE_WITH_BADGE = 22;
-  private readonly DESC_TRUNCATE = 139;
-
-  readonly showFullTitle = signal(false);
-  readonly showFullDescription = signal(false);
+  // === Truncation config (consumed by directive/pipe through the template) ===
+  readonly TITLE_TRUNCATE_BASE = 18;
+  readonly TITLE_TRUNCATE_WITH_BADGE = 22;
+  readonly DESC_TRUNCATE = 139;
 
   // === Computed (truncate) ===
   /** True if the task has a valid due date (drives top padding + title width). */
@@ -97,52 +98,17 @@ export class TaskComponent implements OnChanges, OnDestroy {
     this.hasDue() ? this.TITLE_TRUNCATE_WITH_BADGE : this.TITLE_TRUNCATE_BASE
   );
 
-  readonly displayedTitle = computed(() => {
-    const title = this.localTask().title ?? "";
-    const maxLen = this.titleTruncateLength();
-    if (this.showFullTitle() || !title) return title;
-    return title.length <= maxLen ? title : title.slice(0, maxLen) + "…";
-  });
-
-  readonly displayedDescription = computed(() => {
-    const desc = this.localTask().description ?? "";
-    if (this.showFullDescription() || !desc) return desc;
-    return desc.length <= this.DESC_TRUNCATE
-      ? desc
-      : desc.slice(0, this.DESC_TRUNCATE) + "…";
-  });
-
-  readonly canTruncateTitle = computed(() => {
-    const title = this.localTask().title ?? "";
-    return title.length > this.titleTruncateLength();
-  });
-
-  readonly canTruncateDescription = computed(
-    () => (this.localTask().description ?? "").length > this.DESC_TRUNCATE
-  );
-
   // === i/o changes ===
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["task"] && this.task) {
       this.localTask.set({ ...this.task });
-      this.showFullTitle.set(false);
-      this.showFullDescription.set(false);
+      // Truncate state resets via [ttResetKey] bound to task id.
     }
   }
 
   ngOnDestroy(): void {
     // Nothing special here anymore; DnD cleanup is handled by services.
   }
-
-  // === UI helpers (truncate toggles) ===
-  toggleTitleTruncate = (): void => {
-    if (this.canTruncateTitle()) this.showFullTitle.set(!this.showFullTitle());
-  };
-
-  toggleDescriptionTruncate = (): void => {
-    if (this.canTruncateDescription())
-      this.showFullDescription.set(!this.showFullDescription());
-  };
 
   // === DnD callbacks (from directive) ===
   onTaskPreviewSize(sz: { width: number; height: number }): void {
@@ -249,12 +215,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
     };
     this.patchLocalTask({ completed: updated.completed });
     this.taskService.updateTask(updated.id!, updated);
-  }
-
-  onDescriptionClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (target.closest("a")) return;
-    if (this.canTruncateDescription()) this.toggleDescriptionTruncate();
   }
 
   patchLocalTask(patch: Partial<Task>): void {

@@ -5,7 +5,6 @@ import {
   EventEmitter,
   signal,
   ViewChild,
-  Renderer2,
   CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectionStrategy,
   inject,
@@ -34,6 +33,7 @@ import { AttachmentService } from "../../services/attachment.service";
 import { TaskService } from "../../services/task.service";
 import { StopBubblingDirective } from "./stop-bubbling.directive";
 import { ClickOutsideDirective } from "./click-outside.directive";
+import { NativeDialogGuardService } from "../../services/native-dialog-guard.service";
 
 @Component({
   selector: "app-task-form",
@@ -51,6 +51,7 @@ import { ClickOutsideDirective } from "./click-outside.directive";
   // Keep schema in case other custom elements appear inside the form.
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [NativeDialogGuardService],
 })
 export class TaskFormComponent
   implements AfterViewInit, OnInit, OnChanges, OnDestroy
@@ -75,6 +76,10 @@ export class TaskFormComponent
 
   // ===== Injections / form =====
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly guard = inject(NativeDialogGuardService);
+  private readonly attachmentService = inject(AttachmentService);
+  private readonly taskService = inject(TaskService);
+
   readonly form = this.fb.group({
     title: this.fb.control<string>("", { validators: [Validators.required] }),
     description: this.fb.control<string>(""),
@@ -83,10 +88,6 @@ export class TaskFormComponent
 
   // ===== Local state =====
   readonly showEmojiPicker = signal(false);
-  private readonly renderer = inject(Renderer2);
-
-  private readonly attachmentService = inject(AttachmentService);
-  private readonly taskService = inject(TaskService);
 
   private readonly emptyTask: Task = {
     id: undefined,
@@ -109,10 +110,6 @@ export class TaskFormComponent
     ...this.task,
   });
 
-  /** Swallow outside events while native file dialog is open. */
-  readonly nativeDialogOpen = signal(false);
-  private unlisteners: Array<() => void> = [];
-
   /** True when the browser is Brave (used to hide attachment zone). */
   readonly isBrave = signal(false);
 
@@ -129,44 +126,11 @@ export class TaskFormComponent
   }
 
   ngAfterViewInit(): void {
-    // Swallow global events while native file dialog is open.
-    const swallowIfDialog = (e: Event) => {
-      if (this.nativeDialogOpen()) {
-        // Stop handlers installed by the board/columns while the OS dialog is open.
-        (
-          e as { stopImmediatePropagation?: () => void }
-        ).stopImmediatePropagation?.();
-        e.stopPropagation();
-        e.preventDefault();
-      }
-    };
-
-    this.unlisteners.push(
-      this.renderer.listen("document", "mousedown", swallowIfDialog),
-      this.renderer.listen("document", "mouseup", swallowIfDialog),
-      this.renderer.listen("document", "click", swallowIfDialog),
-      this.renderer.listen("document", "focusin", swallowIfDialog),
-      this.renderer.listen("document", "keydown", (e: KeyboardEvent) => {
-        if (this.nativeDialogOpen() && e.key === "Escape") swallowIfDialog(e);
-      }),
-      this.renderer.listen("window", "focus", () => {
-        if (this.nativeDialogOpen()) {
-          // Let the browser fully close the file dialog before releasing the guard.
-          setTimeout(() => this.nativeDialogOpen.set(false), 0);
-        }
-      })
-    );
+    // Nothing here anymore (global listeners handled by directives/services).
   }
 
   ngOnDestroy(): void {
-    this.unlisteners.forEach((u) => {
-      try {
-        u();
-      } catch {
-        // ignore listener cleanup errors
-      }
-    });
-    this.unlisteners = [];
+    // Nothing to clean up locally (service handles its own teardown).
   }
 
   // ===== Public imperative API =====
@@ -218,7 +182,8 @@ export class TaskFormComponent
 
   // ===== UI actions =====
   onDialogOpen(open: boolean): void {
-    this.nativeDialogOpen.set(open);
+    // Delegate to the scoped guard service.
+    this.guard.setOpen(open);
   }
 
   toggleEmojiPicker(): void {

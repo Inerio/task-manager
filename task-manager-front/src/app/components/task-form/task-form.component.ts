@@ -36,6 +36,7 @@ import { NativeDialogGuardService } from "../../services/native-dialog-guard.ser
 import { TaskAttachmentsFacade } from "../../services/task-attachments.facade";
 import { BrowserInfoService } from "../../services/browser-info.service";
 import { insertAtCaret } from "../../utils/dom-text";
+import { AutofocusOnInitDirective } from "./autofocus-on-init.directive";
 
 @Component({
   selector: "app-task-form",
@@ -47,6 +48,7 @@ import { insertAtCaret } from "../../utils/dom-text";
     EmojiPickerComponent,
     StopBubblingDirective,
     ClickOutsideDirective,
+    AutofocusOnInitDirective,
   ],
   templateUrl: "./task-form.component.html",
   styleUrls: ["./task-form.component.scss"],
@@ -71,7 +73,6 @@ export class TaskFormComponent
   @Output() readonly fileDownloaded = new EventEmitter<string>();
 
   // ===== Template refs =====
-  @ViewChild("titleInput") private titleInput?: ElementRef<HTMLInputElement>;
   @ViewChild("descTextarea") descTextarea?: ElementRef<HTMLTextAreaElement>;
   @ViewChild("formContainer", { static: true })
   formContainer?: ElementRef<HTMLElement>;
@@ -137,25 +138,6 @@ export class TaskFormComponent
 
   ngOnDestroy(): void {
     // Nothing local to clean up.
-  }
-
-  // ===== Public imperative API =====
-  /** Focus the title input (parents call after the form is rendered). */
-  focusTitle(): void {
-    const el = this.titleInput?.nativeElement;
-    if (!el) {
-      // Late render fallback.
-      queueMicrotask(() => this.titleInput?.nativeElement?.focus());
-      return;
-    }
-    el.focus();
-    // Put caret at end (non-breaking).
-    try {
-      const len = el.value.length;
-      el.setSelectionRange(len, len);
-    } catch {
-      // Older browsers may throw — safe to ignore.
-    }
   }
 
   // ===== UI actions =====

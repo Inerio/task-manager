@@ -6,10 +6,8 @@ import {
   Input,
   signal,
   type Signal,
-  runInInjectionContext,
   ViewChild,
   afterNextRender,
-  Injector,
   ElementRef,
   OnChanges,
   SimpleChanges,
@@ -53,7 +51,6 @@ export class KanbanColumnComponent implements OnChanges {
   private readonly dragDropGlobal = inject(DragDropGlobalService);
   private readonly attachmentService = inject(AttachmentService);
   private readonly i18n = inject(TranslocoService);
-  private readonly injector = inject(Injector);
 
   /** Local DnD service (scoped to this column instance). */
   readonly dnd = inject(KanbanColumnDndService);
@@ -89,12 +86,7 @@ export class KanbanColumnComponent implements OnChanges {
     if (this.showForm()) return;
     this.showForm.set(true);
     this.editingTask.set(null);
-
-    // Focus the title after the form has been rendered.
-    // Must run inside an injection context → fixes NG0203.
-    runInInjectionContext(this.injector, () => {
-      afterNextRender(() => this.taskForm?.focusTitle());
-    });
+    // Manual focus removed: title input now auto-focuses via appAutofocusOnInit.
   }
 
   closeForm(): void {

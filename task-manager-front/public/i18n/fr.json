@@ -56,18 +56,13 @@
       "t4Desc": "Boîte de réception, Aujourd’hui, Cette semaine puis Terminé.",
       "t5Desc": "Des Idées à Relecture puis Terminé."
     },
-    "template": {
-      "title": "Commencer avec un modèle ?",
-      "message": "Souhaitez-vous un modèle simple avec 3 colonnes :\n {{todo}} • {{inProgress}} • {{done}}",
-      "todo": "À faire",
-      "inProgress": "En cours",
-      "done": "Terminé"
-    },
     "column": {
       "delete": "Supprimer la colonne",
       "deleteConfirm": "Supprimer la colonne « {{name}} » et toutes ses tâches ?",
       "deleteTasksTitle": "Supprimer les tâches",
       "deleteTasksConfirm": "Supprimer toutes les tâches dans « {{name}} » ?",
+      "deleteAllTasksTitle": "Supprimer les tâches",
+      "deleteAllTasksConfirm": "Supprimer toutes les tâches dans « {{name}} » ?",
       "deleteAll": "Supprimer toutes les tâches de cette colonne",
       "rename": "Renommer cette colonne",
       "add": "Ajouter une colonne",
@@ -125,8 +120,7 @@
   "theme": {
     "switch": "Thème",
     "light": "Clair",
-    "dark": "Sombre",
-    "notImplemented": "Interrupteur de thème : pas encore implémenté."
+    "dark": "Sombre"
   },
   "emoji": {
     "searchPlaceholder": "Rechercher"

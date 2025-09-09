@@ -56,18 +56,13 @@
       "t4Desc": "Inbox, Today, This Week, then Done.",
       "t5Desc": "From Ideas to Review and Done."
     },
-    "template": {
-      "title": "Start with a template?",
-      "message": "Would you like a simple Kanban template with 3 columns:\n {{todo}} • {{inProgress}} • {{done}}",
-      "todo": "To do",
-      "inProgress": "In progress",
-      "done": "Done"
-    },
     "column": {
       "delete": "Delete column",
       "deleteConfirm": "Delete column “{{name}}” and all its tasks?",
       "deleteTasksTitle": "Delete tasks",
       "deleteTasksConfirm": "Delete all tasks in “{{name}}”?",
+      "deleteAllTasksTitle": "Delete tasks",
+      "deleteAllTasksConfirm": "Delete all tasks in “{{name}}”?",
       "deleteAll": "Delete all tasks in this column",
       "rename": "Rename this column",
       "add": "Add column",
@@ -125,8 +120,7 @@
   "theme": {
     "switch": "Theme",
     "light": "Light",
-    "dark": "Dark",
-    "notImplemented": "Theme switch: not yet implemented."
+    "dark": "Dark"
   },
   "emoji": {
     "searchPlaceholder": "Search"

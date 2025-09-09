@@ -29,6 +29,8 @@ export class AttachmentTagComponent {
 
   onDownload(ev: Event): void {
     ev.stopPropagation();
+    // Prevent default to avoid spacebar scrolling when activated via keyboard.
+    (ev as KeyboardEvent)?.preventDefault?.();
     if (this.pending) return;
     this.download.emit();
   }

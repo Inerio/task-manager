@@ -11,6 +11,7 @@ import {
   ElementRef,
   OnChanges,
   SimpleChanges,
+  ChangeDetectionStrategy,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { Task, TaskWithPendingFiles } from "../../../task/models/task.model";
@@ -33,6 +34,7 @@ import { KanbanColumnDndService } from "../../data/kanban-column-dnd.service";
   templateUrl: "./kanban-column.component.html",
   styleUrls: ["./kanban-column.component.scss"],
   providers: [KanbanColumnDndService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class KanbanColumnComponent implements OnChanges {
   // ===== Inputs =====

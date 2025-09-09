@@ -52,6 +52,10 @@ export class ToggleTruncateDirective implements OnChanges {
   @HostBinding("attr.role") get role() {
     return this.canTruncate ? "button" : null;
   }
+  @HostBinding("attr.tabindex") get tabIndex() {
+    // Make the block focusable only when interactive.
+    return this.canTruncate ? 0 : null;
+  }
   @HostBinding("attr.aria-expanded") get ariaExpanded() {
     return this.canTruncate ? String(this.expanded) : null;
   }
@@ -78,5 +82,15 @@ export class ToggleTruncateDirective implements OnChanges {
     if (target?.closest("a")) return;
     if (!this.canTruncate) return;
     this.expanded = !this.expanded;
+  }
+
+  // Keyboard a11y: behave like a button when interactive.
+  @HostListener("keydown", ["$event"])
+  onKeydown(e: KeyboardEvent): void {
+    if (!this.canTruncate) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault(); // avoid page scroll on Space
+      this.expanded = !this.expanded;
+    }
   }
 }

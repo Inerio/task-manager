@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   OnDestroy,
   inject,
@@ -6,7 +7,6 @@ import {
   computed,
   effect,
 } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { TranslocoModule } from "@jsverse/transloco";
 import { AlertComponent } from "./shared/ui/alert/alert.component";
 import { ConfirmDialogComponent } from "./shared/ui/confirm-dialog/confirm-dialog.component";
@@ -22,8 +22,8 @@ import { BoardService } from "./features/board/data/board.service";
   standalone: true,
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     TranslocoModule,
     // root-level singletons
     AlertComponent,

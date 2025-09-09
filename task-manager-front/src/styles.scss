@@ -1,7 +1,7 @@
 @use "./app/shared/styles/shared";
 @use "./styles/_tokens";
 @use "./styles/_breakpoints";
-@use "./styles/_mixins";
+@use "./styles/_mixins" as mixins;
 @use "./styles/themes/_light";
 @use "./styles/themes/_dark";
 
@@ -17,6 +17,11 @@
 html,
 body {
   height: 100%;
+}
+
+:root {
+  /* Default scheme; dark theme overrides via [data-theme="dark"] */
+  color-scheme: light;
 }
 
 body {
@@ -38,8 +43,7 @@ option {
 
 /* Global focus (AA) */
 :where(a, button, input, textarea, [tabindex]):focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 40%, transparent);
-  outline: none;
+  @include mixins.focus-ring(); /* centralized tokenized ring */
 }
 
 /* Utility */

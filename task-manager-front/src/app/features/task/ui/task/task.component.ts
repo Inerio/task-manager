@@ -235,7 +235,7 @@ export class TaskComponent implements OnChanges, OnDestroy {
       });
       this.taskService.updateTaskFromApi(freshTask);
     }
-    await this.taskService.refreshTaskById(taskId);
+    // Removed redundant extra refetch (was refreshTaskById) to avoid double HTTP call.
   }
 
   async onAttachmentDeleted(filename: string): Promise<void> {

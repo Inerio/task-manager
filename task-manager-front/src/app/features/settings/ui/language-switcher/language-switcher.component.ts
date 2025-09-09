@@ -58,9 +58,9 @@ export class LanguageSwitcherComponent implements OnInit, OnDestroy {
     this.sub?.unsubscribe?.();
   }
 
-  /** Toggle language regardless of which button is clicked. */
-  toggle(): void {
-    const next: Lang = this.active() === "en" ? "fr" : "en";
-    this.transloco.setActiveLang(next);
+  /** Explicitly set the requested language. */
+  set(lang: Lang): void {
+    if (lang === this.active()) return;
+    this.transloco.setActiveLang(lang);
   }
 }

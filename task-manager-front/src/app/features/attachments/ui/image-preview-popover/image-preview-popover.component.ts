@@ -16,4 +16,6 @@ export class ImagePreviewPopoverComponent {
   @Input({ required: true }) x!: number;
   @Input({ required: true }) y!: number;
   @Input({ required: true }) visible!: boolean;
+  /** Accessible alt text for the preview image (filename if available). */
+  @Input() alt = "preview";
 }

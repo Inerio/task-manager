@@ -37,7 +37,8 @@
     }
 
     &.active {
-      background: color-mix(in oklab, #111827 92%, #0000);
+      /* Use brand color for consistency across light/dark themes */
+      background: var(--brand);
       color: #fff;
     }
   }

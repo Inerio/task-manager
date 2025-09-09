@@ -1,4 +1,10 @@
-import { Component, Input, computed, inject } from "@angular/core";
+import {
+  Component,
+  Input,
+  computed,
+  inject,
+  ChangeDetectionStrategy,
+} from "@angular/core";
 import { TranslocoModule } from "@jsverse/transloco";
 import { KanbanColumnComponent } from "../kanban-column/kanban-column.component";
 import { KanbanColumnService } from "../../data/kanban-column.service";
@@ -20,6 +26,7 @@ import { BoardColumnsEditService } from "../../data/board-columns-edit.service";
   styleUrls: ["./board-columns.component.scss"],
   imports: [TranslocoModule, KanbanColumnComponent],
   providers: [BoardColumnsDndService, BoardColumnsEditService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BoardColumnsComponent {
   @Input({ required: true }) boardId!: number;
@@ -62,8 +69,5 @@ export class BoardColumnsComponent {
   }
   isEditingTitle(column: KanbanColumn): boolean {
     return this.edit.editingColumn() === column;
-  }
-  isDraft(column: KanbanColumn): boolean {
-    return !column.id;
   }
 }

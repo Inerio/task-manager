@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy } from "@angular/core";
+import { Component, ChangeDetectionStrategy, input } from "@angular/core";
 import { TranslocoModule } from "@jsverse/transloco";
 
 @Component({
@@ -10,8 +10,8 @@ import { TranslocoModule } from "@jsverse/transloco";
   imports: [TranslocoModule],
 })
 export class FooterComponent {
-  /** Brand shown before the legal text. Override via [brand] if needed. */
-  @Input() brand = "Tasukeru";
+  /** Brand shown before the legal text. */
+  readonly brand = input("Tasukeru");
 
   /** Static year (no need to recompute). */
   readonly year = new Date().getFullYear();

@@ -43,12 +43,18 @@ export class ThemeSwitcherComponent implements OnInit, OnDestroy {
   };
 
   ngOnInit(): void {
-    // Initialize from: LS -> existing [data-theme] -> fallback
+    // Initialize from: LS -> existing [data-theme] -> prefers-color-scheme -> fallback
     const saved = (localStorage.getItem(this.LS_KEY) as Theme | null) ?? null;
     const fromAttr =
       (document.documentElement.getAttribute("data-theme") as Theme | null) ??
       null;
-    const initial: Theme = saved ?? fromAttr ?? "light";
+    const prefersDark =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const initial: Theme =
+      saved ?? fromAttr ?? (prefersDark ? "dark" : "light");
+
     this.setTheme(initial, false);
     window.addEventListener("storage", this.onStorage);
   }
@@ -57,10 +63,10 @@ export class ThemeSwitcherComponent implements OnInit, OnDestroy {
     window.removeEventListener("storage", this.onStorage);
   }
 
-  /** Toggle between light/dark. */
-  toggle(): void {
-    const next: Theme = this.active() === "light" ? "dark" : "light";
-    this.setTheme(next, true);
+  /** Explicitly select the requested theme (no ambiguous toggle). */
+  select(theme: Theme): void {
+    if (theme === this.active()) return;
+    this.setTheme(theme, true);
   }
 
   /** Apply theme to <html> and optionally persist. */

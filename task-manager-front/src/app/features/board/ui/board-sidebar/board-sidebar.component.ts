@@ -8,6 +8,7 @@ import {
   input,
   output,
   signal,
+  ChangeDetectionStrategy,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { LanguageSwitcherComponent } from "../../../settings/ui/language-switcher/language-switcher.component";
@@ -43,6 +44,7 @@ interface TempBoard {
   ],
   templateUrl: "./board-sidebar.component.html",
   styleUrls: ["./board-sidebar.component.scss"],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BoardSidebarComponent {
   // ---- Inputs / Outputs ----

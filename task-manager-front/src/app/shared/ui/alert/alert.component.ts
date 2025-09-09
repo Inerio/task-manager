@@ -1,11 +1,9 @@
-import {
-  Component,
-  computed,
-  inject,
-  ChangeDetectionStrategy,
-} from "@angular/core";
+import { Component, inject, ChangeDetectionStrategy } from "@angular/core";
 import { NgClass } from "@angular/common";
-import { AlertService } from "../../../core/services/alert.service";
+import {
+  AlertService,
+  type AlertMessage,
+} from "../../../core/services/alert.service";
 
 @Component({
   selector: "app-alert",
@@ -18,11 +16,11 @@ import { AlertService } from "../../../core/services/alert.service";
 export class AlertComponent {
   private readonly alertService = inject(AlertService);
 
-  /** Current alerts (reactive signal). */
-  readonly alerts = computed(() => this.alertService.alerts());
+  /** Direct alias to the service signal (no extra computed wrapper). */
+  readonly alerts = this.alertService.alerts;
 
   /** Stable trackBy for @for (prevents DOM churn). */
-  trackById(_index: number, a: { id: number }): number {
+  trackById(_index: number, a: Pick<AlertMessage, "id">): number {
     return a.id;
   }
 

@@ -101,6 +101,16 @@ export class BoardColumnsEditService {
     const currentlyEditing = this.editingColumn();
     if (!currentlyEditing) return;
 
+    // Prevent creating/updating with an empty title (UX safeguard).
+    if (!newName) {
+      if (!column.id) {
+        this.columns.removeColumnRef(currentlyEditing);
+      }
+      this.editingColumn.set(null);
+      this.editingTitleValue.set("");
+      return;
+    }
+
     try {
       if (!column.id) {
         // Creating from a DRAFT: service appends the created item.

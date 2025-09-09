@@ -43,14 +43,28 @@ function getOrCreateAnonId(): string {
   return fresh;
 }
 
+/** Only attach header for same-origin requests to avoid leaking the UID. */
+function isSameOrigin(url: string): boolean {
+  try {
+    // Relative URL -> same origin
+    if (!/^https?:\/\//i.test(url)) return true;
+    const target = new URL(url, globalThis.location?.origin ?? undefined);
+    return target.origin === globalThis.location?.origin;
+  } catch {
+    // On parsing error, be conservative and skip
+    return false;
+  }
+}
+
 /**
- * Adds a stable anonymous UID to every request.
+ * Adds a stable anonymous UID to every same-origin request.
  * - Uses env.clientIdHeader
  * - Does not override if header is already set upstream
  */
 export const anonIdInterceptor: HttpInterceptorFn = (req, next) => {
   const headerName = environment.clientIdHeader ?? "X-Client-Id";
   if (req.headers.has(headerName)) return next(req); // respect upstream header
+  if (!isSameOrigin(req.url)) return next(req); // don't leak across origins
 
   const uid = getOrCreateAnonId();
   const cloned = req.clone({ setHeaders: { [headerName]: uid } });

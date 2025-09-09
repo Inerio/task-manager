@@ -6,17 +6,22 @@
   [class.drag-over]="isDragging()"
   appStopBubbling
   appDropzone
-  [dzAccept]="acceptTypes"
+  [dzAccept]="effectiveAccept"
   (dzFiles)="onFilesSelected($event)"
   (dzStateChange)="isDragging.set($event)"
   (click)="onZoneClick()"
+  [attr.role]="'button'"
+  [attr.tabindex]="0"
+  (keydown.enter)="onZoneKeydown($event)"
+  (keydown.space)="onZoneKeydown($event)"
+  [attr.aria-label]="'common.chooseFile' | transloco"
 >
   <!-- Hidden file input -->
   <input
     type="file"
     #fileInput
     (change)="onFileSelect($event)"
-    [accept]="acceptTypes"
+    [accept]="effectiveAccept"
     multiple
     hidden
   />
@@ -65,5 +70,6 @@
     [x]="previewLeft()"
     [y]="previewTop()"
     [visible]="!!previewUrl()"
+    [alt]="previewFilename() || 'preview'"
   />
 </div>

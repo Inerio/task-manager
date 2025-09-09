@@ -19,6 +19,7 @@ import { DropzoneDirective } from "../../directives/dropzone.directive";
 import { AttachmentTagComponent } from "../attachment-tag/attachment-tag.component";
 import { AttachmentPickerService } from "../../data/attachment-picker.service";
 import { StopBubblingDirective } from "../../../../shared/directives/stop-bubbling.directive";
+import { UPLOAD_CONFIG, type UploadConfig } from "../../tokens/upload.config";
 
 /**
  * AttachmentZoneComponent: handles both standard uploads (edit mode)
@@ -51,8 +52,13 @@ export class AttachmentZoneComponent {
   // ===== Inputs =====
   @Input({ required: true }) attachments!: ReadonlyArray<string>;
   @Input({ required: true }) taskId!: number;
-  @Input() acceptTypes = "image/*,.pdf,.doc,.docx,.txt";
-  @Input() maxSize = 5 * 1024 * 1024;
+
+  /** If not provided, falls back to UPLOAD_CONFIG.acceptTypes. */
+  @Input() acceptTypes?: string;
+
+  /** If not provided, falls back to UPLOAD_CONFIG.maxSize. */
+  @Input() maxSize?: number;
+
   @Input() creationMode = false;
   @Input() pendingFiles: File[] = [];
 
@@ -71,6 +77,9 @@ export class AttachmentZoneComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly fileSelection = inject(FileSelectionService);
   private readonly picker = inject(AttachmentPickerService);
+  private readonly uploadCfg = inject<UploadConfig>(UPLOAD_CONFIG, {
+    optional: true,
+  });
 
   // ===== UI state =====
   readonly isDragging = signal(false);
@@ -81,6 +90,14 @@ export class AttachmentZoneComponent {
 
   // Promise resolver used by the hidden input fallback.
   private inputResolve: ((files: File[]) => void) | undefined;
+
+  // ===== Derived effective config =====
+  get effectiveAccept(): string {
+    return this.acceptTypes ?? this.uploadCfg?.acceptTypes ?? "";
+  }
+  get effectiveMaxSize(): number {
+    return this.maxSize ?? this.uploadCfg?.maxSize ?? 5 * 1024 * 1024;
+  }
 
   // ===== Track helpers (stable references for @for trackBy) =====
   trackByFilename(_index: number, filename: string): string {
@@ -95,9 +112,17 @@ export class AttachmentZoneComponent {
     void this.openWithService();
   }
 
+  onZoneKeydown(ev: Event): void {
+    const e = ev as KeyboardEvent;
+    const key = e.key || "";
+    if (key === "Enter" || key === " ") {
+      e.preventDefault();
+    }
+  }
+
   private async openWithService(): Promise<void> {
     const files = await this.picker.pick({
-      accept: this.acceptTypes,
+      accept: this.effectiveAccept,
       multiple: true,
       beforeOpen: () => this.dialogOpen.emit(true),
       afterClose: () => this.dialogOpen.emit(false),
@@ -161,8 +186,8 @@ export class AttachmentZoneComponent {
     ];
 
     const { accepted, rejected } = this.fileSelection.select(selectedFiles, {
-      accept: this.acceptTypes,
-      maxSize: this.maxSize,
+      accept: this.effectiveAccept,
+      maxSize: this.effectiveMaxSize,
       existing,
     });
 

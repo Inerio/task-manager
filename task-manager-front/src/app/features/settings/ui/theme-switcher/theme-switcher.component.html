@@ -7,7 +7,7 @@
     type="button"
     [class.active]="isLight()"
     [attr.aria-pressed]="isLight()"
-    (click)="toggle()"
+    (click)="select('light')"
     [attr.aria-label]="'theme.light' | transloco"
     [attr.title]="'theme.light' | transloco"
   >
@@ -18,7 +18,7 @@
     type="button"
     [class.active]="isDark()"
     [attr.aria-pressed]="isDark()"
-    (click)="toggle()"
+    (click)="select('dark')"
     [attr.aria-label]="'theme.dark' | transloco"
     [attr.title]="'theme.dark' | transloco"
   >

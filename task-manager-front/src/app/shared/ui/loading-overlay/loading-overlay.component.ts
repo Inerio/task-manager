@@ -2,10 +2,8 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
-  Input,
-  OnChanges,
-  SimpleChanges,
-  type Signal,
+  computed,
+  input,
 } from "@angular/core";
 import { TranslocoModule } from "@jsverse/transloco";
 import { LoadingService } from "../../../core/services/loading.service";
@@ -18,23 +16,21 @@ import { LoadingService } from "../../../core/services/loading.service";
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslocoModule],
 })
-export class LoadingOverlayComponent implements OnChanges {
+export class LoadingOverlayComponent {
   private readonly loading = inject(LoadingService);
 
   /** If provided, the overlay becomes "inline" and listens to that scope only. */
-  @Input() scope?: string;
+  readonly scope = input<string | null>(null);
 
-  /** Scoped loading signal when `scope` is set. */
-  private scopedSignal?: Signal<boolean>;
+  /** Resolve the scoped loading signal only when a scope is defined. */
+  private readonly scoped = computed(() => {
+    const s = this.scope();
+    return s ? this.loading.isLoadingScope(s) : null;
+  });
 
-  ngOnChanges(_changes: SimpleChanges): void {
-    this.scopedSignal = this.scope
-      ? this.loading.isLoadingScope(this.scope)
-      : undefined;
-  }
-
-  /** Read current loading state (scoped or global). */
-  isLoading(): boolean {
-    return this.scopedSignal ? this.scopedSignal() : this.loading.isLoading();
-  }
+  /** Signal-friendly boolean used directly in the template. */
+  readonly isLoading = computed(() => {
+    const scoped = this.scoped();
+    return scoped ? scoped() : this.loading.isLoading();
+  });
 }

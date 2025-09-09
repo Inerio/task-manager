@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  ChangeDetectionStrategy,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
@@ -21,6 +22,7 @@ import { BoardService } from "../../data/board.service";
   imports: [CommonModule, TranslocoModule],
   templateUrl: "./board-toolbar.component.html",
   styleUrls: ["./board-toolbar.component.scss"],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BoardToolbarComponent {
   // ---- Inputs / Outputs ----

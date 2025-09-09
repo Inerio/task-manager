@@ -6,6 +6,7 @@ import {
   effect,
   OnChanges,
   SimpleChanges,
+  ChangeDetectionStrategy,
 } from "@angular/core";
 import { LoadingOverlayComponent } from "../../../../shared/ui/loading-overlay/loading-overlay.component";
 import { BoardColumnsComponent } from "../board-columns/board-columns.component";
@@ -22,6 +23,7 @@ import { TaskService } from "../../../task/data/task.service";
   templateUrl: "./board.component.html",
   styleUrls: ["./board.component.scss"],
   imports: [LoadingOverlayComponent, BoardColumnsComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BoardComponent implements OnChanges {
   @Input({ required: true }) boardId!: number;

@@ -4,16 +4,15 @@ import {
   HostListener,
   Input,
   Output,
-  inject,
 } from "@angular/core";
 import { isFileDragEvent } from "../../../shared/utils/drag-drop-utils";
-import { FileSelectionService } from "../data/file-selection.service";
 
 /**
  * Dropzone directive:
  * - Emits dzStateChange(true/false) when a file drag enters/leaves the host.
  * - Emits dzFiles(File[]) on drop.
- * - Optional accept filtering via [dzAccept].
+ * - [dzAccept] is kept for API symmetry but filtering is centralized later
+ *   in FileSelectionService to ensure consistent alerts/UX.
  * - Can be disabled with [dzDisabled].
  */
 @Directive({
@@ -26,8 +25,6 @@ export class DropzoneDirective {
 
   @Output() readonly dzFiles = new EventEmitter<File[]>();
   @Output() readonly dzStateChange = new EventEmitter<boolean>();
-
-  private readonly fileSelection = inject(FileSelectionService);
 
   @HostListener("dragover", ["$event"])
   onDragOver(event: DragEvent): void {
@@ -57,11 +54,9 @@ export class DropzoneDirective {
     const list = event.dataTransfer?.files;
     const files = list ? Array.from(list) : [];
 
-    const accepted = this.dzAccept
-      ? files.filter((f) => this.fileSelection.matchesAccept(f, this.dzAccept))
-      : files;
-
-    this.dzFiles.emit(accepted);
+    // Do not pre-filter by accept here; let selection service handle it
+    // so the UI can emit consistent rejection alerts.
+    this.dzFiles.emit(files);
     this.dzStateChange.emit(false);
   }
 }

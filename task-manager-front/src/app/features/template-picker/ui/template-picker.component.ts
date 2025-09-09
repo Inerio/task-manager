@@ -4,6 +4,9 @@ import {
   HostListener,
   computed,
   inject,
+  effect,
+  ViewChild,
+  ElementRef,
 } from "@angular/core";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { toSignal } from "@angular/core/rxjs-interop";
@@ -30,6 +33,16 @@ export class TemplatePickerComponent {
   // Make language changes a reactive dependency so the template cards re-translate
   private readonly currentLang = toSignal(this.i18n.langChanges$, {
     initialValue: this.i18n.getActiveLang(),
+  });
+
+  @ViewChild("dialog", { read: ElementRef })
+  private dialogEl?: ElementRef<HTMLElement>;
+
+  /** Focus dialog on open for better a11y. */
+  private focusEffect = effect(() => {
+    if (this.visible()) {
+      queueMicrotask(() => this.dialogEl?.nativeElement.focus());
+    }
   });
 
   /** Translate columns for preview on-the-fly when language changes. */

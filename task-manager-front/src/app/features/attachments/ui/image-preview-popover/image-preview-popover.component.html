@@ -1,5 +1,5 @@
 @if (visible && url) {
 <div class="popover" [style.top.px]="y" [style.left.px]="x">
-  <img [src]="url" alt="preview" />
+  <img [src]="url" [attr.alt]="alt" />
 </div>
 }

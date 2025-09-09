@@ -8,17 +8,14 @@ import {
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { TranslocoModule } from "@jsverse/transloco";
-
-import { AlertComponent } from "./components/alert/alert.component";
-import { ConfirmDialogComponent } from "./components/alert/confirm-dialog.component";
-import { LoadingOverlayComponent } from "./components/loading-overlay/loading-overlay.component";
-import { TemplatePickerComponent } from "./components/template-picker/template-picker.component";
-import { BoardComponent } from "./components/board/board.component";
-
-import { BoardSidebarComponent } from "./components/board-sidebar/board-sidebar.component";
-import { BoardToolbarComponent } from "./components/board-toolbar/board-toolbar.component";
-
-import { BoardService } from "./services/board.service";
+import { AlertComponent } from "./shared/ui/alert/alert.component";
+import { ConfirmDialogComponent } from "./shared/ui/confirm-dialog/confirm-dialog.component";
+import { LoadingOverlayComponent } from "./shared/ui/loading-overlay/loading-overlay.component";
+import { TemplatePickerComponent } from "./features/template-picker/ui/template-picker.component";
+import { BoardComponent } from "./features/board/ui/board/board.component";
+import { BoardSidebarComponent } from "./features/board/ui/board-sidebar/board-sidebar.component";
+import { BoardToolbarComponent } from "./features/board/ui/board-toolbar/board-toolbar.component";
+import { BoardService } from "./features/board/data/board.service";
 
 @Component({
   selector: "app-root",

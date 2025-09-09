@@ -9,10 +9,9 @@ import {
   withInterceptorsFromDi,
 } from "@angular/common/http";
 import { provideTransloco } from "@jsverse/transloco";
-
-import { provideUploadConfig } from "./tokens/upload.config";
+import { provideUploadConfig } from "./features/attachments/tokens/upload.config";
 import { environment } from "../environments/environment";
-import { AppTranslocoLoader } from "./transloco.loader";
+import { AppTranslocoLoader } from "./core/i18n/transloco.loader";
 import { anonIdInterceptor } from "./core/interceptors/anon-id.interceptor";
 
 // Read saved language early to avoid initial flicker on bootstrap.

@@ -1,9 +1,7 @@
 @use "../../../../../styles/_breakpoints" as bp;
 
 .task-kanbanColumn {
-  /* Vertical gap between tasks */
   --task-gap: 0.8rem;
-
   position: relative;
   display: flex;
   flex-direction: column;
@@ -16,8 +14,7 @@
   overflow-y: auto;
   overflow-x: hidden;
 
-  /* Subtle, brand-aligned scrollbar */
-  scrollbar-width: thin; /* Firefox */
+  scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--brand) 35%, #9fb6d44d) transparent;
 
   &::-webkit-scrollbar {
@@ -44,7 +41,6 @@
     transition: background 0.18s, border 0.18s;
     box-shadow: 0 1px 3px 0 #0001;
 
-    /* Keep "Add task" visible while scrolling */
     position: sticky;
     top: 0;
     z-index: 5;
@@ -58,32 +54,30 @@
   }
 }
 
-/* Column-level anchor for absolute slices */
 .task-dropzone-column {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
-/* Head zone (spacer + top slice + optional placeholder) */
 .head-zone {
   position: relative;
-
   .head-spacer {
     height: var(--task-gap);
   }
 }
 
-/* One row per card */
 .task-row {
   position: relative;
   margin-bottom: var(--task-gap);
-
   app-task {
     display: block;
     margin: 0;
   }
 }
 
-/* ===== Drop slices (hit areas) ===== */
+/* ===== Drop slices ===== */
 .drop-slice {
   position: absolute;
   left: 0;
@@ -95,13 +89,11 @@
   pointer-events: auto;
 }
 
-/* Head slice overlays the entire head zone */
 .head-slice {
   inset: 0;
   top: 0;
 }
 
-/* Slight overlap around card edges improves targeting */
 .slice-before {
   top: -8px;
   height: calc(50% + 8px);
@@ -111,13 +103,15 @@
   height: calc(50% + 8px);
 }
 
-/* Tail slice to catch drops past the last task */
+.tail-flex-zone {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 84px;
+}
+
 .tail-slice {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -72px;
-  height: 112px;
+  inset: 0;
   z-index: 30;
   pointer-events: none;
 }
@@ -129,9 +123,13 @@
 .empty-drop-wrapper {
   position: relative;
   margin: var(--task-gap) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1 1 auto;
+  width: 100%;
 }
 
-/* Capture dragover/drop over the empty hint */
 .empty-slice {
   position: absolute;
   inset: 0;
@@ -142,11 +140,11 @@
   pointer-events: auto;
 }
 
-/* Visible empty-state hint */
 .empty-column-drop {
   border: 2px dashed #e0e7ef;
   border-radius: var(--radius-2);
-  min-height: 84px;
+  height: 100%;
+  width: 100%;
   background: #f9fbff;
   display: flex;
   align-items: center;
@@ -161,7 +159,7 @@
   }
 }
 
-/* ===== Placeholder (preview) ===== */
+/* ===== Placeholder ===== */
 .task-placeholder {
   --ph: 72px;
   height: 0;
@@ -174,6 +172,7 @@
   overflow: hidden;
   pointer-events: auto;
   z-index: 25;
+  box-sizing: border-box;
 
   &::before {
     content: "";
@@ -205,19 +204,23 @@
   &.open {
     animation: phOpen 140ms ease-out forwards;
   }
-
   &.open-static {
     height: var(--ph);
     animation: none;
   }
 
-  /* Ghost preview must not capture events */
   app-task {
     pointer-events: none;
+    display: block;
+    width: 100%;
   }
 }
 
-/* Full-area hit target so the placeholder accepts drops everywhere */
+.empty-drop-wrapper .task-placeholder {
+  width: 100%;
+  align-self: stretch;
+}
+
 .placeholder-slice {
   position: absolute;
   inset: 0;

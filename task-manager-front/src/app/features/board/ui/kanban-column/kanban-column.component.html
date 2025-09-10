@@ -1,4 +1,3 @@
-<!-- Template micro-perf: cache expensive reads with @let; remove deprecated aria-dropeffect -->
 @let tasks = dnd.displayedTasks(); @let ghost = dnd.ghostTask(); @let isDrag =
 dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
 
@@ -27,14 +26,10 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
         (cancel)="handleTaskFormCancel()"
       ></app-task-form>
     </div>
-    }
-
-    <!-- ===== Non-empty column: head slice + (optional) top preview + tasks + tail slice ===== -->
-    @if (tasks.length > 0) {
+    } @if (tasks.length > 0) {
 
     <!-- TOP ZONE -->
     <div class="head-zone">
-      <!-- Hide the head-slice if it matches the dragged card own edge -->
       @if (!dnd.suppressZone(0)) {
       <div
         class="drop-slice head-slice"
@@ -54,7 +49,6 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
         [style.--ph.px]="ph"
         aria-hidden="true"
       >
-        <!-- Full-area hit target so the whole preview accepts drop -->
         <div
           class="drop-slice placeholder-slice"
           (dragover)="dnd.onSliceDragOver($event, 0)"
@@ -67,11 +61,8 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
       </div>
       }
     </div>
-
-    <!-- Inter-task slices + live placeholder -->
     @for (task of tasks; track trackById($index, task); let idx = $index) {
     <div class="task-row">
-      <!-- Slice before current card (index = idx); hidden if it's the dragged card own edge -->
       @if (!dnd.suppressZone(idx)) {
       <div
         class="drop-slice slice-before"
@@ -80,11 +71,8 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
         (drop)="dnd.onSliceDrop($event, idx)"
       ></div>
       }
-
       <app-task [task]="task"></app-task>
-
-      <!-- Live placeholder AFTER this card (index = idx + 1) -->
-      @if (dnd.dragOverIndex() === idx + 1) {
+      @if (dnd.dragOverIndex() === idx + 1 && idx + 1 < tasks.length) {
       <div
         class="task-placeholder"
         [class.open]="dnd.animateOnEnter()"
@@ -92,7 +80,6 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
         [style.--ph.px]="ph"
         aria-hidden="true"
       >
-        <!-- Full-area hit target so the whole preview accepts drop -->
         <div
           class="drop-slice placeholder-slice"
           (dragover)="dnd.onSliceDragOver($event, idx + 1)"
@@ -103,10 +90,7 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
         <app-task [task]="ghost" [ghost]="true"></app-task>
         }
       </div>
-      }
-
-      <!-- Slice after current card (index = idx + 1); hidden if it's the dragged card own edge -->
-      @if (!dnd.suppressZone(idx + 1)) {
+      } @if (!dnd.suppressZone(idx + 1) && idx + 1 < tasks.length) {
       <div
         class="drop-slice slice-after"
         [class.active]="dnd.sliceIsActive(idx + 1)"
@@ -117,18 +101,38 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
     </div>
     }
 
-    <!-- Tail slice to allow "append" under the last card (index = length) -->
-    <div
-      class="drop-slice tail-slice"
-      [class.active]="dnd.sliceIsActive(tasks.length)"
-      (dragover)="dnd.onSliceDragOver($event, tasks.length)"
-      (drop)="dnd.onSliceDrop($event, tasks.length)"
-    ></div>
+    <div class="tail-flex-zone">
+      <div
+        class="drop-slice tail-slice"
+        [class.active]="dnd.sliceIsActive(tasks.length)"
+        (dragover)="dnd.onSliceDragOver($event, tasks.length)"
+        (drop)="dnd.onSliceDrop($event, tasks.length)"
+      ></div>
+
+      @if (dnd.dragOverIndex() === tasks.length) {
+      <div
+        class="task-placeholder"
+        [class.open]="dnd.animateOnEnter()"
+        [class.open-static]="!dnd.animateOnEnter()"
+        [style.--ph.px]="ph"
+        aria-hidden="true"
+      >
+        <div
+          class="drop-slice placeholder-slice"
+          (dragover)="dnd.onSliceDragOver($event, tasks.length)"
+          (drop)="dnd.onSliceDrop($event, tasks.length)"
+        ></div>
+
+        @if (ghost) {
+        <app-task [task]="ghost" [ghost]="true"></app-task>
+        }
+      </div>
+      }
+    </div>
 
     } @else {
-    <!-- ===== EMPTY COLUMN: drop directly on the visible hint; preview replaces it on hover ===== -->
+    <!-- ===== EMPTY COLUMN ===== -->
     <div class="empty-drop-wrapper">
-      <!-- Overlay slice so the hint itself captures dragover/drop -->
       <div
         class="drop-slice empty-slice"
         [class.active]="dnd.sliceIsActive(0)"
@@ -144,7 +148,6 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
         [style.--ph.px]="ph"
         aria-hidden="true"
       >
-        <!-- Full-area hit target so the whole preview accepts drop -->
         <div
           class="drop-slice placeholder-slice"
           (dragover)="dnd.onSliceDragOver($event, 0)"

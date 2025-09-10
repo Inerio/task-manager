@@ -60,18 +60,46 @@ export class AppComponent implements OnDestroy {
   // Footer year
   readonly currentYear = new Date().getFullYear();
 
+  // --- persistence key (scoped) ---
+  private readonly STORAGE_KEY = "tasukeru:lastBoardId";
+
   constructor() {
     this.boardService.loadBoards();
+
     this._onMqChange = this._onMqChange.bind(this);
     this._mql.addEventListener("change", this._onMqChange);
 
     effect(() => {
-      const firstId = this.boards()[0]?.id;
-      if (typeof firstId === "number" && this.selectedBoardId() === null) {
-        this.selectedBoardId.set(firstId);
+      const boards = this.boards();
+      const current = this.selectedBoardId();
+
+      if (boards.length === 0) {
+        if (current !== null) this.selectedBoardId.set(null);
+        return;
       }
+
+      const currentExists = boards.some((b) => b.id === current);
+      if (currentExists) return;
+
+      const saved = this.getSavedBoardId();
+      const savedExists =
+        typeof saved === "number" && boards.some((b) => b.id === saved);
+
+      const next = (savedExists ? saved : boards[0]!.id!) as number;
+      if (current !== next) this.selectedBoardId.set(next);
     });
 
+    // Persist the last opened board id.
+    effect(() => {
+      const id = this.selectedBoardId();
+      try {
+        if (typeof id === "number") {
+          localStorage.setItem(this.STORAGE_KEY, String(id));
+        }
+      } catch {}
+    });
+
+    // Drawer state based on viewport/data.
     effect(() => {
       const small = this.isMdDown();
       const hasBoards = this.hasBoards();
@@ -92,6 +120,18 @@ export class AppComponent implements OnDestroy {
     this.isMdDown.set(e.matches);
   }
 
+  /** Read last board id from storage. */
+  private getSavedBoardId(): number | null {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (raw == null) return null;
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : null;
+    } catch {
+      return null;
+    }
+  }
+
   // Sidebar controls (mobile/tablet)
   openSidebar(): void {
     if (this.isMdDown()) this.sidebarOpen.set(true);
@@ -99,7 +139,6 @@ export class AppComponent implements OnDestroy {
   closeSidebar(): void {
     if (this.isMdDown() && this.hasBoards()) this.sidebarOpen.set(false);
   }
-
   onBoardSelected(id: number): void {
     if (this.selectedBoardId() !== id) this.selectedBoardId.set(id);
     if (this.isMdDown()) this.sidebarOpen.set(false);

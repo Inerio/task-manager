@@ -264,40 +264,31 @@ export class KanbanColumnDndService {
       const columnTasks = [...this.filteredTasks()];
       const fromIdx = columnTasks.findIndex((t) => t.id === taskId);
       if (fromIdx === -1) return;
-
       if (targetIndex === fromIdx) {
         this.dragOverIndex.set(null);
         this.hoveredZoneIndex.set(null);
         this.animateOnEnter.set(false);
         return;
       }
-
       columnTasks.splice(fromIdx, 1);
       const insertAt = Math.max(0, Math.min(targetIndex, columnTasks.length));
       columnTasks.splice(insertAt, 0, draggedTask);
-
       const reordered = columnTasks.map((t, idx) => ({ ...t, position: idx }));
-
       this.drag.markTaskDropped(taskId); // fast feedback
-
       this.dragOverIndex.set(null);
       this.hoveredZoneIndex.set(null);
       this.animateOnEnter.set(false);
-
       void this.tasksSvc.reorderTasks(reordered).catch(() => {});
       return;
     }
-
     // Cross-column move (optimistic + persist).
     const sourceTasks = allTasks.filter(
       (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
     );
     const targetTasks = [...this.filteredTasks()];
-
     const newTask = { ...draggedTask, kanbanColumnId: colId };
     const clamped = Math.max(0, Math.min(targetIndex, targetTasks.length));
     targetTasks.splice(clamped, 0, newTask);
-
     const reorderedSource = sourceTasks.map((t, idx) => ({
       ...t,
       position: idx,
@@ -306,17 +297,12 @@ export class KanbanColumnDndService {
       ...t,
       position: idx,
     }));
-
     this.drag.markTaskDropped(taskId);
-
     this.dragOverIndex.set(null);
     this.hoveredZoneIndex.set(null);
     this.animateOnEnter.set(false);
-
-    await Promise.allSettled([
-      this.tasksSvc.reorderTasks([...reorderedSource, ...reorderedTarget]),
-      this.tasksSvc.updateTask(newTask.id!, newTask),
-    ]);
+    await this.tasksSvc.updateTask(newTask.id!, newTask);
+    await this.tasksSvc.reorderTasks([...reorderedSource, ...reorderedTarget]);
   }
 
   /** True if the hovered zone equals the dragged card own edges (no-op move). */

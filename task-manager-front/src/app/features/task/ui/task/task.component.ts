@@ -96,11 +96,21 @@ export class TaskComponent implements OnChanges, OnDestroy {
     this.hasDue() ? this.TITLE_TRUNCATE_WITH_BADGE : this.TITLE_TRUNCATE_BASE
   );
 
-  // === i/o changes ===
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["task"] && this.task) {
-      this.localTask.set({ ...this.task });
-      // Truncate state resets via [ttResetKey] bound to task id.
+      // Preserve edit mode if we're still looking at the same task id.
+      const prev = this.localTask();
+      const keepEditing =
+        prev?.isEditing === true &&
+        prev?.id != null &&
+        prev.id === this.task.id;
+
+      this.localTask.set({
+        ...this.task,
+        // If the incoming task doesn't carry isEditing (API payload), keep local true.
+        isEditing: keepEditing ? true : (this.task as Task).isEditing ?? false,
+      } as Task);
+      // Truncate state still resets via [ttResetKey] bound to task id.
     }
   }
 

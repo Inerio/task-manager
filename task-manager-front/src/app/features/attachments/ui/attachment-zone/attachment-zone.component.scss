@@ -18,25 +18,93 @@
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent);
   }
 
+  .visually-hidden-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    left: -9999px;
+    top: -9999px;
+  }
+
+  /* Wrapper */
+  .attachments-list {
+    position: relative;
+    overflow: visible;
+    &.clamped {
+      overflow: hidden;
+      background: color-mix(in oklab, var(--brand) 7%, var(--surface-1));
+      border-radius: var(--radius-2);
+    }
+    &.has-toggle {
+      padding-bottom: 1.6rem;
+    }
+  }
+  &:has(.attachments-toggle) .attachments-list {
+    padding-bottom: 1.6rem;
+  }
+
   .attachment-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
     margin-bottom: 0;
   }
-}
 
-.empty-upload-text {
-  padding: 0.08rem 0.05rem;
-  color: #7a869a;
-  font-size: 0.96em;
-  text-align: left;
-  user-select: none;
+  .empty-upload-text {
+    padding: 0.08rem 0.05rem;
+    color: #7a869a;
+    font-size: 0.96em;
+    text-align: left;
+    user-select: none;
 
-  .fake-link {
-    color: var(--brand);
-    text-decoration: underline dotted;
-    cursor: pointer;
-    font-weight: 500;
+    .fake-link {
+      color: var(--brand);
+      text-decoration: underline dotted;
+      cursor: pointer;
+      font-weight: 500;
+    }
+  }
+
+  .attachments-toggle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.3rem;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+
+    .toggle-btn {
+      pointer-events: auto;
+      appearance: none;
+      border: 1px solid var(--border-2);
+      background: var(--surface-1);
+      border-radius: 999px;
+      padding: 0.14rem 0.42rem;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 1px 2px #0001;
+      transition: background 0.15s, border-color 0.15s;
+
+      &:hover {
+        background: color-mix(in oklab, var(--surface-1) 92%, #000);
+      }
+
+      .chevron {
+        display: inline-block;
+        width: 0.5rem;
+        height: 0.5rem;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: rotate(45deg);
+        transition: transform 0.18s ease;
+
+        &.up {
+          transform: rotate(-135deg);
+        }
+      }
+    }
   }
 }

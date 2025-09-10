@@ -47,6 +47,14 @@ export class TaskDndDirective implements OnChanges {
 
   @HostListener("dragstart", ["$event"])
   onDragStart(e: DragEvent): void {
+    const hostEl = this.host.nativeElement;
+    const target = e.target as Element | null;
+    const lockedOnHost = hostEl.getAttribute("data-preview-lock") === "1";
+    const lockedFromChild = target?.closest?.('[data-preview-lock="1"]');
+    if (lockedOnHost || lockedFromChild) {
+      e.preventDefault();
+      return;
+    }
     if (this.disabled || this.ghost) {
       e.preventDefault();
       return;
@@ -57,11 +65,8 @@ export class TaskDndDirective implements OnChanges {
       e.preventDefault();
       return;
     }
-
     this.taskDraggingChange.emit(true);
-    this.dnd.start(e, this.host.nativeElement, id, col, (sz) =>
-      this.taskPreviewSize.emit(sz)
-    );
+    this.dnd.start(e, hostEl, id, col, (sz) => this.taskPreviewSize.emit(sz));
   }
 
   @HostListener("dragend")

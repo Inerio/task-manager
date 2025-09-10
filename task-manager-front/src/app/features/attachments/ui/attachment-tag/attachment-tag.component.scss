@@ -1,3 +1,8 @@
+:host {
+  display: inline-flex;
+  max-width: 100%;
+}
+
 .attachment-tag {
   display: inline-flex;
   align-items: center;
@@ -7,6 +12,7 @@
   box-shadow: 0 1px 2px #0001;
   border: 1px solid var(--border-2);
   font-size: 0.92em;
+  max-width: 100%;
 
   &.pending {
     border-style: dashed;
@@ -16,12 +22,16 @@
 
   .filename {
     cursor: pointer;
-    max-width: 36ch;
     color: var(--brand);
     font-weight: 500;
     text-decoration: underline dotted;
     margin-right: 0.22em;
     transition: color 0.14s;
+
+    /* Adaptive truncation */
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 auto;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -43,6 +53,7 @@
     border-radius: 4px;
     padding: 0 2px;
     transition: background 0.14s, color 0.14s;
+    flex: 0 0 auto;
 
     &:hover {
       background: color-mix(in oklab, var(--danger) 10%, var(--surface-1));

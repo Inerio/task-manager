@@ -20,19 +20,8 @@ import { AttachmentTagComponent } from "../attachment-tag/attachment-tag.compone
 import { AttachmentPickerService } from "../../data/attachment-picker.service";
 import { StopBubblingDirective } from "../../../../shared/directives/stop-bubbling.directive";
 import { UPLOAD_CONFIG, type UploadConfig } from "../../tokens/upload.config";
+import { ClampToRowsDirective } from "../../directives/clamp-to-rows.directive";
 
-/**
- * AttachmentZoneComponent: handles both standard uploads (edit mode)
- * and deferred uploads (creation mode).
- *
- * Preview hover -> PreviewHoverDirective.
- * Popover rendering -> ImagePreviewPopoverComponent.
- * File selection/validation -> FileSelectionService.
- * Drag & drop -> DropzoneDirective.
- * Tag rendering -> AttachmentTagComponent.
- * Opening picker (FS Access vs <input>) -> AttachmentPickerService.
- * Event propagation shielding -> StopBubblingDirective.
- */
 @Component({
   selector: "app-attachment-zone",
   standalone: true,
@@ -46,32 +35,24 @@ import { UPLOAD_CONFIG, type UploadConfig } from "../../tokens/upload.config";
     DropzoneDirective,
     AttachmentTagComponent,
     StopBubblingDirective,
+    ClampToRowsDirective,
   ],
 })
 export class AttachmentZoneComponent {
-  // ===== Inputs =====
   @Input({ required: true }) attachments!: ReadonlyArray<string>;
   @Input({ required: true }) taskId!: number;
-
-  /** If not provided, falls back to UPLOAD_CONFIG.acceptTypes. */
   @Input() acceptTypes?: string;
-
-  /** If not provided, falls back to UPLOAD_CONFIG.maxSize. */
   @Input() maxSize?: number;
-
   @Input() creationMode = false;
   @Input() pendingFiles: File[] = [];
 
-  // ===== Outputs =====
   @Output() readonly filesUploaded = new EventEmitter<File[]>();
   @Output() readonly fileDeleted = new EventEmitter<string>();
   @Output() readonly fileDownloaded = new EventEmitter<string>();
   @Output() readonly dialogOpen = new EventEmitter<boolean>();
 
-  // ===== Template refs =====
   @ViewChild("fileInput") fileInput!: ElementRef<HTMLInputElement>;
 
-  // ===== Injections =====
   private readonly alertService = inject(AlertService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly i18n = inject(TranslocoService);
@@ -81,17 +62,18 @@ export class AttachmentZoneComponent {
     optional: true,
   });
 
-  // ===== UI state =====
   readonly isDragging = signal(false);
   readonly previewUrl = signal<string | null>(null);
   readonly previewFilename = signal<string | null>(null);
   readonly previewTop = signal(0);
   readonly previewLeft = signal(0);
 
-  // Promise resolver used by the hidden input fallback.
+  readonly expanded = signal(false);
+  readonly needsToggle = signal(false);
+  readonly collapsedMaxHeight = signal(0);
+
   private inputResolve: ((files: File[]) => void) | undefined;
 
-  // ===== Derived effective config =====
   get effectiveAccept(): string {
     return this.acceptTypes ?? this.uploadCfg?.acceptTypes ?? "";
   }
@@ -99,7 +81,6 @@ export class AttachmentZoneComponent {
     return this.maxSize ?? this.uploadCfg?.maxSize ?? 5 * 1024 * 1024;
   }
 
-  // ===== Track helpers (stable references for @for trackBy) =====
   trackByFilename(_index: number, filename: string): string {
     return filename;
   }
@@ -107,17 +88,21 @@ export class AttachmentZoneComponent {
     return file.name;
   }
 
-  // ===== Open dialog (via service) =====
+  /** Safety: force-hide any preview (used before actions and on container exits). */
+  private hidePreview(): void {
+    this.previewUrl.set(null);
+    this.previewFilename.set(null);
+  }
+
   onZoneClick(): void {
+    this.hidePreview();
     void this.openWithService();
   }
 
   onZoneKeydown(ev: Event): void {
     const e = ev as KeyboardEvent;
     const key = e.key || "";
-    if (key === "Enter" || key === " ") {
-      e.preventDefault();
-    }
+    if (key === "Enter" || key === " ") e.preventDefault();
   }
 
   private async openWithService(): Promise<void> {
@@ -139,14 +124,20 @@ export class AttachmentZoneComponent {
     return new Promise<File[]>((resolve) => {
       let settled = false;
 
+      const cleanup = () => {
+        window.removeEventListener("focus", onFocusBack, true);
+        this.inputResolve = undefined;
+      };
+
       const onFocusBack = () => {
-        // If the user cancels, "change" won't fire; resolve with [] on focus return.
         setTimeout(() => {
           if (settled) return;
+          const hasFiles = !!input.files && input.files.length > 0;
+          if (hasFiles) return;
           settled = true;
-          window.removeEventListener("focus", onFocusBack, true);
+          cleanup();
           resolve([]);
-        }, 0);
+        }, 200);
       };
 
       window.addEventListener("focus", onFocusBack, true);
@@ -154,7 +145,7 @@ export class AttachmentZoneComponent {
       this.inputResolve = (files) => {
         if (settled) return;
         settled = true;
-        window.removeEventListener("focus", onFocusBack, true);
+        cleanup();
         resolve(files);
       };
 
@@ -162,7 +153,6 @@ export class AttachmentZoneComponent {
     });
   }
 
-  // ===== Hidden input change handler (used by the fallback Promise) =====
   onFileSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
     const list = input.files;
@@ -172,13 +162,11 @@ export class AttachmentZoneComponent {
     input.value = "";
   }
 
-  // ===== Dropzone integration =====
   onFilesSelected(files: File[]): void {
     if (!files?.length) return;
     this.handleSelectionWithAlerts(files);
   }
 
-  // ===== Common selection handling (centralized) =====
   private handleSelectionWithAlerts(selectedFiles: File[]): void {
     const existing = [
       ...this.attachments,
@@ -191,7 +179,6 @@ export class AttachmentZoneComponent {
       existing,
     });
 
-    // Raise alerts based on counters (keep messages short and independent).
     if (rejected.notAccepted > 0) {
       this.alertService.show(
         "error",
@@ -211,13 +198,11 @@ export class AttachmentZoneComponent {
       );
     }
 
-    if (accepted.length) {
-      this.filesUploaded.emit(accepted);
-    }
+    if (accepted.length) this.filesUploaded.emit(accepted);
   }
 
-  // ===== Attachment actions =====
   onDeleteAttachment(filename: string): void {
+    this.hidePreview();
     this.fileDeleted.emit(filename);
   }
 
@@ -231,10 +216,10 @@ export class AttachmentZoneComponent {
   }
 
   onDeletePendingFile(filename: string): void {
+    this.hidePreview();
     this.fileDeleted.emit(filename);
   }
 
-  // ===== Preview popover state =====
   isImage(filename: string): boolean {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(filename);
   }
@@ -262,7 +247,6 @@ export class AttachmentZoneComponent {
     this.previewFilename.set(null);
   }
 
-  /** Return a deduplicated list of attached files, preserving order. */
   getUniqueAttachments(): string[] {
     const seen = new Set<string>();
     return this.attachments.filter((filename) => {
@@ -270,5 +254,44 @@ export class AttachmentZoneComponent {
       seen.add(filename);
       return true;
     });
+  }
+
+  toggleExpand(): void {
+    this.expanded.update((v) => !v);
+  }
+
+  /** Prevent toggle button events from opening the picker in the parent zone. */
+  onToggleClick(ev: Event): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    (
+      ev as { stopImmediatePropagation?: () => void }
+    ).stopImmediatePropagation?.();
+    this.hidePreview();
+    this.toggleExpand();
+  }
+
+  onToggleKeydown(ev: Event): void {
+    const e = ev as KeyboardEvent;
+    const key = e.key ?? "";
+    if (key !== "Enter" && key !== " ") return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+    (
+      ev as { stopImmediatePropagation?: () => void }
+    ).stopImmediatePropagation?.();
+    this.hidePreview();
+    this.toggleExpand();
+  }
+
+  /** Safety: close preview whenever pointer leaves the whole zone. */
+  onZoneMouseLeave(): void {
+    this.hidePreview();
+  }
+
+  /** Safety: close preview when pointer leaves the list wrapper. */
+  onListMouseLeave(): void {
+    this.hidePreview();
   }
 }

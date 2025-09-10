@@ -10,61 +10,87 @@
   (dzFiles)="onFilesSelected($event)"
   (dzStateChange)="isDragging.set($event)"
   (click)="onZoneClick()"
+  (mouseleave)="onZoneMouseLeave()"
   [attr.role]="'button'"
   [attr.tabindex]="0"
   (keydown.enter)="onZoneKeydown($event)"
   (keydown.space)="onZoneKeydown($event)"
   [attr.aria-label]="'common.chooseFile' | transloco"
 >
-  <!-- Hidden file input -->
   <input
     type="file"
     #fileInput
     (change)="onFileSelect($event)"
     [accept]="effectiveAccept"
     multiple
-    hidden
+    class="visually-hidden-file-input"
+    aria-hidden="true"
+    tabindex="-1"
   />
 
-  <!-- Attached files -->
-  @if (attachments.length > 0) {
-  <div class="attachment-tags">
-    @for (filename of getUniqueAttachments(); track trackByFilename($index,
-    filename)) {
-    <app-attachment-tag
-      [filename]="filename"
-      (download)="onDownloadAttachment(filename)"
-      (delete)="onDeleteAttachment(filename)"
-      appPreviewHover
-      [phTaskId]="taskId"
-      [phFilename]="filename"
-      (phShow)="onPreviewShow($event)"
-      (phMove)="onPreviewMove($event)"
-      (phHide)="onPreviewHide()"
-    />
+  <div
+    class="attachments-list"
+    [appClampToRows]="2"
+    [appClampExpanded]="expanded()"
+    (appClampNeedsToggle)="needsToggle.set($event)"
+    (appClampHeight)="collapsedMaxHeight.set($event)"
+    (mouseleave)="onListMouseLeave()"
+  >
+    @if (attachments.length > 0) {
+    <div class="attachment-tags">
+      @for (filename of getUniqueAttachments(); track trackByFilename($index,
+      filename)) {
+      <app-attachment-tag
+        [filename]="filename"
+        (download)="onDownloadAttachment(filename)"
+        (delete)="onDeleteAttachment(filename)"
+        appPreviewHover
+        [phTaskId]="taskId"
+        [phFilename]="filename"
+        (phShow)="onPreviewShow($event)"
+        (phMove)="onPreviewMove($event)"
+        (phHide)="onPreviewHide()"
+      />
+      }
+    </div>
+    } @if (creationMode && pendingFiles.length > 0) {
+    <div class="attachment-tags">
+      @for (file of pendingFiles; track trackByFile($index, file)) {
+      <app-attachment-tag
+        [filename]="file.name"
+        [pending]="true"
+        (delete)="onDeletePendingFile(file.name)"
+      />
+      }
+    </div>
     }
   </div>
-  }
 
-  <!-- Pending buffer (creation mode) -->
-  @if (creationMode && pendingFiles.length > 0) {
-  <div class="attachment-tags">
-    @for (file of pendingFiles; track trackByFile($index, file)) {
-    <app-attachment-tag
-      [filename]="file.name"
-      [pending]="true"
-      (delete)="onDeletePendingFile(file.name)"
-    />
-    }
-  </div>
-  } @if ((attachments.length === 0) && (!creationMode || pendingFiles.length ===
+  @if ((attachments.length === 0) && (!creationMode || pendingFiles.length ===
   0)) {
   <div class="empty-upload-text">
     <span class="fake-link">{{ "common.chooseFile" | transloco }}</span>
   </div>
+  } @if (needsToggle()) {
+  <div class="attachments-toggle">
+    <button
+      type="button"
+      class="toggle-btn"
+      (click)="onToggleClick($event)"
+      (keydown.enter)="onToggleKeydown($any($event))"
+      (keydown.space)="onToggleKeydown($any($event))"
+      [attr.aria-label]="
+        (expanded() ? 'common.collapse' : 'common.expand') | transloco
+      "
+      [attr.title]="
+        (expanded() ? 'common.collapse' : 'common.expand') | transloco
+      "
+    >
+      <span class="chevron" [class.up]="expanded()"></span>
+    </button>
+  </div>
   }
 
-  <!-- Image preview popover (presentational) -->
   <app-image-preview-popover
     [url]="previewUrl()"
     [x]="previewLeft()"

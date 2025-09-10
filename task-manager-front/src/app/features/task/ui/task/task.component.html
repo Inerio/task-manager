@@ -25,18 +25,15 @@
     <div class="task-title-row">
       <h4
         appToggleTruncate
-        #ttTitle="appToggleTruncate"
+        ttMode="overflow"
         [ttContent]="localTask().title"
-        [ttMaxLen]="titleTruncateLength()"
         [ttResetKey]="localTask().id"
         [ttShowLabelKey]="'task.showFullTitle.show'"
         [ttHideLabelKey]="'task.showFullTitle.hide'"
-        [innerHTML]="
-          localTask().title
-            | truncateSmart : ttTitle.expanded : titleTruncateLength()
-            | linkify
-        "
+        class="clamp-title"
+        [innerHTML]="localTask().title | linkify"
       ></h4>
+
       <input
         type="checkbox"
         class="task-checkbox-icon-inline"
@@ -54,32 +51,25 @@
     />
     <h4
       appToggleTruncate
-      #ttTitle2="appToggleTruncate"
+      ttMode="overflow"
       [ttContent]="localTask().title"
-      [ttMaxLen]="titleTruncateLength()"
       [ttResetKey]="localTask().id"
       [ttShowLabelKey]="'task.showFullTitle.show'"
       [ttHideLabelKey]="'task.showFullTitle.hide'"
-      [innerHTML]="
-        localTask().title
-          | truncateSmart : ttTitle2.expanded : titleTruncateLength()
-          | linkify
-      "
+      class="clamp-title"
+      [innerHTML]="localTask().title | linkify"
     ></h4>
     }
+
     <p
       appToggleTruncate
-      #ttDesc="appToggleTruncate"
+      ttMode="overflow"
       [ttContent]="localTask().description"
-      [ttMaxLen]="DESC_TRUNCATE"
       [ttResetKey]="localTask().id"
       [ttShowLabelKey]="'task.showFullDescription.show'"
       [ttHideLabelKey]="'task.showFullDescription.hide'"
-      [innerHTML]="
-        localTask().description
-          | truncateSmart : ttDesc.expanded : DESC_TRUNCATE
-          | linkify
-      "
+      class="clamp-desc"
+      [innerHTML]="localTask().description | linkify"
     ></p>
 
     <app-attachment-zone

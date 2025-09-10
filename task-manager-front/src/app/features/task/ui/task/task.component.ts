@@ -30,7 +30,6 @@ import { TaskPulseDirective } from "../../directives/task-pulse.directive";
 import { EnsureVisibleDirective } from "../../directives/ensure-visible.directive";
 import { TaskDndDirective } from "../../directives/task-dnd.directive";
 import { ToggleTruncateDirective } from "../../directives/toggle-truncate.directive";
-import { TruncateSmartPipe } from "../../../../shared/pipes/truncate-smart.pipe";
 
 @Component({
   selector: "app-task",
@@ -45,7 +44,6 @@ import { TruncateSmartPipe } from "../../../../shared/pipes/truncate-smart.pipe"
     EnsureVisibleDirective,
     TaskDndDirective,
     ToggleTruncateDirective,
-    TruncateSmartPipe,
   ],
   templateUrl: "./task.component.html",
   styleUrls: ["./task.component.scss"],
@@ -79,22 +77,13 @@ export class TaskComponent implements OnChanges, OnDestroy {
   // DnD (own card)
   readonly dragging = signal(false);
 
-  // === Truncation config (consumed by directive/pipe through the template) ===
-  readonly TITLE_TRUNCATE_BASE = 18;
-  readonly TITLE_TRUNCATE_WITH_BADGE = 22;
-  readonly DESC_TRUNCATE = 139;
-
-  // === Computed (truncate) ===
+  // === Computed ===
   /** True if the task has a valid due date (drives top padding + title width). */
   readonly hasDue = computed<boolean>(() => {
     const raw = this.localTask().dueDate;
     if (!raw) return false;
     return !!this.parseLocalISO(raw);
   });
-
-  readonly titleTruncateLength = computed(() =>
-    this.hasDue() ? this.TITLE_TRUNCATE_WITH_BADGE : this.TITLE_TRUNCATE_BASE
-  );
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes["task"] && this.task) {
@@ -110,7 +99,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
         // If the incoming task doesn't carry isEditing (API payload), keep local true.
         isEditing: keepEditing ? true : (this.task as Task).isEditing ?? false,
       } as Task);
-      // Truncate state still resets via [ttResetKey] bound to task id.
     }
   }
 
@@ -245,7 +233,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
       });
       this.taskService.updateTaskFromApi(freshTask);
     }
-    // Removed redundant extra refetch (was refreshTaskById) to avoid double HTTP call.
   }
 
   async onAttachmentDeleted(filename: string): Promise<void> {

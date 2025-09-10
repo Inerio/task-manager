@@ -21,4 +21,10 @@
   --shadow-1: 0 2px 8px 0 rgba(0, 0, 0, 0.35);
   --shadow-2: 0 2px 12px 0 rgba(0, 0, 0, 0.45);
   --shadow-3: 0 4px 24px 0 rgba(0, 0, 0, 0.6);
+
+  /* Keep good contrast for the truncate accent in dark mode */
+  --clamp-ring: color-mix(in oklab, var(--brand) 42%, var(--surface-2));
+  --clamp-bg: color-mix(in oklab, var(--brand) 12%, var(--surface-2));
+  --clamp-ring-hover: color-mix(in oklab, var(--brand) 55%, var(--surface-2));
+  --clamp-bg-hover: color-mix(in oklab, var(--brand) 16%, var(--surface-2));
 }

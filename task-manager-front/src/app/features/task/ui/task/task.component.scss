@@ -1,13 +1,32 @@
 @use "../../../../../styles/_breakpoints" as bp;
 
+/* Container queries drive dynamic line clamps based on card width */
 .task-card {
+  /* Enable container queries on width */
+  container-type: inline-size;
+
+  /* Default clamp values (narrow cards) */
+  --title-lines: 1;
+  --desc-lines: 3;
+
+  /* Title “bubble” tuning */
+  --clamp-pad-x: 0.6rem;
+  --clamp-pad-y: 0.2rem;
+  --clamp-ring-w: 1.1px;
+  --clamp-left-nudge: 0.22rem;
+
+  /* DA-driven colors (subtle by default) */
+  --clamp-ring: color-mix(in oklab, var(--brand) 48%, transparent);
+  --clamp-ring-hover: color-mix(in oklab, var(--brand) 64%, transparent);
+  --clamp-bg: color-mix(in oklab, var(--brand) 6%, transparent);
+  --clamp-bg-hover: color-mix(in oklab, var(--brand) 9%, transparent);
+
   position: relative;
   background: var(--surface-1);
   border-radius: var(--radius-3);
   box-shadow: var(--shadow-1);
   margin-bottom: 1rem;
   padding: 1.9rem 1rem 0.32rem 1rem;
-  /* Smooth collapse when the card becomes the dragged one */
   transition: background-color 0.3s, box-shadow 0.2s, height 160ms ease,
     margin 160ms ease, padding 160ms ease;
   color: var(--text-1);
@@ -20,6 +39,20 @@
   &.completed {
     background-color: #e0ffe0;
     border-left: 4px solid #4caf50;
+  }
+
+  /* Dynamically increase visible lines as the card gets wider */
+  @container (min-width: 340px) {
+    --title-lines: 2;
+    --desc-lines: 4;
+  }
+  @container (min-width: 420px) {
+    --title-lines: 2;
+    --desc-lines: 5;
+  }
+  @container (min-width: 520px) {
+    --title-lines: 3;
+    --desc-lines: 6;
   }
 
   /* While dragging: collapse the original card footprint smoothly */
@@ -61,10 +94,9 @@
     align-self: flex-start;
   }
 
+  /* Allow popovers to escape in edit mode without changing footprint */
   &.editing {
-    /* Allow dropdowns (emoji picker) to overflow in edit mode */
     overflow: visible;
-    padding: 0 !important;
   }
 
   .task-content-readonly {
@@ -83,15 +115,6 @@
         color: var(--text-1);
         flex: 1 1 0;
         min-width: 0;
-
-        &.truncated {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          color: var(--brand);
-          cursor: pointer;
-          user-select: none;
-        }
       }
     }
 
@@ -101,17 +124,116 @@
       margin: 0;
       padding: 0.2rem 0;
       color: var(--text-1);
-      &.truncated {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        color: var(--brand);
-        cursor: pointer;
-        user-select: none;
+    }
+
+    /* ===== Dynamic multi-line clamp + DA outline with FADE ===== */
+    .clamp-title,
+    .clamp-desc {
+      position: relative; /* anchor pseudo elements */
+      border-radius: var(--radius-1);
+      transition: -webkit-mask-image 0.14s, mask-image 0.14s;
+
+      /* Opacities drive the fade of ring/tint overlays (default hidden) */
+      --ring-opacity: 0;
+      --bg-opacity: 0;
+
+      &::before,
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        transition: opacity 140ms ease;
+      }
+      /* Background tint overlay */
+      &::before {
+        background: var(--clamp-bg);
+        opacity: var(--bg-opacity);
+      }
+      /* Ring overlay */
+      &::after {
+        box-shadow: inset 0 0 0 var(--clamp-ring-w) var(--clamp-ring);
+        opacity: var(--ring-opacity);
+      }
+      &:hover::after {
+        box-shadow: inset 0 0 0 var(--clamp-ring-w) var(--clamp-ring-hover);
       }
     }
 
-    p {
+    .clamp-title.truncated {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      line-clamp: var(--title-lines);
+      -webkit-line-clamp: var(--title-lines);
+      overflow: hidden;
+
+      &.is-overflowing {
+        padding: var(--clamp-pad-y) var(--clamp-pad-x);
+        margin-block: 0.06rem;
+        margin-inline-start: calc(-1 * var(--clamp-left-nudge));
+        border-radius: var(--radius-2);
+
+        -webkit-mask-image: linear-gradient(
+          to right,
+          black calc(100% - (1.6em + var(--clamp-pad-x))),
+          transparent
+        );
+        mask-image: linear-gradient(
+          to right,
+          black calc(100% - (1.6em + var(--clamp-pad-x))),
+          transparent
+        );
+        --ring-opacity: 0.74;
+        --bg-opacity: 0.26;
+
+        &:hover {
+          --bg-opacity: 0.38;
+        }
+      }
+    }
+
+    .clamp-desc.truncated {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      line-clamp: var(--desc-lines);
+      -webkit-line-clamp: var(--desc-lines);
+      overflow: hidden;
+
+      &.is-overflowing {
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          black calc(100% - 1.2em),
+          transparent
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          black calc(100% - 1.2em),
+          transparent
+        );
+
+        /* Even softer on paragraph */
+        --ring-opacity: 0.68;
+        --bg-opacity: 0.22;
+
+        &:hover {
+          --bg-opacity: 0.32;
+        }
+      }
+    }
+
+    /* When expanded (not truncated), remove fades & masks */
+    .clamp-title:not(.truncated),
+    .clamp-desc:not(.truncated) {
+      -webkit-mask-image: none;
+      mask-image: none;
+      --ring-opacity: 0;
+      --bg-opacity: 0;
+    }
+
+    /* Base paragraph styles (kept) */
+    .clamp-desc,
+    p.clamp-desc {
       background: var(--surface-2);
       border-radius: var(--radius-1);
       color: #444;
@@ -122,18 +244,6 @@
       overflow-wrap: anywhere;
       white-space: pre-line;
       min-height: 24px;
-
-      &.truncated {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        cursor: pointer;
-        color: var(--brand);
-        user-select: none;
-        transition: background 0.14s;
-        &:hover {
-          background: #e6f2ff;
-        }
-      }
     }
   }
 }
@@ -145,18 +255,15 @@
   min-height: 24px !important;
 }
 
-/* Edit mode harmonization */
-.task-card.editing {
-  box-shadow: none !important;
-  background: var(--surface-1) !important;
-}
+/* Keep inner edit form visually flat inside the card shell */
 .task-card.editing .task-form.editing-task-form {
-  border-radius: var(--radius-3);
-  box-shadow: var(--shadow-2);
-  padding: 0.7rem 1rem 0.32rem 1rem;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
 }
 
-/* DnD highlight (unused now during drag, but kept for other states) */
+/* DnD highlight (kept for other states) */
 .task-card.drag-over-card {
   background: #f4faff;
   border: 2.5px solid var(--brand);
@@ -203,7 +310,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  transform: translate(-9999px, -9999px); /* moved immediately on dragover */
+  transform: translate(-9999px, -9999px);
   z-index: 2147483647;
   pointer-events: none;
   opacity: 0.55;

@@ -63,4 +63,10 @@
   --z-footer: 200;
   --z-overlay: 99999;
   --z-dialog: 9999;
+
+  /* ===== Truncate accent (used for title/description when clamped) ===== */
+  --clamp-ring: color-mix(in oklab, var(--brand) 26%, var(--surface-2));
+  --clamp-bg: color-mix(in oklab, var(--brand) 7%, var(--surface-2));
+  --clamp-ring-hover: color-mix(in oklab, var(--brand) 36%, var(--surface-2));
+  --clamp-bg-hover: color-mix(in oklab, var(--brand) 10%, var(--surface-2));
 }

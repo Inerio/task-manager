@@ -84,6 +84,7 @@
           (keydown.escape)="edit.cancelTitleEdit()"
           maxlength="60"
           required
+          appAutofocusOnInit
           [disabled]="!!edit.editingColumn() && !isEditingTitle(kanbanColumn)"
         />
         }

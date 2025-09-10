@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from "@angular/core";
+import { Injectable, signal, inject, effect } from "@angular/core";
 import { KanbanColumn, KanbanColumnId } from "../models/kanban-column.model";
 import { KanbanColumnService } from "./kanban-column.service";
 import { TaskService } from "../../task/data/task.service";
@@ -22,22 +22,63 @@ export class BoardColumnsEditService {
   readonly editingColumn = signal<KanbanColumn | null>(null);
   readonly editingTitleValue = signal<string>("");
 
+  /** Re-entrancy guards */
+  private saving = false;
+  private committingOnBoardChange = false;
+
+  constructor() {
+    // If the column being edited disappears from the current list (e.g. board switch),
+    // finalize it: create the draft with current (possibly empty) title, then clear edit state.
+    effect(() => {
+      const list = this.columns.kanbanColumns();
+      const editing = this.editingColumn();
+      if (!editing) return;
+
+      const stillHere =
+        list.some((c) => c === editing) ||
+        (editing.id != null && list.some((c) => c.id === editing.id));
+
+      if (!stillHere) {
+        queueMicrotask(() => void this.commitDraftIfDetached(editing));
+      }
+    });
+  }
+
+  private async commitDraftIfDetached(editing: KanbanColumn): Promise<void> {
+    if (this.committingOnBoardChange) return;
+    this.committingOnBoardChange = true;
+    try {
+      if (!editing.id && editing.boardId) {
+        const name = this.editingTitleValue().trim(); // empty allowed
+        try {
+          await this.columns.createKanbanColumn(name, editing.boardId);
+          this.columns.removeColumnRef(editing);
+        } catch {
+          // Error already surfaced via service alerts
+        }
+      }
+    } finally {
+      this.editingColumn.set(null);
+      this.editingTitleValue.set("");
+      this.committingOnBoardChange = false;
+    }
+  }
+
   async addKanbanColumnAndEdit(boardId: number): Promise<void> {
     if (!boardId) return;
-    if (
-      this.columns.kanbanColumns().length >= this.MAX_COLUMNS ||
-      this.editingColumn()
-    )
-      return;
+    if (this.columns.kanbanColumns().length >= this.MAX_COLUMNS) return;
 
-    const existingDraft = this.columns.kanbanColumns().find((c) => !c.id);
-    if (existingDraft) {
-      this.startEditTitle(existingDraft);
-      return;
+    // If "+" is clicked while editing: commit current (even empty), then create the next one.
+    const current = this.editingColumn();
+    if (current) {
+      await this.saveTitleEdit(current, current.boardId ?? boardId);
     }
-
-    const draft = this.columns.insertDraftColumn(boardId);
-    this.startEditTitle(draft);
+    try {
+      const created = await this.columns.createKanbanColumn("", boardId);
+      this.startEditTitle(created);
+    } catch {
+      // no-op: error toast already shown by KanbanColumnService
+    }
   }
 
   async deleteKanbanColumn(
@@ -54,11 +95,8 @@ export class BoardColumnsEditService {
     );
     if (!confirmed) return;
 
-    try {
-      await this.columns.deleteKanbanColumn(id, boardId);
-    } catch {
-      this.alert.show("error", this.i18n.translate("errors.deletingColumn"));
-    }
+    // Service already shows an alert on error.
+    await this.columns.deleteKanbanColumn(id, boardId);
   }
 
   async deleteAllInColumn(id: KanbanColumnId, name: string): Promise<void> {
@@ -83,43 +121,43 @@ export class BoardColumnsEditService {
   startEditTitle(column: KanbanColumn): void {
     if (this.editingColumn()) return;
     this.editingColumn.set(column);
-    this.editingTitleValue.set(column.name);
+    this.editingTitleValue.set(column.name ?? "");
 
-    // Focus after input mounts
-    queueMicrotask(() => {
+    // Focus after input mounts; use rAF+microtask to be extra resilient.
+    const focusNow = () => {
       const el = document.getElementById(
         `edit-kanbanColumn-title-${column.id ?? "draft"}`
       ) as HTMLInputElement | null;
-      el?.focus();
-    });
+      if (el) {
+        el.focus();
+        // Put caret at end
+        if (typeof el.setSelectionRange === "function") {
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        }
+      }
+    };
+    requestAnimationFrame(() => queueMicrotask(focusNow));
   }
 
   async saveTitleEdit(column: KanbanColumn, boardId: number): Promise<void> {
     if (!boardId) return;
+    if (this.saving) return;
+    this.saving = true;
 
-    const newName = this.editingTitleValue().trim();
+    const newName = this.editingTitleValue().trim(); // empty allowed
     const currentlyEditing = this.editingColumn();
-    if (!currentlyEditing) return;
-
-    // Prevent creating/updating with an empty title (UX safeguard).
-    if (!newName) {
-      if (!column.id) {
-        this.columns.removeColumnRef(currentlyEditing);
-      }
-      this.editingColumn.set(null);
-      this.editingTitleValue.set("");
+    if (!currentlyEditing) {
+      this.saving = false;
       return;
     }
 
     try {
       if (!column.id) {
-        // Creating from a DRAFT: service appends the created item.
+        // Create from a DRAFT (even with empty name).
         const before = this.columns.kanbanColumns();
         const draftIndex = before.indexOf(currentlyEditing);
-
         const created = await this.columns.createKanbanColumn(newName, boardId);
-
-        // Remove draft entry so we don't have two items with the same id.
         this.columns.removeColumnRef(currentlyEditing);
         const after = this.columns.kanbanColumns();
         const createdIdx = after.findIndex((c) => c.id === created.id);
@@ -135,22 +173,19 @@ export class BoardColumnsEditService {
         await this.columns.updateKanbanColumn(updated);
       }
     } catch {
-      this.alert.show("error", this.i18n.translate("errors.updatingColumn"));
     } finally {
       this.editingColumn.set(null);
       this.editingTitleValue.set("");
+      this.saving = false;
     }
   }
 
+  /** ESC / click-outside now *commits* the draft with empty title instead of cancelling. */
   cancelTitleEdit(): void {
     const editing = this.editingColumn();
     if (!editing) return;
-
-    if (!editing.id) {
-      this.columns.removeColumnRef(editing);
-    }
-    this.editingColumn.set(null);
-    this.editingTitleValue.set("");
+    const boardId = editing.boardId ?? 0;
+    void this.saveTitleEdit(editing, boardId);
   }
 
   onEditTitleInput(event: Event): void {

@@ -12,6 +12,7 @@ import { TaskService } from "../../../task/data/task.service";
 import { KanbanColumn } from "../../models/kanban-column.model";
 import { BoardColumnsDndService } from "../../data/board-columns-dnd.service";
 import { BoardColumnsEditService } from "../../data/board-columns-edit.service";
+import { AutofocusOnInitDirective } from "../../../../shared/directives/autofocus-on-init.directive"; // focus helper
 
 /**
  * BoardColumns: light orchestrator that composes two scoped services:
@@ -24,7 +25,7 @@ import { BoardColumnsEditService } from "../../data/board-columns-edit.service";
   standalone: true,
   templateUrl: "./board-columns.component.html",
   styleUrls: ["./board-columns.component.scss"],
-  imports: [TranslocoModule, KanbanColumnComponent],
+  imports: [TranslocoModule, KanbanColumnComponent, AutofocusOnInitDirective],
   providers: [BoardColumnsDndService, BoardColumnsEditService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -67,7 +68,16 @@ export class BoardColumnsComponent {
   trackByColumnId(index: number, col: KanbanColumn): number | string {
     return typeof col.id === "number" ? col.id : `draft-${index}`;
   }
+
   isEditingTitle(column: KanbanColumn): boolean {
-    return this.edit.editingColumn() === column;
+    const editing = this.edit.editingColumn();
+    if (!editing) return false;
+    if (editing.id != null && column.id != null) {
+      return editing.id === column.id;
+    }
+    if (editing.id == null && column.id == null) {
+      return true;
+    }
+    return editing === column;
   }
 }

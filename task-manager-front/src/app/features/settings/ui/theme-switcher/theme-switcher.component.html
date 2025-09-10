@@ -2,12 +2,15 @@
   class="theme-toggle"
   role="group"
   [attr.aria-label]="'theme.switch' | transloco"
+  tabindex="0"
+  (click)="toggle()"
+  (keydown)="onWrapperKeydown($event)"
 >
   <button
     type="button"
     [class.active]="isLight()"
     [attr.aria-pressed]="isLight()"
-    (click)="select('light')"
+    (click)="$event.stopPropagation(); toggle()"
     [attr.aria-label]="'theme.light' | transloco"
     [attr.title]="'theme.light' | transloco"
   >
@@ -18,7 +21,7 @@
     type="button"
     [class.active]="isDark()"
     [attr.aria-pressed]="isDark()"
-    (click)="select('dark')"
+    (click)="$event.stopPropagation(); toggle()"
     [attr.aria-label]="'theme.dark' | transloco"
     [attr.title]="'theme.dark' | transloco"
   >

@@ -2,12 +2,15 @@
   class="lang-toggle"
   role="group"
   [attr.aria-label]="'lang.switch' | transloco"
+  tabindex="0"
+  (click)="toggle()"
+  (keydown)="onWrapperKeydown($event)"
 >
   <button
     type="button"
     [class.active]="active() === 'en'"
     [attr.aria-pressed]="active() === 'en'"
-    (click)="set('en')"
+    (click)="$event.stopPropagation(); toggle()"
   >
     {{ "lang.en" | transloco }}
   </button>
@@ -16,7 +19,7 @@
     type="button"
     [class.active]="active() === 'fr'"
     [attr.aria-pressed]="active() === 'fr'"
-    (click)="set('fr')"
+    (click)="$event.stopPropagation(); toggle()"
   >
     {{ "lang.fr" | transloco }}
   </button>

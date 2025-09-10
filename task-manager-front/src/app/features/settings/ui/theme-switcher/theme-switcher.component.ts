@@ -16,6 +16,7 @@ type Theme = "light" | "dark";
  * - Persists to localStorage.
  * - Respects prefers-color-scheme (inline script may set data-theme early).
  * - Syncs across tabs via "storage" event.
+ * - Toggle anywhere in the control (container click / Enter / Space).
  */
 @Component({
   selector: "app-theme-switcher",
@@ -79,4 +80,18 @@ export class ThemeSwitcherComponent implements OnInit, OnDestroy {
   /** Convenience flags for template. */
   readonly isLight = computed(() => this.active() === "light");
   readonly isDark = computed(() => this.active() === "dark");
+
+  /** Toggle helper used by container + buttons. */
+  toggle(): void {
+    const next: Theme = this.active() === "light" ? "dark" : "light";
+    this.setTheme(next, true);
+  }
+
+  /** Keyboard support on the wrapper (Enter/Space). */
+  onWrapperKeydown(event: KeyboardEvent): void {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      this.toggle();
+    }
+  }
 }

@@ -15,6 +15,7 @@ type Lang = "en" | "fr";
  * - Persists active lang in localStorage.
  * - Updates <html lang> attribute.
  * - Subscribes to Transloco changes to keep local state in sync.
+ * - Toggle anywhere in the control (container click / Enter / Space).
  */
 @Component({
   selector: "app-language-switcher",
@@ -62,5 +63,19 @@ export class LanguageSwitcherComponent implements OnInit, OnDestroy {
   set(lang: Lang): void {
     if (lang === this.active()) return;
     this.transloco.setActiveLang(lang);
+  }
+
+  /** Toggle helper used by container + buttons. */
+  toggle(): void {
+    const next: Lang = this.active() === "en" ? "fr" : "en";
+    this.set(next);
+  }
+
+  /** Keyboard support on the wrapper (Enter/Space). */
+  onWrapperKeydown(event: KeyboardEvent): void {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      this.toggle();
+    }
   }
 }

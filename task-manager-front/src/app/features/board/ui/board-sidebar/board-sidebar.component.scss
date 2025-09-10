@@ -33,6 +33,13 @@
       transform: translateX(0);
       box-shadow: 8px 0 24px #0003;
     }
+
+    &.fullscreen {
+      width: 100vw;
+      max-width: 100vw;
+      transform: translateX(0);
+      box-shadow: none;
+    }
   }
 
   .sidebar-header {

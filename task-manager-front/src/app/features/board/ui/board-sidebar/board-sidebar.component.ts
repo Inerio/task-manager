@@ -52,6 +52,8 @@ export class BoardSidebarComponent {
   isMdDown = input<boolean>(false);
   /** Drawer open state (visual only; parent keeps the source of truth). */
   open = input<boolean>(true);
+  /** Force fullscreen drawer (used when there are no boards on mobile). */
+  forceFullscreen = input<boolean>(false);
   /** Currently selected board id (for highlight & a11y). */
   selectedId = input<number | null>(null);
   /** Emit when a board is selected (or created). */
@@ -81,7 +83,7 @@ export class BoardSidebarComponent {
   readonly dragOverBoardIndex = signal<number | null>(null);
   readonly dropEndOver = signal(false);
 
-  // Displayed list (existing + temporary item while editing).
+  // Displayed list.
   readonly displayedBoards = computed<ReadonlyArray<BoardLike | TempBoard>>(
     () => {
       if (this.editingBoardId() === null) return this.boards();
@@ -92,7 +94,6 @@ export class BoardSidebarComponent {
     }
   );
 
-  /** Show “+ Add board” only under the limit (and hide during the Nth creation). */
   readonly canShowAdd = computed(() => {
     const count = this.boards().length;
     const isEditing = this.editingBoardId() !== null;

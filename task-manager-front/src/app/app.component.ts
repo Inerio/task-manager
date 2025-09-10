@@ -44,6 +44,9 @@ export class AppComponent implements OnDestroy {
   readonly boards = this.boardService.boards;
   readonly selectedBoardId = signal<number | null>(null);
 
+  // Derived "has boards" flag
+  readonly hasBoards = computed(() => this.boards().length > 0);
+
   // Responsive flags
   private readonly _mql = window.matchMedia("(max-width: 768px)");
   readonly isMdDown = signal<boolean>(this._mql.matches);
@@ -59,11 +62,9 @@ export class AppComponent implements OnDestroy {
 
   constructor() {
     this.boardService.loadBoards();
-
     this._onMqChange = this._onMqChange.bind(this);
     this._mql.addEventListener("change", this._onMqChange);
 
-    // Auto-select first board once loaded (if none selected yet).
     effect(() => {
       const firstId = this.boards()[0]?.id;
       if (typeof firstId === "number" && this.selectedBoardId() === null) {
@@ -71,10 +72,9 @@ export class AppComponent implements OnDestroy {
       }
     });
 
-    // Drawer state based on viewport/data.
     effect(() => {
       const small = this.isMdDown();
-      const hasBoards = this.boards().length > 0;
+      const hasBoards = this.hasBoards();
       const selected = this.selectedBoardId();
       if (!small) {
         this.sidebarOpen.set(true);
@@ -97,10 +97,9 @@ export class AppComponent implements OnDestroy {
     if (this.isMdDown()) this.sidebarOpen.set(true);
   }
   closeSidebar(): void {
-    if (this.isMdDown()) this.sidebarOpen.set(false);
+    if (this.isMdDown() && this.hasBoards()) this.sidebarOpen.set(false);
   }
 
-  // Child -> parent events
   onBoardSelected(id: number): void {
     if (this.selectedBoardId() !== id) this.selectedBoardId.set(id);
     if (this.isMdDown()) this.sidebarOpen.set(false);

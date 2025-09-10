@@ -7,6 +7,7 @@
   <app-board-sidebar
     [isMdDown]="isMdDown()"
     [open]="sidebarOpen()"
+    [forceFullscreen]="!hasBoards()"
     [selectedId]="selectedBoardId()"
     (boardSelected)="onBoardSelected($event)"
     (requestClose)="closeSidebar()"
@@ -16,7 +17,7 @@
   <div
     class="sidebar-backdrop"
     (click)="closeSidebar()"
-    [class.visible]="isMdDown() && sidebarOpen()"
+    [class.visible]="isMdDown() && sidebarOpen() && hasBoards()"
   ></div>
 
   @if (selectedBoardId() !== null) {

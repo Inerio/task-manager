@@ -2,6 +2,7 @@
   id="app-sidebar"
   class="sidebar"
   [class.open]="isMdDown() && open()"
+  [class.fullscreen]="isMdDown() && forceFullscreen()"
   [attr.aria-hidden]="isMdDown() ? (!open()).toString() : 'false'"
 >
   <!-- Switchers row -->
@@ -9,7 +10,8 @@
     <app-language-switcher></app-language-switcher>
     <app-theme-switcher></app-theme-switcher>
 
-    <!-- Close on mobile/tablet -->
+    <!-- Close on mobile/tablet (hidden when fullscreen/no boards) -->
+    @if (!(isMdDown() && forceFullscreen())) {
     <button
       type="button"
       class="sidebar-close styled-x-btn"
@@ -19,6 +21,7 @@
     >
       <img src="/svg/x.svg" alt="close" width="16" height="16" />
     </button>
+    }
   </div>
 
   <h1 class="tasukeru-title">

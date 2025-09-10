@@ -12,20 +12,20 @@ import { TaskService } from "../../../task/data/task.service";
 import { KanbanColumn } from "../../models/kanban-column.model";
 import { BoardColumnsDndService } from "../../data/board-columns-dnd.service";
 import { BoardColumnsEditService } from "../../data/board-columns-edit.service";
-import { AutofocusOnInitDirective } from "../../../../shared/directives/autofocus-on-init.directive"; // focus helper
+import { AutofocusOnInitDirective } from "../../../../shared/directives/autofocus-on-init.directive";
+import { BoardHorizontalAutoScrollDirective } from "../../directives/board-horizontal-autoscroll.directive";
 
-/**
- * BoardColumns: light orchestrator that composes two scoped services:
- * - BoardColumnsDndService (drag/drop state + move persistence)
- * - BoardColumnsEditService (inline edit + CRUD)
- * Strict 1:1 feature parity with the original monolithic component.
- */
 @Component({
   selector: "app-board-columns",
   standalone: true,
   templateUrl: "./board-columns.component.html",
   styleUrls: ["./board-columns.component.scss"],
-  imports: [TranslocoModule, KanbanColumnComponent, AutofocusOnInitDirective],
+  imports: [
+    TranslocoModule,
+    KanbanColumnComponent,
+    AutofocusOnInitDirective,
+    BoardHorizontalAutoScrollDirective,
+  ],
   providers: [BoardColumnsDndService, BoardColumnsEditService],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,17 +35,14 @@ export class BoardColumnsComponent {
   private readonly columns = inject(KanbanColumnService);
   private readonly tasks = inject(TaskService);
 
-  // Expose services to the template
   readonly dnd = inject(BoardColumnsDndService);
   readonly edit = inject(BoardColumnsEditService);
 
-  /** True if the board has at least one task (Set for O(1) lookups). */
   readonly hasAnyTask = computed(() => {
     const columnIds = new Set(this.columns.kanbanColumns().map((c) => c.id));
     return this.tasks.tasks().some((t) => columnIds.has(t.kanbanColumnId));
   });
 
-  /** Displayed columns; while dragging, show the in-flight order. */
   readonly kanbanColumns = computed(() => {
     const raw = this.columns.kanbanColumns();
     const draggedId = this.dnd.draggedKanbanColumnId();
@@ -61,10 +58,8 @@ export class BoardColumnsComponent {
     return copy;
   });
 
-  /** Expose the limit for the template (kept identical). */
   readonly MAX_COLUMNS = this.edit.MAX_COLUMNS;
 
-  // ---- Template helpers (tiny, unchanged behavior)
   trackByColumnId(index: number, col: KanbanColumn): number | string {
     return typeof col.id === "number" ? col.id : `draft-${index}`;
   }
@@ -72,12 +67,9 @@ export class BoardColumnsComponent {
   isEditingTitle(column: KanbanColumn): boolean {
     const editing = this.edit.editingColumn();
     if (!editing) return false;
-    if (editing.id != null && column.id != null) {
+    if (editing.id != null && column.id != null)
       return editing.id === column.id;
-    }
-    if (editing.id == null && column.id == null) {
-      return true;
-    }
+    if (editing.id == null && column.id == null) return true;
     return editing === column;
   }
 }

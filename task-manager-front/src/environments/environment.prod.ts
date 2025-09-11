@@ -4,4 +4,6 @@ export const environment = {
   clientIdHeader: "X-Client-Id",
   uploadAcceptTypes: "image/*,application/pdf",
   uploadMaxBytes: 5 * 1024 * 1024, // 5 MB
+  // Bump on each release to bust /i18n/*.json caches.
+  assetsVersion: "2025-09-11-01",
 } as const;

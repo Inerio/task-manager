@@ -34,14 +34,14 @@
     "deleteAllConfirm": "Voulez-vous vraiment supprimer toutes les tâches de ce tableau ?",
     "columnsAria": "Colonnes Kanban",
     "columns": {
-      "inbox": "Boîte de réception",
+      "inbox": "Notes rapides",
       "todo": "À faire",
       "inProgress": "En cours",
       "done": "Terminé",
       "today": "Aujourd’hui",
       "thisWeek": "Cette semaine",
       "ideas": "Idées",
-      "review": "Relecture"
+      "review": "À vérifier"
     },
     "templates": {
       "title": "Commencer avec un modèle ?",
@@ -50,11 +50,12 @@
       "skip": "Ignorer",
       "oneColumn": "1 colonne",
       "nColumns": "{{count}} colonnes",
-      "t1Desc": "Une seule liste pour la capture rapide.",
-      "t2Desc": "Flux simple de À faire vers Terminé.",
-      "t3Desc": "Kanban classique : À faire → En cours → Terminé.",
-      "t4Desc": "Boîte de réception, Aujourd’hui, Cette semaine puis Terminé.",
-      "t5Desc": "Des Idées à Relecture puis Terminé."
+
+      "t1Desc": "Une seule liste. Notez rapidement et cochez au fur et à mesure.",
+      "t2Desc": "Deux étapes : démarrer quand vous êtes prêt, puis passer en Terminé.",
+      "t3Desc": "Planifier → Faire → Terminé. Le classique en 3 colonnes, simple et efficace.",
+      "t4Desc": "Planifier la semaine : capturer, se concentrer sur Aujourd’hui, préparer Cette semaine, puis Terminé.",
+      "t5Desc": "Du brouillon à l’action : Idées → À faire → En cours → À vérifier → Terminé."
     },
     "column": {
       "delete": "Supprimer la colonne",

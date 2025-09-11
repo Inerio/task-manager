@@ -19,7 +19,7 @@ export interface BoardTemplateDef {
   id: BoardTemplateId;
   /** Translation keys under boards.columns.* */
   columns: ColKey[];
-  /** i18n key for the small description (optional). */
+  /** i18n key for the small description. */
   descKey?: string;
 }
 

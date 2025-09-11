@@ -17,10 +17,11 @@
   color: var(--text-1);
   border-radius: 14px;
   box-shadow: var(--shadow-3);
-  width: min(920px, 92vw);
-  max-height: min(88vh, 720px); /* keep dialog within viewport */
+
+  width: min(1300px, 96vw);
+  max-height: min(88vh, 720px);
   padding: 1.4rem var(--pad-x) 0.5rem;
-  overflow: auto; /* allow internal scroll on small screens */
+  overflow: auto;
   animation: popIn 0.17s cubic-bezier(0.5, 1.2, 0.5, 1.07);
   text-align: center;
 
@@ -44,8 +45,8 @@
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.7rem;
+  grid-template-columns: repeat(5, minmax(190px, 1fr));
+  gap: 1rem;
 
   /* Tighter grid under ~980px, then single column on phones. */
   @include bp.down(980px) {
@@ -53,7 +54,7 @@
     gap: 0.6rem;
   }
   @include bp.sm-down {
-    grid-template-columns: 1fr; /* full-width cards on phones */
+    grid-template-columns: 1fr;
     gap: 0.6rem;
   }
 }
@@ -62,15 +63,15 @@
   border: 1px solid var(--border-1);
   background: var(--surface-3);
   border-radius: var(--radius-3);
-  padding: 0.8rem 0.7rem;
+  padding: 1rem 0.9rem;
   text-align: left;
   cursor: pointer;
   transition: transform 0.14s ease, box-shadow 0.14s ease, border 0.14s ease;
   box-shadow: 0 1px 4px #0001;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  min-height: 112px; /* comfortable touch size */
+  gap: 0.5rem;
+  min-height: 124px;
 
   &:hover {
     transform: translateY(-1px);
@@ -100,7 +101,7 @@
 .cols {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.4rem;
 
   @include bp.sm-down {
     gap: 0.3rem;
@@ -118,7 +119,8 @@
 }
 
 .desc {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
+  line-height: 1.25;
   color: color-mix(in oklab, var(--text-2) 92%, #0000);
   min-height: 1.2em;
 }
@@ -131,9 +133,8 @@
   color: var(--brand);
 }
 
-/* Footer actions remain visible while scrolling templates on mobile. */
 .footer {
-  position: sticky; /* keeps the action reachable */
+  position: sticky;
   bottom: 0;
   background: var(--surface-1);
   border-top: 1px solid var(--border-1);

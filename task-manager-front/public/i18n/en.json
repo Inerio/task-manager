@@ -34,12 +34,12 @@
     "deleteAllConfirm": "Are you sure you want to delete all tasks in this board?",
     "columnsAria": "Kanban columns",
     "columns": {
-      "inbox": "Inbox",
+      "inbox": "Quick notes",
       "todo": "To do",
       "inProgress": "In progress",
       "done": "Done",
       "today": "Today",
-      "thisWeek": "This Week",
+      "thisWeek": "This week",
       "ideas": "Ideas",
       "review": "Review"
     },
@@ -50,11 +50,12 @@
       "skip": "Skip",
       "oneColumn": "1 column",
       "nColumns": "{{count}} columns",
-      "t1Desc": "A single collection for quick capture.",
-      "t2Desc": "Simple flow from To do to Done.",
-      "t3Desc": "Classic Kanban: To do → In progress → Done.",
-      "t4Desc": "Inbox, Today, This Week, then Done.",
-      "t5Desc": "From Ideas to Review and Done."
+
+      "t1Desc": "One list. Jot things down fast and tick them off.",
+      "t2Desc": "Two steps: start when ready, then move to Done.",
+      "t3Desc": "Plan → Do → Done. The classic, clear three-stage board.",
+      "t4Desc": "Plan your week: capture, focus on Today, queue for This week, then Done.",
+      "t5Desc": "From Ideas to Done with a quick Review step in between."
     },
     "column": {
       "delete": "Delete column",

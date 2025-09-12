@@ -29,7 +29,7 @@ import { TaskDueBadgeComponent } from "../task-due-badge/task-due-badge.componen
 import { TaskPulseDirective } from "../../directives/task-pulse.directive";
 import { EnsureVisibleDirective } from "../../directives/ensure-visible.directive";
 import { TaskDndDirective } from "../../directives/task-dnd.directive";
-import { ToggleTruncateDirective } from "../../directives/toggle-truncate.directive";
+import { ToggleTruncateDirective } from "../../../../shared/directives/toggle-truncate.directive";
 
 @Component({
   selector: "app-task",
@@ -52,7 +52,7 @@ import { ToggleTruncateDirective } from "../../directives/toggle-truncate.direct
 export class TaskComponent implements OnChanges, OnDestroy {
   // === Inputs ===
   @Input({ required: true }) task!: Task;
-  /** Ghost mode: visual-only clone (used in placeholder). */
+  /** Ghost mode: visual-only clone. */
   @Input() ghost = false;
 
   // === Template refs ===
@@ -78,7 +78,7 @@ export class TaskComponent implements OnChanges, OnDestroy {
   readonly dragging = signal(false);
 
   // === Computed ===
-  /** True if the task has a valid due date (drives top padding + title width). */
+  /** True if the task has a valid due date. */
   readonly hasDue = computed<boolean>(() => {
     const raw = this.localTask().dueDate;
     if (!raw) return false;
@@ -96,7 +96,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
 
       this.localTask.set({
         ...this.task,
-        // If the incoming task doesn't carry isEditing (API payload), keep local true.
         isEditing: keepEditing ? true : (this.task as Task).isEditing ?? false,
       } as Task);
     }
@@ -106,7 +105,7 @@ export class TaskComponent implements OnChanges, OnDestroy {
     // Nothing special here anymore; DnD cleanup is handled by services.
   }
 
-  // === DnD callbacks (from directive) ===
+  // === DnD callbacks ===
   onTaskPreviewSize(sz: { width: number; height: number }): void {
     const el = this.cardEl?.nativeElement;
     if (!el) return;
@@ -128,7 +127,6 @@ export class TaskComponent implements OnChanges, OnDestroy {
   // === CRUD & editing (delegated to TaskForm) ===
   startEdit(): void {
     this.patchLocalTask({ isEditing: true });
-    // Auto-visibility handled by [ensureVisible].
   }
 
   async saveEdit(payload: TaskWithPendingFiles): Promise<void> {
@@ -269,7 +267,7 @@ export class TaskComponent implements OnChanges, OnDestroy {
 
   // ===== Date helpers =====
 
-  /** Parse YYYY-MM-DD as a *local* date (avoid TZ shifts). */
+  /** Parse YYYY-MM-DD as a *local* date. */
   private parseLocalISO(iso: string): Date | null {
     if (!iso) return null;
     const [y, m, d] = iso.split("-").map(Number);

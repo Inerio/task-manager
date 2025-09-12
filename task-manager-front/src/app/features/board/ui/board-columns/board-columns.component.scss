@@ -1,11 +1,9 @@
 @use "../../../../../styles/_breakpoints" as bp;
 
-/* Make the component host participate in parent's flex layout.
-   Critical so inner containers can resolve height:100% and keep scrolling inside columns. */
 :host {
   display: flex;
   flex: 1 1 auto;
-  min-height: 0; /* allow nested scroll areas */
+  min-height: 0;
   width: 100%;
 }
 
@@ -14,9 +12,7 @@
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
-  min-width: 0; /* allow inner flex to shrink */
-
-  /* Fill available height from host */
+  min-width: 0;
   display: flex;
   flex: 1 1 auto;
   height: 100%;
@@ -25,9 +21,8 @@
 
 /* ===== Grid Kanban ===== */
 .task-columns {
-  /* Never wrap: keep all columns + the "+" on one line and scroll horizontally */
   --gap: var(--space-6);
-  --col-min: 296px; /* minimum visual width for a column */
+  --col-min: 296px;
   --fab: 62px;
   --fab-clearance: var(--space-7);
 
@@ -40,16 +35,12 @@
   margin-left: 0;
   margin-right: 0;
   padding: var(--space-2) var(--space-4);
-
-  /* Inherit full height from the viewport to cap columns at screen height */
   height: 100%;
-  min-height: 0; /* allow children to scroll instead of overflowing */
+  min-height: 0;
+  overflow-inline: auto;
+  overflow-block: visible;
 
-  /* Redundant overflow for extra safety */
-  overflow-inline: auto; /* horizontal scroll */
-  overflow-block: visible; /* vertical overflow visible */
-
-  /* Width presets still apply on large screens (nice filling). */
+  /* Width presets still apply on large screens. */
   &:has(.column-draggable:nth-of-type(1)):not(
       :has(.column-draggable:nth-of-type(2))
     ) {
@@ -115,7 +106,6 @@
   }
 
   @include bp.sm-down {
-    /* Keep horizontal scroll on mobile too */
     width: max(var(--col-min), var(--col-w, var(--col-min)));
   }
 }
@@ -170,7 +160,24 @@
   padding: 0.3rem 1.3rem;
   border-radius: var(--radius-1);
   color: var(--text-1);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
 }
+
+/* Clamp to 2 lines when collapsed (directive toggles .truncated) */
+.kanbanColumn-title.truncated {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  max-height: calc(2 * 1.2em);
+  padding-block-end: 0.12em;
+}
+
+/* Wrap long words and prevent grab cursor inheritance */
 .kanbanColumn-title-input {
   font-weight: bold;
   text-align: center;
@@ -180,6 +187,13 @@
   font-size: 1.08rem;
   background: var(--surface-1);
   transition: border 0.15s;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+  resize: none;
+  cursor: text;
+
   &:focus {
     border-color: var(--brand);
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 32%, #0000);

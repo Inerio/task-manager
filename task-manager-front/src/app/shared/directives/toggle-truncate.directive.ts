@@ -14,7 +14,7 @@ import { TranslocoService } from "@jsverse/transloco";
 
 /**
  * Click-to-expand/collapse directive with two modes:
- * - 'length' (legacy): truncation is based on character count (ttMaxLen).
+ * - 'length': truncation is based on character count (ttMaxLen).
  * - 'overflow' (responsive, default): truncation is CSS-driven; we detect
  *   real overflow with measurements.
  *
@@ -31,7 +31,7 @@ export class ToggleTruncateDirective
 {
   /** Full plain-text content; used in 'length' mode. */
   @Input() ttContent: string = "";
-  /** Max chars when collapsed (legacy mode). */
+  /** Max chars when collapsed. */
   @Input() ttMaxLen = 140;
   /** Reset expansion when key changes. */
   @Input() ttResetKey: unknown;
@@ -40,7 +40,7 @@ export class ToggleTruncateDirective
   @Input() ttShowLabelKey?: string;
   @Input() ttHideLabelKey?: string;
 
-  /** Truncation mode: 'length' (legacy) | 'overflow' (responsive). */
+  /** Truncation mode: 'length' | 'overflow' */
   @Input() ttMode: "length" | "overflow" = "overflow";
 
   /** Public so the template can read the state if needed. */
@@ -52,7 +52,7 @@ export class ToggleTruncateDirective
   private canCollapseWithImpact = false;
 
   private ro?: ResizeObserver;
-  private measureEl?: HTMLElement; // off-screen clone for impact checks
+  private measureEl?: HTMLElement;
 
   // Scheduling (avoid jitter during resize / CQ changes)
   private raf1?: number;
@@ -224,13 +224,13 @@ export class ToggleTruncateDirective
 
   // ===== Measurements =====
 
-  /** Measure real overflow while collapsed (clamp applied). */
+  /** Measure real overflow while collapsed. */
   private measureOverflow(): void {
     if (this.ttMode !== "overflow") return;
 
     const el = this.el.nativeElement;
 
-    // Only meaningful while collapsed (when clamp is applied).
+    // Only meaningful while collapsed.
     if (this.expanded) {
       this.hasOverflow = false;
       return;

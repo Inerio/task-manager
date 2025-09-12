@@ -55,10 +55,18 @@
         } @if (!isEditingTitle(kanbanColumn)) {
         <span
           class="kanbanColumn-title"
-          (click)="edit.startEditTitle(kanbanColumn)"
-          tabindex="0"
-          (keydown.enter)="edit.startEditTitle(kanbanColumn)"
-          (keydown.space)="edit.startEditTitle(kanbanColumn)"
+          appToggleTruncate
+          ttMode="overflow"
+          [ttResetKey]="kanbanColumn.id + ':' + kanbanColumn.name"
+          (click)="
+            $any($event.currentTarget)?.classList?.contains('is-overflowing') ||
+            $any($event.currentTarget)?.getAttribute('aria-expanded') === 'true'
+              ? null
+              : edit.startEditTitle(kanbanColumn, $any($event.currentTarget))
+          "
+          (dblclick)="
+            edit.startEditTitle(kanbanColumn, $any($event.currentTarget))
+          "
           [attr.title]="'boards.column.rename' | transloco"
         >
           @if (!kanbanColumn.name.trim()) {
@@ -73,20 +81,23 @@
           } @else { {{ kanbanColumn.name }} }
         </span>
         } @else {
-        <input
+        <textarea
           id="edit-kanbanColumn-title-{{ kanbanColumn.id ?? 'draft' }}"
           class="kanbanColumn-title-input"
-          type="text"
+          [rows]="edit.editingRows()"
           [value]="edit.editingTitleValue()"
           (input)="edit.onEditTitleInput($event)"
           (blur)="edit.saveTitleEdit(kanbanColumn, boardId)"
-          (keydown.enter)="edit.saveTitleEdit(kanbanColumn, boardId)"
+          (keydown.enter)="
+            $event.preventDefault(); edit.saveTitleEdit(kanbanColumn, boardId)
+          "
           (keydown.escape)="edit.cancelTitleEdit()"
           maxlength="60"
           required
           appAutofocusOnInit
           [disabled]="!!edit.editingColumn() && !isEditingTitle(kanbanColumn)"
-        />
+          aria-multiline="true"
+        ></textarea>
         }
 
         <!-- X button after the title (delete column) -->

@@ -14,6 +14,7 @@ import { BoardColumnsDndService } from "../../data/board-columns-dnd.service";
 import { BoardColumnsEditService } from "../../data/board-columns-edit.service";
 import { AutofocusOnInitDirective } from "../../../../shared/directives/autofocus-on-init.directive";
 import { BoardHorizontalAutoScrollDirective } from "../../directives/board-horizontal-autoscroll.directive";
+import { ToggleTruncateDirective } from "../../../../shared/directives/toggle-truncate.directive";
 
 @Component({
   selector: "app-board-columns",
@@ -25,6 +26,7 @@ import { BoardHorizontalAutoScrollDirective } from "../../directives/board-horiz
     KanbanColumnComponent,
     AutofocusOnInitDirective,
     BoardHorizontalAutoScrollDirective,
+    ToggleTruncateDirective,
   ],
   providers: [BoardColumnsDndService, BoardColumnsEditService],
   changeDetection: ChangeDetectionStrategy.OnPush,

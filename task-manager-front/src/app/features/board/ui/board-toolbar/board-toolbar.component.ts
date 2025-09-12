@@ -73,6 +73,19 @@ export class BoardToolbarComponent {
     );
   }
 
+  onTitleEnter(e: Event): void {
+    const ke = e as KeyboardEvent;
+    if (this.confirmDialog.state().visible || ke.repeat) {
+      ke.preventDefault();
+      ke.stopPropagation();
+      return;
+    }
+
+    ke.preventDefault();
+    ke.stopPropagation();
+    this.startSelectedBoardEdit();
+  }
+
   onEditSelectedBoardInput(event: Event): void {
     this.editingSelectedBoardValue.set(
       (event.target as HTMLInputElement).value
@@ -106,13 +119,13 @@ export class BoardToolbarComponent {
 
     const confirmed = await this.confirmDialog.open(
       this.i18n.translate("boards.delete"),
-      this.i18n.translate("boards.deleteBoardConfirm", { name })
+      this.i18n.translate("boards.deleteBoardConfirm", { name }),
+      { allowEnterConfirm: false }
     );
     if (!confirmed) return;
 
     this.boardService.deleteBoard(id).subscribe({
       next: () => {
-        // compute next selection locally, then let parent set it
         const next =
           this.boardService.boards().find((b) => b.id !== id)?.id ?? null;
         this.boardService.loadBoards();

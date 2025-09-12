@@ -11,13 +11,12 @@
     [attr.aria-describedby]="'confirm-dialog-message'"
   >
     <h3 id="confirm-dialog-title">{{ state().title }}</h3>
-    <!-- Use class for clarity; SCSS renders \n as real line breaks -->
     <p id="confirm-dialog-message" class="message">{{ state().message }}</p>
     <div class="btn-group">
       <button
         class="btn btn-success"
         type="button"
-        autofocus
+        [attr.autofocus]="state().allowEnterConfirm ? '' : null"
         (click)="confirm()"
       >
         {{ state().confirmText ?? ("confirm.yes" | transloco) }}

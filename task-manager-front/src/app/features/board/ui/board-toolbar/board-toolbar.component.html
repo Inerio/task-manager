@@ -16,7 +16,7 @@
       class="selected-board-title"
       tabindex="0"
       (click)="startSelectedBoardEdit()"
-      (keydown.enter)="startSelectedBoardEdit()"
+      (keydown.enter)="onTitleEnter($event)"
       (keydown.space)="startSelectedBoardEdit()"
       [attr.title]="'boards.editTitleHint' | transloco"
     >

@@ -40,16 +40,22 @@ export class ConfirmDialogComponent {
 
   // ---- Global keybindings ----
   /** Close with ESC anywhere. */
-  @HostListener("document:keydown.escape")
-  private onEsc(): void {
-    if (this.visible()) this.cancel();
+  @HostListener("document:keydown.escape", ["$event"])
+  private onEsc(e: KeyboardEvent): void {
+    if (!this.visible()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.cancel();
   }
 
-  /** Confirm with ENTER when dialog is visible. */
+  /** Confirm with ENTER only if allowed for this dialog. */
   @HostListener("document:keydown.enter", ["$event"])
   private onEnter(e: KeyboardEvent): void {
     if (!this.visible()) return;
     e.preventDefault();
+    e.stopPropagation();
+    if (!this.state().allowEnterConfirm) return;
+    if (e.repeat) return;
     this.confirm();
   }
 }

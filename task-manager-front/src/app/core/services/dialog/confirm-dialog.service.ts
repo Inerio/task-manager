@@ -8,11 +8,13 @@ interface ConfirmDialogState {
   resolve?: (value: boolean) => void;
   confirmText?: string;
   cancelText?: string;
+  allowEnterConfirm: boolean;
 }
 
 type ConfirmDialogOptions = {
   confirmText?: string;
   cancelText?: string;
+  allowEnterConfirm?: boolean;
 };
 
 @Injectable({ providedIn: "root" })
@@ -24,6 +26,7 @@ export class ConfirmDialogService {
     resolve: undefined,
     confirmText: undefined,
     cancelText: undefined,
+    allowEnterConfirm: true,
   });
 
   /** Readonly state consumed by the dialog component. */
@@ -48,18 +51,19 @@ export class ConfirmDialogService {
         resolve,
         confirmText: options?.confirmText,
         cancelText: options?.cancelText,
+        allowEnterConfirm: options?.allowEnterConfirm ?? true,
       });
     });
   }
 
-  /** Confirm action (idempotent). */
+  /** Confirm action. */
   confirm(): void {
     if (!this._state().visible) return;
     this._state().resolve?.(true);
     this.close();
   }
 
-  /** Cancel action (idempotent). */
+  /** Cancel action. */
   cancel(): void {
     if (!this._state().visible) return;
     this._state().resolve?.(false);
@@ -75,6 +79,7 @@ export class ConfirmDialogService {
       resolve: undefined,
       confirmText: undefined,
       cancelText: undefined,
+      allowEnterConfirm: true,
     });
   }
 }

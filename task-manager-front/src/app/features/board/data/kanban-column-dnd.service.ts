@@ -149,7 +149,7 @@ export class KanbanColumnDndService {
   // ===== Inter-task slices =====
   onSliceDragOver(event: DragEvent, zoneIndex: number): void {
     if (!this.drag.isTaskDrag()) return;
-    if (isFileDragEvent(event)) return; // ignore real file drags
+    if (isFileDragEvent(event)) return;
 
     if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     this.drag.setTaskHoverColumn(this._columnId());
@@ -259,7 +259,7 @@ export class KanbanColumnDndService {
     const draggedTask = allTasks.find((t) => t.id === taskId);
     if (!draggedTask) return;
 
-    // Same-column reorder (optimistic).
+    // Same-column reorder (optimistic via reorderTasks).
     if (fromColumnId === colId) {
       const columnTasks = [...this.filteredTasks()];
       const fromIdx = columnTasks.findIndex((t) => t.id === taskId);
@@ -274,35 +274,26 @@ export class KanbanColumnDndService {
       const insertAt = Math.max(0, Math.min(targetIndex, columnTasks.length));
       columnTasks.splice(insertAt, 0, draggedTask);
       const reordered = columnTasks.map((t, idx) => ({ ...t, position: idx }));
-      this.drag.markTaskDropped(taskId); // fast feedback
+      this.drag.markTaskDropped(taskId);
       this.dragOverIndex.set(null);
       this.hoveredZoneIndex.set(null);
       this.animateOnEnter.set(false);
       void this.tasksSvc.reorderTasks(reordered).catch(() => {});
       return;
     }
-    // Cross-column move (optimistic + persist).
-    const sourceTasks = allTasks.filter(
-      (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
+
+    // Cross-column move: fully optimistic & instant (delegated to service).
+    const clamped = Math.max(
+      0,
+      Math.min(targetIndex, this.filteredTasks().length)
     );
-    const targetTasks = [...this.filteredTasks()];
-    const newTask = { ...draggedTask, kanbanColumnId: colId };
-    const clamped = Math.max(0, Math.min(targetIndex, targetTasks.length));
-    targetTasks.splice(clamped, 0, newTask);
-    const reorderedSource = sourceTasks.map((t, idx) => ({
-      ...t,
-      position: idx,
-    }));
-    const reorderedTarget = targetTasks.map((t, idx) => ({
-      ...t,
-      position: idx,
-    }));
     this.drag.markTaskDropped(taskId);
     this.dragOverIndex.set(null);
     this.hoveredZoneIndex.set(null);
     this.animateOnEnter.set(false);
-    await this.tasksSvc.updateTask(newTask.id!, newTask);
-    await this.tasksSvc.reorderTasks([...reorderedSource, ...reorderedTarget]);
+    void this.tasksSvc
+      .moveTaskOptimistic(taskId, colId, clamped)
+      .catch(() => {});
   }
 
   /** True if the hovered zone equals the dragged card own edges (no-op move). */

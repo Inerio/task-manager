@@ -30,7 +30,7 @@ export class DropzoneDirective {
   onDragOver(event: DragEvent): void {
     if (this.dzDisabled) return;
     if (!isFileDragEvent(event)) return;
-    event.preventDefault(); // allow drop
+    event.preventDefault();
     try {
       if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
     } catch {

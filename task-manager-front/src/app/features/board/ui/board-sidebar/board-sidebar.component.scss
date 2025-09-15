@@ -111,14 +111,20 @@
   font-size: 1rem;
   border: 2px solid var(--brand);
   border-radius: var(--radius-1);
-  background: #f5f7fa;
+  background: var(--surface-1);
+  color: var(--text-1);
   width: 100%;
   transition: border 0.15s, box-shadow 0.15s, background 0.16s;
 
+  &::placeholder {
+    color: color-mix(in oklab, var(--text-2) 70%, transparent);
+  }
+
   &:focus {
-    border-color: color-mix(in oklab, var(--brand) 80%, #0000);
-    box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 30%, #0000);
-    background: #fff;
+    border-color: color-mix(in oklab, var(--brand) 80%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 30%, transparent);
+    background: var(--surface-1);
+    color: var(--text-1);
   }
 }
 

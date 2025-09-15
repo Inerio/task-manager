@@ -40,21 +40,49 @@ type EmojiPickerEl = HTMLElement & {
       class="emoji-picker-dropdown"
       [attr.locale]="currentLocale"
       [attr.data-source]="currentDataUrl"
-      style="
-        position:absolute; left:50%; top:calc(100% - 18px); z-index:99;
-        width:min(340px, 40vw); max-height:370px;
-        transform: translateX(-50%) scale(0.77); transform-origin: top center;
-        /* brand variables used by the picker CSS */
-        --background:#fff;
-        --category-button-active-background:#e3f2fd;
-        --search-background:#f7f9fc;
-        --border-radius:16px;
-        --color:#232323;
-        /* avoid flash of unstyled content */
-        visibility:hidden;
-      "
     ></emoji-picker>
   `,
+  styles: [
+    `
+      .emoji-picker-dropdown {
+        position: absolute;
+        left: 50%;
+        top: calc(100% - 18px);
+        z-index: 99;
+
+        /* Desktop/base sizing */
+        width: min(340px, 40vw);
+        max-height: 370px;
+        transform: translateX(-50%) scale(0.77);
+        transform-origin: top center;
+
+        /* Brand variables used by the picker CSS */
+        --background: #fff;
+        --category-button-active-background: #e3f2fd;
+        --search-background: #f7f9fc;
+        --border-radius: 16px;
+        --color: #232323;
+
+        /* Avoid FOUC until first configurePicker() */
+        visibility: hidden;
+      }
+
+      /* Mobile override: wider cap but smaller global scale */
+      @media (max-width: 768px) {
+        .emoji-picker-dropdown {
+          /* Never exceed the column; allow more width if available */
+          width: min(760px, 96vw);
+          max-width: none;
+
+          /* Slightly shorter on small screens */
+          max-height: min(56vh, 350px);
+
+          /* Make everything smaller so more categories fit */
+          transform: translateX(-50%) scale(0.7);
+        }
+      }
+    `,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -150,9 +178,10 @@ export class EmojiPickerComponent implements AfterViewInit, OnDestroy {
     const locale = this.currentLocale;
 
     // UI labels (category names, "Search", etc.)
-    const ui = (locale === "fr"
-      ? i18nFr
-      : i18nEn) as unknown as EmojiPickerI18n;
+    const ui =
+      locale === "fr"
+        ? (i18nFr as unknown as EmojiPickerI18n)
+        : (i18nEn as unknown as EmojiPickerI18n);
     try {
       picker.i18n = ui;
     } catch {

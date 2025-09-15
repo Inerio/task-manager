@@ -27,4 +27,54 @@
   --clamp-bg: color-mix(in oklab, var(--brand) 12%, var(--surface-2));
   --clamp-ring-hover: color-mix(in oklab, var(--brand) 55%, var(--surface-2));
   --clamp-bg-hover: color-mix(in oklab, var(--brand) 16%, var(--surface-2));
+
+  /* ===== Icons ➜ force white in dark mode (no template change) ===== */
+  --icon-white-filter: invert(1) brightness(1.8) contrast(1.05);
+  img[src="/svg/trash.svg"],
+  img[src="/svg/x.svg"],
+  img[src="/svg/pencil.svg"],
+  img[src="/svg/smile-plus.svg"] {
+    filter: var(--icon-white-filter);
+  }
+
+  /* + Add task button text */
+  .task-kanbanColumn .add-btn {
+    color: #fff;
+  }
+
+  /* Language switcher pills text */
+  .lang-toggle button,
+  .lang-toggle button.active {
+    color: #fff;
+  }
+
+  /* ===== Sidebar boards — better readability in dark mode ===== */
+  .boards-list .board-item {
+    background: color-mix(in oklab, var(--surface-2) 92%, #0000);
+    color: var(--text-1);
+    border: 1px solid var(--border-2);
+  }
+  .boards-list .board-item:hover {
+    background: color-mix(in oklab, var(--brand) 10%, var(--surface-2));
+    color: var(--text-1); /* keep good contrast */
+  }
+  .boards-list .board-item.selected {
+    background: var(--brand);
+    color: #fff;
+    border-color: transparent;
+  }
+  .boards-list .board-item.drag-over {
+    outline: 2px dashed var(--brand);
+    background: color-mix(in oklab, var(--brand) 16%, var(--surface-2));
+  }
+
+  /* New-board input inside sidebar */
+  .boards-list .board-edit-input {
+    background: var(--surface-2);
+    color: var(--text-1);
+    border-color: var(--brand);
+  }
+  .boards-list .board-edit-input::placeholder {
+    color: color-mix(in oklab, var(--text-2) 70%, #0000);
+  }
 }

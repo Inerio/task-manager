@@ -125,8 +125,29 @@ export class TaskFormComponent
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes["task"]) {
-      this.applyTaskToState(this.task);
+    const c = changes["task"];
+    if (!c) return;
+    const incoming: Partial<Task> = this.task ?? {};
+    const first = c.firstChange;
+    const prevVal = c.previousValue as Partial<Task> | undefined;
+    const idChanged = (prevVal?.id ?? null) !== (incoming.id ?? null);
+    if (!this.editMode || first || idChanged) {
+      this.applyTaskToState(incoming);
+      return;
+    }
+    const hasUserEdits = this.form.dirty || this.form.touched;
+    if (hasUserEdits) {
+      const curr = this.form.getRawValue();
+      const prev = this.localTask();
+      this.localTask.set({
+        ...prev,
+        ...incoming,
+        title: curr.title,
+        description: curr.description,
+        dueDate: curr.dueDate,
+      });
+    } else {
+      this.applyTaskToState(incoming);
     }
   }
 

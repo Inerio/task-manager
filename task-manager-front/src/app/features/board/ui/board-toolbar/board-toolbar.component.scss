@@ -1,6 +1,6 @@
 @use "../../../../../styles/_breakpoints" as bp;
 
-/* ===== Board header (identical look) ===== */
+/* ===== Board header ===== */
 .board-header {
   display: flex;
   justify-content: space-between;
@@ -98,6 +98,7 @@
       }
     }
 
+    /* Light mode hover */
     &:hover,
     &:focus {
       background: #f5f5f9;
@@ -114,11 +115,16 @@
     width: 320px;
     max-width: 100%;
     background: var(--surface-1);
+    color: var(--text-1);
     min-height: 48px;
     line-height: 1.2;
     display: flex;
     align-items: center;
     transition: border 0.17s, box-shadow 0.16s;
+
+    &::placeholder {
+      color: color-mix(in oklab, var(--text-2) 70%, #0000);
+    }
 
     &:focus {
       border-color: #1651a3;
@@ -188,5 +194,19 @@
       border-radius: 50% !important;
       box-shadow: 0 2px 12px #0001;
     }
+  }
+}
+
+:host-context([data-theme="dark"]) .board-header .selected-board-title {
+  &:hover,
+  &:focus {
+    background: color-mix(in oklab, var(--brand) 12%, var(--surface-2));
+    border-radius: var(--radius-1);
+    transition: background 0.14s;
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--brand) 55%, #0000);
+    outline-offset: 2px;
   }
 }

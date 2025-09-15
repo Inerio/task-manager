@@ -14,8 +14,13 @@
     border-radius: var(--radius-1);
     border: 1.8px solid #bfc2ce;
     background: var(--surface-1);
+    color: var(--text-1);
     margin-bottom: 0.46rem;
     transition: border 0.18s, box-shadow 0.18s;
+
+    &::placeholder {
+      color: color-mix(in oklab, var(--text-2) 72%, #0000);
+    }
   }
 
   .form-control.textarea {
@@ -29,6 +34,17 @@
     height: 180px;
     max-height: 360px;
     resize: vertical;
+  }
+
+  /* Date input */
+  .form-control[type="date"] {
+    color: var(--text-1);
+
+    /* chromium/webkit */
+    &::-webkit-calendar-picker-indicator {
+      filter: invert(0);
+      opacity: 0.8;
+    }
   }
 
   .form-control:focus {

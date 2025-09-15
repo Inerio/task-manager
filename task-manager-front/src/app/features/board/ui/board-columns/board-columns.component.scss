@@ -235,7 +235,6 @@
     height: var(--ph);
   }
 }
-
 @keyframes phShimmer {
   0% {
     transform: translateX(-100%);
@@ -286,7 +285,6 @@
   overflow-inline: auto;
   overflow-block: visible;
 
-  /* Width presets still apply on large screens. */
   &:has(.column-draggable:nth-of-type(1)):not(
       :has(.column-draggable:nth-of-type(2))
     ) {
@@ -315,7 +313,6 @@
     --gap: var(--space-5);
   }
   @include bp.md-down {
-    /* Edge-to-edge on mobile: no side padding, keep only vertical */
     padding-block: var(--space-3);
     padding-inline: 0;
     --fab-clearance: var(--space-5);
@@ -336,7 +333,6 @@
   border-radius: var(--radius-3);
   box-shadow: var(--shadow-2);
 
-  /* Columns never shrink below --col-min; on wide screens they can expand with --col-w */
   flex: 0 0 max(var(--col-min), var(--col-w, var(--col-min)));
   width: max(var(--col-min), var(--col-w, var(--col-min)));
 
@@ -423,15 +419,16 @@
   padding-block-end: 0.12em;
 }
 
-/* Wrap long words and prevent grab cursor inheritance */
+/* Wrap long words and improve legibility while editing */
 .kanbanColumn-title-input {
   font-weight: bold;
   text-align: center;
-  border: 2px solid #222;
+  border: 2px solid var(--border-2);
   border-radius: var(--radius-1);
   padding: 0.3rem 1.3rem;
   font-size: 1.08rem;
   background: var(--surface-1);
+  color: var(--text-1);
   transition: border 0.15s;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -439,6 +436,10 @@
   line-height: 1.2;
   resize: none;
   cursor: text;
+
+  &::placeholder {
+    color: color-mix(in oklab, var(--text-2) 70%, #0000);
+  }
 
   &:focus {
     border-color: var(--brand);
@@ -503,6 +504,7 @@
     width: 1.1em;
     height: 1.1em;
     margin-left: 0.18em;
+    filter: grayscale(1) brightness(1.2);
     opacity: 0.75;
   }
 }
@@ -510,6 +512,7 @@
   color: var(--brand);
   .edit-icon {
     opacity: 1;
+    filter: none;
   }
 }
 

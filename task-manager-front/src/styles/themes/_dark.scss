@@ -28,7 +28,7 @@
   --clamp-ring-hover: color-mix(in oklab, var(--brand) 55%, var(--surface-2));
   --clamp-bg-hover: color-mix(in oklab, var(--brand) 16%, var(--surface-2));
 
-  /* ===== Icons ➜ force white in dark mode (no template change) ===== */
+  /* ===== Icons -> force white in dark mode ===== */
   --icon-white-filter: invert(1) brightness(1.8) contrast(1.05);
   img[src="/svg/trash.svg"],
   img[src="/svg/x.svg"],
@@ -56,7 +56,7 @@
   }
   .boards-list .board-item:hover {
     background: color-mix(in oklab, var(--brand) 10%, var(--surface-2));
-    color: var(--text-1); /* keep good contrast */
+    color: var(--text-1);
   }
   .boards-list .board-item.selected {
     background: var(--brand);
@@ -67,8 +67,6 @@
     outline: 2px dashed var(--brand);
     background: color-mix(in oklab, var(--brand) 16%, var(--surface-2));
   }
-
-  /* New-board input inside sidebar */
   .boards-list .board-edit-input {
     background: var(--surface-2);
     color: var(--text-1);
@@ -77,4 +75,76 @@
   .boards-list .board-edit-input::placeholder {
     color: color-mix(in oklab, var(--text-2) 70%, #0000);
   }
+
+  /* ====== Task card readability (readonly) ====== */
+  .task-card .task-content-readonly .clamp-desc {
+    color: var(--text-2);
+    background: color-mix(in oklab, var(--surface-2) 94%, #0000);
+  }
+  .task-card .task-content-readonly a {
+    color: var(--brand);
+  }
+  .task-card .task-checkbox-icon,
+  .task-card .task-checkbox-icon-inline {
+    background: var(--surface-2);
+    border-color: var(--border-2);
+    box-shadow: 0 0 0 1px #0000;
+  }
+
+  /* ====== Task form readability ====== */
+  .task-form.editing-task-form .form-control {
+    background: var(--surface-1);
+    color: var(--text-1);
+    border-color: var(--border-2);
+  }
+  .task-form.editing-task-form .form-control.textarea {
+    background: var(--surface-2);
+    border-color: var(--border-2);
+  }
+  .task-form.editing-task-form .form-control::placeholder {
+    color: color-mix(in oklab, var(--text-2) 72%, #0000);
+  }
+
+  /* Date input text + calendar indicator in white */
+  .task-form.editing-task-form .form-control[type="date"] {
+    color: var(--text-1);
+  }
+  .task-form.editing-task-form
+    .form-control[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.6);
+    opacity: 0.9;
+  }
+
+  /* ====== Attachments zone ====== */
+  .attachments-zone .empty-upload-text {
+    color: var(--text-2);
+  }
+  .attachments-zone .attachments-toggle .toggle-btn {
+    color: #fff;
+    background: var(--surface-2);
+    border-color: var(--border-2);
+  }
+
+  /* ====== Due badge & date in dark ====== */
+  .task-card .due-badge {
+    background: color-mix(in oklab, var(--surface-2) 92%, #0000);
+    color: #fff;
+    border-color: var(--border-2);
+    box-shadow: none;
+  }
+  .task-card .due-badge.late {
+    background: color-mix(in oklab, var(--danger) 18%, var(--surface-2));
+    color: #fff;
+    border-color: color-mix(in oklab, var(--danger) 70%, var(--surface-2));
+  }
+  .task-card .due-date {
+    color: var(--text-2);
+  }
+
+  --task-completed-bg: color-mix(
+    in oklab,
+    var(--success) 16%,
+    var(--surface-2)
+  );
+  --task-completed-border: color-mix(in oklab, var(--success) 82%, #0000);
 }

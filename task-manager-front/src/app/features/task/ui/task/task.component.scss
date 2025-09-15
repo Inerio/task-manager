@@ -15,7 +15,7 @@
   --clamp-ring-w: 1.1px;
   --clamp-left-nudge: 0.22rem;
 
-  /* DA-driven colors (subtle by default) */
+  /* DA-driven colors */
   --clamp-ring: color-mix(in oklab, var(--brand) 48%, transparent);
   --clamp-ring-hover: color-mix(in oklab, var(--brand) 64%, transparent);
   --clamp-bg: color-mix(in oklab, var(--brand) 6%, transparent);
@@ -37,8 +37,8 @@
   }
 
   &.completed {
-    background-color: #e0ffe0;
-    border-left: 4px solid #4caf50;
+    background-color: var(--task-completed-bg, #e0ffe0);
+    border-left: 4px solid var(--task-completed-border, #4caf50);
   }
 
   /* Dynamically increase visible lines as the card gets wider */
@@ -126,14 +126,19 @@
       color: var(--text-1);
     }
 
+    /* Links coming from |linkify */
+    a {
+      color: var(--brand);
+      text-decoration: underline dotted;
+    }
+
     /* ===== Dynamic multi-line clamp + DA outline with FADE ===== */
     .clamp-title,
     .clamp-desc {
-      position: relative; /* anchor pseudo elements */
+      position: relative;
       border-radius: var(--radius-1);
       transition: -webkit-mask-image 0.14s, mask-image 0.14s;
 
-      /* Opacities drive the fade of ring/tint overlays (default hidden) */
       --ring-opacity: 0;
       --bg-opacity: 0;
 
@@ -211,8 +216,6 @@
           black calc(100% - 1.2em),
           transparent
         );
-
-        /* Even softer on paragraph */
         --ring-opacity: 0.68;
         --bg-opacity: 0.22;
 
@@ -222,7 +225,7 @@
       }
     }
 
-    /* When expanded (not truncated), remove fades & masks */
+    /* When expanded, remove fades & masks */
     .clamp-title:not(.truncated),
     .clamp-desc:not(.truncated) {
       -webkit-mask-image: none;
@@ -231,12 +234,12 @@
       --bg-opacity: 0;
     }
 
-    /* Base paragraph styles (kept) */
+    /* Base paragraph styles */
     .clamp-desc,
     p.clamp-desc {
       background: var(--surface-2);
       border-radius: var(--radius-1);
-      color: #444;
+      color: var(--text-2, #444);
       font-size: 0.99rem;
       margin: 0 0 0.5rem 0;
       padding: 0.44rem 0.7rem;
@@ -263,7 +266,7 @@
   padding: 0;
 }
 
-/* DnD highlight (kept for other states) */
+/* DnD highlight */
 .task-card.drag-over-card {
   background: #f4faff;
   border: 2.5px solid var(--brand);
@@ -292,7 +295,7 @@
   }
 }
 
-/* === Drag snapshot (kept for other uses) === */
+/* === Drag snapshot === */
 .task-drag-image {
   pointer-events: none !important;
   transform: scale(1.06);
@@ -305,7 +308,6 @@
   opacity: 1;
 }
 
-/* === Simplified cursor-following ghost === */
 .task-drag-overlay {
   position: fixed;
   top: 0;

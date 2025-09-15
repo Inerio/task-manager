@@ -17,6 +17,9 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
     @if (showForm()) {
     <div
       class="task-form-wrapper"
+      [ensureVisible]="showForm()"
+      [evBottomSafe]="300"
+      [evRetries]="[0, 120, 260, 420, 700, 1000, 1400]"
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()"
     >

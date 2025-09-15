@@ -22,15 +22,21 @@ import { TaskComponent } from "../../../task/ui/task/task.component";
 import { TaskFormComponent } from "../../../task/ui/task-form/task-form.component";
 import { AttachmentService } from "../../../attachments/data/attachment.service";
 import { KanbanColumnDndService } from "../../data/kanban-column-dnd.service";
+import { EnsureVisibleDirective } from "../../../task/directives/ensure-visible.directive"; // ⬅️ added
 
 /**
  * Kanban column (UI + form). Pure DnD logic is delegated to KanbanColumnDndService.
- * Behavior is 1:1 with the previous monolithic component.
  */
 @Component({
   selector: "app-kanban-column",
   standalone: true,
-  imports: [CommonModule, TranslocoModule, TaskComponent, TaskFormComponent],
+  imports: [
+    CommonModule,
+    TranslocoModule,
+    TaskComponent,
+    TaskFormComponent,
+    EnsureVisibleDirective, // ⬅️ added
+  ],
   templateUrl: "./kanban-column.component.html",
   styleUrls: ["./kanban-column.component.scss"],
   providers: [KanbanColumnDndService],
@@ -54,14 +60,14 @@ export class KanbanColumnComponent implements OnChanges {
   private readonly attachmentService = inject(AttachmentService);
   private readonly i18n = inject(TranslocoService);
 
-  /** Local DnD service (scoped to this column instance). */
+  /** Local DnD service. */
   readonly dnd = inject(KanbanColumnDndService);
 
   // ===== UI state (non-DnD) =====
   readonly showForm = signal(false);
   readonly editingTask = signal<null | Task>(null);
 
-  // Keep a direct ref for trackBy (no behavior change)
+  // Keep a direct ref for trackBy.
   readonly filteredTasks: Signal<Task[]> = computed(() =>
     this.taskService
       .tasks()
@@ -83,12 +89,10 @@ export class KanbanColumnComponent implements OnChanges {
   }
 
   // ===== Form actions =====
-  /** Open instead of toggle to avoid accidental close on file dialog cancel. */
   openForm(): void {
     if (this.showForm()) return;
     this.showForm.set(true);
     this.editingTask.set(null);
-    // Manual focus removed: title input now auto-focuses via appAutofocusOnInit.
   }
 
   closeForm(): void {
@@ -161,7 +165,7 @@ export class KanbanColumnComponent implements OnChanges {
     this.taskService.deleteTasksByKanbanColumnId(this.kanbanColumnId);
   }
 
-  // ===== Template utils kept local (no behavior change) =====
+  // ===== Template utils kept local =====
   trackById(_index: number, task: Task): number | undefined {
     return task.id;
   }

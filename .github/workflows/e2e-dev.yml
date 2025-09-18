@@ -1,0 +1,172 @@
+name: E2E (dev only)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "task-manager-front/**"
+      - "task-manager-back/**"
+      - ".github/workflows/e2e-dev.yml"
+  pull_request:
+    branches: [dev]
+    paths:
+      - "task-manager-front/**"
+      - "task-manager-back/**"
+      - ".github/workflows/e2e-dev.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-dev
+  cancel-in-progress: true
+
+jobs:
+  e2e-smoke:
+    name: Playwright smoke (Chromium)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: task
+          POSTGRES_PASSWORD: task
+          POSTGRES_DB: taskmanager
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U task"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- Backend: build & run in the same runner ---
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Install Maven (if not present)
+        run: |
+          if ! command -v mvn >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y maven
+          fi
+          mvn -v
+
+      - name: Build backend (skip unit tests)
+        working-directory: task-manager-back
+        run: mvn -B -DskipTests package
+
+      - name: Run backend (connect to CI Postgres)
+        working-directory: task-manager-back
+        env:
+          # Force datasource to the CI Postgres service
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/taskmanager
+          SPRING_DATASOURCE_USERNAME: task
+          SPRING_DATASOURCE_PASSWORD: task
+          # App port
+          SERVER_PORT: 8080
+          # Allow the CI frontend origin via your app.cors.* properties binding
+          CORS_ALLOWED_ORIGINS: http://localhost:4200
+          # Hibernate schema auto-update in CI (safe for ephemeral DB)
+          SPRING_JPA_HIBERNATE_DDL_AUTO: update
+        run: |
+          # Start Spring Boot in background and capture logs for debugging
+          nohup java -jar target/*.jar > ../backend.log 2>&1 &
+          # Wait for a REAL ready state: TCP -> "Started ..." log -> HTTP probe
+          sudo apt-get update && sudo apt-get install -y curl
+          timeout 210 bash -c '
+            echo "[wait] TCP 8080..."
+            for i in {1..90}; do
+              (echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1 && break
+              sleep 2
+            done
+            echo "[wait] Spring started log..."
+            for i in {1..60}; do
+              grep -q "Started .* in .* seconds" ../backend.log && break
+              sleep 2
+            done || true
+            echo "[wait] HTTP probe /api/v1/boards..."
+            for i in {1..45}; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "X-Client-Id: e2e-ci" http://localhost:8080/api/v1/boards || true)
+              # Accept any 2xx–4xx (reject 000 and 5xx)
+              if [ "$code" -ge 200 ] && [ "$code" -lt 500 ]; then
+                echo "[ready] backend HTTP $code"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "::error::Backend not ready. Tail logs:"
+            tail -n 200 ../backend.log
+            exit 1
+          '
+
+      # --- Frontend + Playwright ---
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: task-manager-front/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: task-manager-front
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: task-manager-front
+        run: npx playwright install --with-deps
+
+      - name: Build frontend (Angular CI config -> API http://localhost:8080)
+        working-directory: task-manager-front
+        run: npx ng build --configuration ci
+
+      - name: Serve dist and wait
+        working-directory: task-manager-front
+        run: |
+          npx http-server dist/task-manager-front/browser -p 4200 -a localhost >/dev/null 2>&1 &
+          # Use curl loop instead of adding a dependency
+          for i in {1..60}; do
+            curl -fsS http://localhost:4200 >/dev/null && break
+            sleep 2
+          done
+
+      - name: Run smoke (@smoke)
+        env:
+          CI: "true"
+          # Optional: expose base URLs to Playwright (your config supports these)
+          BASE_URL: http://localhost:4200
+          API_BASE_URL: http://localhost:8080/api/v1
+        working-directory: task-manager-front
+        run: npx playwright test --project=chromium --grep @smoke --reporter=html
+
+      # --- Artifacts for debugging (always) ---
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: task-manager-front/playwright-report
+          retention-days: 7
+
+      - name: Upload test results (videos, traces)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: task-manager-front/test-results
+          retention-days: 7
+
+      - name: Upload backend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-log
+          path: backend.log
+          retention-days: 7

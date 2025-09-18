@@ -42,7 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- Backend: build & run in the same runner ---
+      # --- Backend: build & run in this same runner ---
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
@@ -50,7 +50,7 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Install Maven (if not present)
+      - name: Install Maven (if missing)
         run: |
           if ! command -v mvn >/dev/null 2>&1; then
             sudo apt-get update
@@ -65,47 +65,61 @@ jobs:
       - name: Run backend (connect to CI Postgres)
         working-directory: task-manager-back
         env:
-          # Force datasource to the CI Postgres service
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/taskmanager
           SPRING_DATASOURCE_USERNAME: task
           SPRING_DATASOURCE_PASSWORD: task
-          # App port
           SERVER_PORT: 8080
-          # Allow the CI frontend origin via your app.cors.* properties binding
+          # Your app binds CORS from app.cors.* via CorsProperties -> set via env indirection:
           CORS_ALLOWED_ORIGINS: http://localhost:4200
-          # Hibernate schema auto-update in CI (safe for ephemeral DB)
+          # Safer schema bootstrapping for ephemeral DB:
           SPRING_JPA_HIBERNATE_DDL_AUTO: update
         run: |
-          # Start Spring Boot in background and capture logs for debugging
+          # Start Spring Boot; log to a file for artifacts
           nohup java -jar target/*.jar > ../backend.log 2>&1 &
-          # Wait for a REAL ready state: TCP -> "Started ..." log -> HTTP probe
+
           sudo apt-get update && sudo apt-get install -y curl
+
+          # Robust readiness: TCP -> Spring "Started ... in" -> real HTTP probe
           timeout 210 bash -c '
             echo "[wait] TCP 8080..."
             for i in {1..90}; do
               (echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1 && break
               sleep 2
             done
+
             echo "[wait] Spring started log..."
             for i in {1..60}; do
               grep -q "Started .* in .* seconds" ../backend.log && break
               sleep 2
             done || true
+
             echo "[wait] HTTP probe /api/v1/boards..."
             for i in {1..45}; do
               code=$(curl -s -o /dev/null -w "%{http_code}" \
                 -H "X-Client-Id: e2e-ci" http://localhost:8080/api/v1/boards || true)
-              # Accept any 2xx–4xx (reject 000 and 5xx)
+              # Accept any 2xx–4xx (reject 000 or 5xx)
               if [ "$code" -ge 200 ] && [ "$code" -lt 500 ]; then
                 echo "[ready] backend HTTP $code"
                 exit 0
               fi
               sleep 2
             done
+
             echo "::error::Backend not ready. Tail logs:"
             tail -n 200 ../backend.log
             exit 1
           '
+
+      - name: API sanity (GET → POST → GET)
+        run: |
+          echo "GET /boards (expect 204 or 200)"; \
+          curl -i -H "X-Client-Id: e2e-ci" http://localhost:8080/api/v1/boards || true
+          echo; echo "POST /boards (create a temp board)"; \
+          curl -i -H "X-Client-Id: e2e-ci" -H "Content-Type: application/json" \
+               -d '{"name":"__ci_smoke__", "position":0}' \
+               http://localhost:8080/api/v1/boards || true
+          echo; echo "GET /boards (should now be 200)"; \
+          curl -i -H "X-Client-Id: e2e-ci" http://localhost:8080/api/v1/boards || true
 
       # --- Frontend + Playwright ---
       - name: Set up Node.js 20
@@ -127,11 +141,19 @@ jobs:
         working-directory: task-manager-front
         run: npx ng build --configuration ci
 
+      - name: Verify built API URL (diagnostic)
+        working-directory: task-manager-front
+        run: |
+          if ! grep -R "http://localhost:8080/api/v1" -n dist/task-manager-front/browser >/dev/null 2>&1; then
+            echo "::warning::API URL string not found in build output. If the app sets it dynamically, ignore this."
+          else
+            echo "[ok] Found http://localhost:8080/api/v1 in build output."
+          fi
+
       - name: Serve dist and wait
         working-directory: task-manager-front
         run: |
           npx http-server dist/task-manager-front/browser -p 4200 -a localhost >/dev/null 2>&1 &
-          # Use curl loop instead of adding a dependency
           for i in {1..60}; do
             curl -fsS http://localhost:4200 >/dev/null && break
             sleep 2
@@ -140,13 +162,12 @@ jobs:
       - name: Run smoke (@smoke)
         env:
           CI: "true"
-          # Optional: expose base URLs to Playwright (your config supports these)
           BASE_URL: http://localhost:4200
           API_BASE_URL: http://localhost:8080/api/v1
         working-directory: task-manager-front
         run: npx playwright test --project=chromium --grep @smoke --reporter=html
 
-      # --- Artifacts for debugging (always) ---
+      # Artifacts for debugging
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4

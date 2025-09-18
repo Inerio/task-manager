@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-// Stable UID so the app recognizes us across runs
-const E2E_UID = `e2e-smoke-${Date.now()}`;
-const BOARD_NAME = "E2E Smoke Board";
+// Read shared UID/board name from env (fallbacks kept for local runs)
+const E2E_UID = process.env["E2E_UID"] || `e2e-smoke-${Date.now()}`;
+const BOARD_NAME = process.env["BOARD_NAME"] || "E2E Smoke Board";
 
 test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)", () => {
   test.beforeEach(async ({ page }) => {

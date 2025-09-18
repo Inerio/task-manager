@@ -23,6 +23,10 @@ jobs:
   e2e-smoke:
     name: Playwright smoke (Chromium)
     runs-on: ubuntu-latest
+    env:
+      # Use the SAME UID for API sanity (curl) and for the UI (Playwright/spec)
+      E2E_UID: e2e-smoke-ci
+      BOARD_NAME: E2E Smoke Board
     services:
       postgres:
         image: postgres:16
@@ -69,9 +73,9 @@ jobs:
           SPRING_DATASOURCE_USERNAME: task
           SPRING_DATASOURCE_PASSWORD: task
           SERVER_PORT: 8080
-          # Your app binds CORS from app.cors.* via CorsProperties -> set via env indirection:
+          # Your app binds CORS from app.cors.* via CorsProperties -> set via env indirection in application.properties
           CORS_ALLOWED_ORIGINS: http://localhost:4200
-          # Safer schema bootstrapping for ephemeral DB:
+          # Safer schema bootstrapping for the ephemeral CI DB:
           SPRING_JPA_HIBERNATE_DDL_AUTO: update
         run: |
           # Start Spring Boot; log to a file for artifacts
@@ -79,7 +83,7 @@ jobs:
 
           sudo apt-get update && sudo apt-get install -y curl
 
-          # Robust readiness: TCP -> Spring "Started ... in" -> real HTTP probe
+          # Robust readiness: TCP -> Spring "Started ... in" -> real HTTP probe with X-Client-Id
           timeout 210 bash -c '
             echo "[wait] TCP 8080..."
             for i in {1..90}; do
@@ -96,7 +100,7 @@ jobs:
             echo "[wait] HTTP probe /api/v1/boards..."
             for i in {1..45}; do
               code=$(curl -s -o /dev/null -w "%{http_code}" \
-                -H "X-Client-Id: e2e-ci" http://localhost:8080/api/v1/boards || true)
+                -H "X-Client-Id: '"$E2E_UID"'" http://localhost:8080/api/v1/boards || true)
               # Accept any 2xx–4xx (reject 000 or 5xx)
               if [ "$code" -ge 200 ] && [ "$code" -lt 500 ]; then
                 echo "[ready] backend HTTP $code"
@@ -110,16 +114,21 @@ jobs:
             exit 1
           '
 
-      - name: API sanity (GET → POST → GET)
+      - name: API sanity (GET → POST → GET) with same UID
+        env:
+          E2E_UID: ${{ env.E2E_UID }}
+          BOARD_NAME: ${{ env.BOARD_NAME }}
         run: |
-          echo "GET /boards (expect 204 or 200)"; \
-          curl -i -H "X-Client-Id: e2e-ci" http://localhost:8080/api/v1/boards || true
-          echo; echo "POST /boards (create a temp board)"; \
-          curl -i -H "X-Client-Id: e2e-ci" -H "Content-Type: application/json" \
-               -d '{"name":"__ci_smoke__", "position":0}' \
+          echo "GET /boards (expect 204 or 200)"
+          curl -i -H "X-Client-Id: $E2E_UID" http://localhost:8080/api/v1/boards || true
+          echo
+          echo "POST /boards (create $BOARD_NAME)"
+          curl -i -H "X-Client-Id: $E2E_UID" -H "Content-Type: application/json" \
+               -d "{\"name\":\"$BOARD_NAME\",\"position\":0}" \
                http://localhost:8080/api/v1/boards || true
-          echo; echo "GET /boards (should now be 200)"; \
-          curl -i -H "X-Client-Id: e2e-ci" http://localhost:8080/api/v1/boards || true
+          echo
+          echo "GET /boards (after create)"
+          curl -i -H "X-Client-Id: $E2E_UID" http://localhost:8080/api/v1/boards || true
 
       # --- Frontend + Playwright ---
       - name: Set up Node.js 20
@@ -164,6 +173,8 @@ jobs:
           CI: "true"
           BASE_URL: http://localhost:4200
           API_BASE_URL: http://localhost:8080/api/v1
+          E2E_UID: ${{ env.E2E_UID }}
+          BOARD_NAME: ${{ env.BOARD_NAME }}
         working-directory: task-manager-front
         run: npx playwright test --project=chromium --grep @smoke --reporter=html
 

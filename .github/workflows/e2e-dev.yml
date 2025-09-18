@@ -24,7 +24,7 @@ jobs:
     name: Playwright smoke (Chromium)
     runs-on: ubuntu-latest
     env:
-      # Use the SAME UID for API sanity (curl) and for the UI (Playwright/spec)
+      # Use the SAME UID for curl (API) and Playwright (UI)
       E2E_UID: e2e-smoke-ci
       BOARD_NAME: E2E Smoke Board
     services:
@@ -46,7 +46,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- Backend: build & run in this same runner ---
+      # --- Backend: build & run on this runner ---
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
@@ -66,24 +66,24 @@ jobs:
         working-directory: task-manager-back
         run: mvn -B -DskipTests package
 
-      - name: Run backend (connect to CI Postgres)
+      - name: Run backend (connect to CI Postgres; permissive CORS)
         working-directory: task-manager-back
         env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/taskmanager
+          SPRING_DATASOURCE_URL: jdbc:postgresql://127.0.0.1:5432/taskmanager
           SPRING_DATASOURCE_USERNAME: task
           SPRING_DATASOURCE_PASSWORD: task
           SERVER_PORT: 8080
-          # Your app binds CORS from app.cors.* via CorsProperties -> set via env indirection in application.properties
-          CORS_ALLOWED_ORIGINS: http://localhost:4200
-          # Safer schema bootstrapping for the ephemeral CI DB:
+          # Your WebCorsConfig binds app.cors.* from application.properties:
+          # allow IPv4 localhost, numeric localhost, and IPv6 localhost
+          CORS_ALLOWED_ORIGINS: http://127.0.0.1:4200,http://localhost:4200,http://[::1]:4200
+          # Safer schema bootstrapping for ephemeral DB
           SPRING_JPA_HIBERNATE_DDL_AUTO: update
         run: |
-          # Start Spring Boot; log to a file for artifacts
           nohup java -jar target/*.jar > ../backend.log 2>&1 &
 
           sudo apt-get update && sudo apt-get install -y curl
 
-          # Robust readiness: TCP -> Spring "Started ... in" -> real HTTP probe with X-Client-Id
+          # Robust readiness: TCP -> Spring "Started ..." -> real HTTP with header
           timeout 210 bash -c '
             echo "[wait] TCP 8080..."
             for i in {1..90}; do
@@ -92,15 +92,15 @@ jobs:
             done
 
             echo "[wait] Spring started log..."
-            for i in {1..60}; do
+            for i in {1..90}; do
               grep -q "Started .* in .* seconds" ../backend.log && break
               sleep 2
             done || true
 
             echo "[wait] HTTP probe /api/v1/boards..."
-            for i in {1..45}; do
+            for i in {1..60}; do
               code=$(curl -s -o /dev/null -w "%{http_code}" \
-                -H "X-Client-Id: '"$E2E_UID"'" http://localhost:8080/api/v1/boards || true)
+                -H "X-Client-Id: '"$E2E_UID"'" http://127.0.0.1:8080/api/v1/boards || true)
               # Accept any 2xx–4xx (reject 000 or 5xx)
               if [ "$code" -ge 200 ] && [ "$code" -lt 500 ]; then
                 echo "[ready] backend HTTP $code"
@@ -120,15 +120,15 @@ jobs:
           BOARD_NAME: ${{ env.BOARD_NAME }}
         run: |
           echo "GET /boards (expect 204 or 200)"
-          curl -i -H "X-Client-Id: $E2E_UID" http://localhost:8080/api/v1/boards || true
+          curl -i -H "X-Client-Id: $E2E_UID" http://127.0.0.1:8080/api/v1/boards || true
           echo
           echo "POST /boards (create $BOARD_NAME)"
           curl -i -H "X-Client-Id: $E2E_UID" -H "Content-Type: application/json" \
                -d "{\"name\":\"$BOARD_NAME\",\"position\":0}" \
-               http://localhost:8080/api/v1/boards || true
+               http://127.0.0.1:8080/api/v1/boards || true
           echo
           echo "GET /boards (after create)"
-          curl -i -H "X-Client-Id: $E2E_UID" http://localhost:8080/api/v1/boards || true
+          curl -i -H "X-Client-Id: $E2E_UID" http://127.0.0.1:8080/api/v1/boards || true
 
       # --- Frontend + Playwright ---
       - name: Set up Node.js 20
@@ -146,33 +146,33 @@ jobs:
         working-directory: task-manager-front
         run: npx playwright install --with-deps
 
-      - name: Build frontend (Angular CI config -> API http://localhost:8080)
+      - name: Build frontend (Angular CI config -> API http://127.0.0.1:8080)
         working-directory: task-manager-front
         run: npx ng build --configuration ci
 
       - name: Verify built API URL (diagnostic)
         working-directory: task-manager-front
         run: |
-          if ! grep -R "http://localhost:8080/api/v1" -n dist/task-manager-front/browser >/dev/null 2>&1; then
+          if ! grep -R "http://127.0.0.1:8080/api/v1" -n dist/task-manager-front/browser >/dev/null 2>&1; then
             echo "::warning::API URL string not found in build output. If the app sets it dynamically, ignore this."
           else
-            echo "[ok] Found http://localhost:8080/api/v1 in build output."
+            echo "[ok] Found http://127.0.0.1:8080/api/v1 in build output."
           fi
 
       - name: Serve dist and wait
         working-directory: task-manager-front
         run: |
-          npx http-server dist/task-manager-front/browser -p 4200 -a localhost >/dev/null 2>&1 &
+          npx http-server dist/task-manager-front/browser -p 4200 -a 127.0.0.1 >/dev/null 2>&1 &
           for i in {1..60}; do
-            curl -fsS http://localhost:4200 >/dev/null && break
+            curl -fsS http://127.0.0.1:4200 >/dev/null && break
             sleep 2
           done
 
       - name: Run smoke (@smoke)
         env:
           CI: "true"
-          BASE_URL: http://localhost:4200
-          API_BASE_URL: http://localhost:8080/api/v1
+          BASE_URL: http://127.0.0.1:4200
+          API_BASE_URL: http://127.0.0.1:8080/api/v1
           E2E_UID: ${{ env.E2E_UID }}
           BOARD_NAME: ${{ env.BOARD_NAME }}
         working-directory: task-manager-front

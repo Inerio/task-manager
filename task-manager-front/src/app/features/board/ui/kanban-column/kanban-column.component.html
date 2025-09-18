@@ -4,13 +4,19 @@ dnd.isTaskDragActive(); @let ph = dnd.placeholderHeight();
 <div
   #scrollHost
   class="task-kanbanColumn"
+  [attr.data-testid]="'col-' + kanbanColumnId"
   [class.task-drag-active]="isDrag"
   (dragenter)="dnd.onColumnDragEnter($event)"
   (dragleave)="dnd.onColumnDragLeave($event)"
 >
   <div class="task-dropzone-column">
     <!-- Add button always on top -->
-    <button type="button" (click)="openForm()" class="add-btn">
+    <button
+      type="button"
+      (click)="openForm()"
+      class="add-btn"
+      data-testid="add-task"
+    >
       + {{ "task.add" | transloco }}
     </button>
 

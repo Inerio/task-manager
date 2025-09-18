@@ -12,6 +12,7 @@
     class="form-control"
     type="text"
     formControlName="title"
+    data-testid="task-title-input"
     [placeholder]="'task.titlePlaceholder' | transloco"
     [attr.aria-label]="'task.titlePlaceholder' | transloco"
     required
@@ -76,7 +77,12 @@
   }
 
   <div class="btn-group">
-    <button class="btn btn-success" type="button" (click)="handleSave()">
+    <button
+      class="btn btn-success"
+      type="button"
+      data-testid="save-task"
+      (click)="handleSave()"
+    >
       {{
         editMode ? ("common.save" | transloco) : ("common.create" | transloco)
       }}

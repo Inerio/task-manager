@@ -1,6 +1,7 @@
 <div
   #cardEl
   class="task-card"
+  [attr.data-testid]="'task-' + localTask().id"
   appTaskPulse
   [appTaskPulseTaskId]="localTask().id ?? null"
   [appTaskPulseGhost]="ghost"
@@ -85,6 +86,7 @@
     <div class="btn-group">
       <button
         class="btn btn-success"
+        data-testid="edit-task"
         (click)="startEdit()"
         [attr.title]="'common.edit' | transloco"
       >

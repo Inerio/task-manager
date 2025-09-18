@@ -3,6 +3,8 @@ import { test, expect } from "@playwright/test";
 // Read shared UID/board name from env (fallbacks kept for local runs)
 const E2E_UID = process.env["E2E_UID"] || `e2e-smoke-${Date.now()}`;
 const BOARD_NAME = process.env["BOARD_NAME"] || "E2E Smoke Board";
+// API base for diagnostics / browser probe (must match CI)
+const API_BASE = process.env["API_BASE_URL"] || "http://127.0.0.1:8080/api/v1";
 
 test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)", () => {
   test.beforeEach(async ({ page }) => {
@@ -16,6 +18,25 @@ test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)"
       },
       { uid: E2E_UID }
     );
+
+    // ---- Network diagnostics (logs will show in CI) ----
+    page.on("request", (req) => {
+      if (req.url().includes("/api/v1/")) {
+        const h = req.headers();
+        console.log(
+          "[REQ]",
+          req.method(),
+          req.url(),
+          "X-Client-Id=",
+          h["x-client-id"] || h["X-Client-Id"]
+        );
+      }
+    });
+    page.on("response", async (res) => {
+      if (res.url().includes("/api/v1/")) {
+        console.log("[RES]", res.status(), res.request().method(), res.url());
+      }
+    });
   });
 
   test("lang & theme → create board → 2 cols → create & edit task", async ({
@@ -24,6 +45,32 @@ test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)"
     // --- OPEN HOME ---
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+
+    // Verify the app sees the same UID as the backend sanity step
+    const uidInApp = await page.evaluate(() => localStorage.getItem("anonId"));
+    console.log("[DIAG] anonId in localStorage =", uidInApp);
+    expect(uidInApp).toBe(E2E_UID);
+
+    // Browser-side probe to detect CORS / wrong API URL early
+    const probe = await page.evaluate<
+      { status: number; body: string },
+      { api: string; uid: string }
+    >(
+      async ({ api, uid }) => {
+        try {
+          const res = await fetch(`${api}/boards`, {
+            headers: { "X-Client-Id": uid },
+          });
+          const txt = await res.text();
+          return { status: res.status, body: txt.slice(0, 200) };
+        } catch (e) {
+          return { status: 0, body: String(e) };
+        }
+      },
+      { api: API_BASE, uid: E2E_UID }
+    );
+    console.log("[DIAG] browser fetch /boards =>", probe.status, probe.body);
+    expect([200, 204]).toContain(probe.status);
 
     // --- LANG: EN -> FR (verify aria-pressed), then back to EN ---
     const enBtn = page.getByRole("button", { name: /^EN$/ }).first();
@@ -57,7 +104,24 @@ test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)"
       const nameInput = page.locator("input.board-edit-input").first();
       await expect(nameInput).toBeVisible();
       await nameInput.fill(BOARD_NAME);
+
+      // Wait for the POST /boards to resolve (2xx) before asserting UI
+      const postOk = page.waitForResponse((r) => {
+        try {
+          const url = new URL(r.url());
+          return (
+            r.request().method() === "POST" &&
+            url.pathname.endsWith("/api/v1/boards") &&
+            r.status() >= 200 &&
+            r.status() < 300
+          );
+        } catch {
+          return false;
+        }
+      });
       await nameInput.press("Enter");
+      await postOk;
+
       await expect(boardTile).toBeVisible({ timeout: 10_000 });
     }
 

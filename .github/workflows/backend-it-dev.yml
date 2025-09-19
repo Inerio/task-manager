@@ -1,0 +1,46 @@
+name: Backend IT on dev (Testcontainers)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "task-manager-back/**"
+      - ".github/workflows/backend-it-dev.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: backend-it-dev
+  cancel-in-progress: true
+
+jobs:
+  it-verify:
+    name: mvn verify (unit + IT)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Docker sanity check (for Testcontainers)
+        run: docker info
+
+      - name: Run Maven verify (unit + integration tests)
+        working-directory: task-manager-back
+        run: ./mvnw -B -ntp verify
+
+      # always keep reports for debug
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: |
+            task-manager-back/target/surefire-reports/*
+            task-manager-back/target/failsafe-reports/*
+          retention-days: 7

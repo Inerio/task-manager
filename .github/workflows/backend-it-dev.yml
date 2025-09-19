@@ -30,11 +30,16 @@ jobs:
       - name: Docker sanity check (for Testcontainers)
         run: docker info
 
+      - name: Make mvnw executable (Linux)
+        working-directory: task-manager-back
+        run: |
+          sed -i 's/\r$//' mvnw
+          chmod +x mvnw
+
       - name: Run Maven verify (unit + integration tests)
         working-directory: task-manager-back
         run: ./mvnw -B -ntp verify
 
-      # always keep reports for debug
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4

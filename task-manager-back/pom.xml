@@ -70,7 +70,7 @@
       <optional>true</optional>
     </dependency>
 
-    <!-- Spring tests (includes AssertJ, JUnit Jupiter, TestRestTemplate, etc.) -->
+    <!-- Spring tests -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
@@ -93,6 +93,13 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Boot integration for Testcontainers -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

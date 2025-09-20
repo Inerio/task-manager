@@ -142,7 +142,7 @@
         </configuration>
       </plugin>
 
-      <!-- Javadoc (non-blocking) -->
+      <!-- Javadoc -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
@@ -158,6 +158,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <argLine>-XX:+EnableDynamicAgentLoading</argLine>
           <excludes>
             <exclude>**/*IT.java</exclude>
           </excludes>
@@ -174,6 +175,7 @@
               <goal>verify</goal>
             </goals>
             <configuration>
+              <argLine>-XX:+EnableDynamicAgentLoading</argLine>
               <includes>
                 <include>**/*IT.java</include>
               </includes>

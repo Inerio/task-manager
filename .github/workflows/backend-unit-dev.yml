@@ -1,0 +1,54 @@
+name: Backend unit tests (dev)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "task-manager-back/**"
+      - ".github/workflows/backend-unit-dev.yml"
+  pull_request:
+    branches: [dev]
+    paths:
+      - "task-manager-back/**"
+      - ".github/workflows/backend-unit-dev.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-unit-dev
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Run backend unit tests (Surefire)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: task-manager-back
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Make mvnw executable (Linux)
+        run: |
+          sed -i 's/\r$//' mvnw
+          chmod +x mvnw
+
+      - name: Run unit tests
+        run: ./mvnw -B -ntp test
+
+      - name: Upload Surefire reports (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports
+          retention-days: 7

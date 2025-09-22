@@ -85,6 +85,6 @@ export class LoadingService {
     obs$: Observable<T>,
     scope?: string
   ): Promise<T> {
-    return this.wrap(firstValueFrom(obs$), scope);
+    return firstValueFrom(this.wrap$(obs$, scope));
   }
 }

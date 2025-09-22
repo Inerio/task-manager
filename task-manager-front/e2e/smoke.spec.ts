@@ -183,12 +183,21 @@ test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)"
 
     // --- ENSURE WE HAVE 2 COLUMNS ---
     const columns = () => page.locator('[data-testid^="col-"]');
+
+    // Robust locator for the "add column" button
+    const addColBtn = page
+      .locator('[data-testid="add-column"]')
+      .or(page.getByRole("button", { name: /^(Add column|\+)$/i }))
+      .first();
+
     if ((await columns().count()) < 1) {
-      await page.getByRole("button", { name: /^\+$/ }).first().click();
+      await expect(addColBtn).toBeVisible({ timeout: 10_000 });
+      await addColBtn.click();
       await expect(columns().first()).toBeVisible({ timeout: 10_000 });
     }
     if ((await columns().count()) < 2) {
-      await page.getByRole("button", { name: /^\+$/ }).first().click();
+      await expect(addColBtn).toBeVisible({ timeout: 10_000 });
+      await addColBtn.click();
       await expect(columns().nth(1)).toBeVisible({ timeout: 10_000 });
     }
     const col1 = columns().nth(0);

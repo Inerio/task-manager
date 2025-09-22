@@ -6,17 +6,24 @@ const BOARD_NAME = process.env["BOARD_NAME"] || "E2E Smoke Board";
 // API base for diagnostics / browser probe (must match CI)
 const API_BASE = process.env["API_BASE_URL"] || "http://127.0.0.1:8080/api/v1";
 
+// App storage keys (the app now uses "tasukeru_uid"; keep legacy for safety)
+const LS_KEY = "tasukeru_uid";
+const LEGACY_LS_KEY = "anonId";
+
 test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)", () => {
   test.beforeEach(async ({ page }) => {
     // Force app to start with our UID and EN locale
+    // Since the app switched from "anonId" -> "tasukeru_uid",
+    //       we write BOTH keys to stay compatible with older builds.
     await page.addInitScript(
-      ({ uid }: { uid: string }) => {
+      ({ uid, key, legacy }: { uid: string; key: string; legacy: string }) => {
         try {
-          localStorage.setItem("anonId", uid);
+          localStorage.setItem(key, uid);
+          localStorage.setItem(legacy, uid);
           localStorage.setItem("translocoLang", "en");
         } catch {}
       },
-      { uid: E2E_UID }
+      { uid: E2E_UID, key: LS_KEY, legacy: LEGACY_LS_KEY }
     );
 
     // Always attach X-Client-Id for ANY request the app makes (fetch or XHR)
@@ -35,7 +42,7 @@ test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)"
           }
         };
 
-        // Patch XHR (covers Angular HttpClient)
+        // Patch XHR (covers Angular HttpClient too)
         const XHR: any = XMLHttpRequest;
         const open = XHR.prototype.open;
         const send = XHR.prototype.send;
@@ -80,9 +87,24 @@ test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)"
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // Verify the app sees the same UID as the backend sanity step
-    const uidInApp = await page.evaluate(() => localStorage.getItem("anonId"));
-    console.log("[DIAG] anonId in localStorage =", uidInApp);
+    // Verify the app sees our UID (check new key, then legacy as fallback)
+    const uidInApp = await page.evaluate<
+      string | null,
+      { k: string; legacy: string }
+    >(
+      ({ k, legacy }) =>
+        localStorage.getItem(k) ?? localStorage.getItem(legacy),
+      { k: LS_KEY, legacy: LEGACY_LS_KEY }
+    );
+    console.log(
+      "[DIAG] uid in localStorage =",
+      uidInApp,
+      "(key:",
+      LS_KEY,
+      "or",
+      LEGACY_LS_KEY,
+      ")"
+    );
     expect(uidInApp).toBe(E2E_UID);
 
     // Browser-side probe to detect CORS / wrong API URL early
@@ -114,11 +136,10 @@ test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)"
     await expect(frBtn).toHaveAttribute("aria-pressed", "true");
     await expect(enBtn).toHaveAttribute("aria-pressed", "false");
 
-    // Switch back to EN for the rest of the test
     await enBtn.click();
     await expect(enBtn).toHaveAttribute("aria-pressed", "true");
 
-    // --- THEME: Light -> Dark (verify aria-pressed) ---
+    // --- Light -> Dark (verify aria-pressed) ---
     const lightBtn = page.getByRole("button", { name: /^Light$/ }).first();
     const darkBtn = page.getByRole("button", { name: /^Dark$/ }).first();
     await darkBtn.click();

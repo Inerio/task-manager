@@ -54,33 +54,39 @@
     }
   </div>
 
-  <!-- NEW: identity button (top-right) -->
-  <button
-    type="button"
-    class="uid-btn"
-    (click)="showAccountDialog.set(true)"
-    [title]="'identity.openTooltip' | transloco"
-    [attr.aria-label]="'identity.openTooltip' | transloco"
-  >
-    <img src="/svg/pencil.svg" width="18" height="18" alt="id" />
-  </button>
+  <div class="header-actions">
+    <button
+      class="delete-btn styled-trash-btn delete-all-btn"
+      (click)="deleteAllTasks()"
+      [title]="'boards.deleteAll' | transloco"
+      [attr.aria-label]="'boards.deleteAll' | transloco"
+    >
+      <img
+        src="/svg/trash-red.svg"
+        [attr.alt]="'boards.deleteAll' | transloco"
+        width="19"
+        height="19"
+      />
+      <span class="delete-all-label">
+        {{ "boards.deleteAll" | transloco }}
+      </span>
+    </button>
 
-  <button
-    class="delete-btn styled-trash-btn delete-all-btn"
-    (click)="deleteAllTasks()"
-    [title]="'boards.deleteAll' | transloco"
-    [attr.aria-label]="'boards.deleteAll' | transloco"
-  >
-    <img
-      src="/svg/trash.svg"
-      [attr.alt]="'boards.deleteAll' | transloco"
-      width="19"
-      height="19"
-    />
-    <span class="delete-all-label">
-      {{ "boards.deleteAll" | transloco }}
-    </span>
-  </button>
+    <button
+      type="button"
+      class="uid-btn"
+      (click)="showAccountDialog.set(true)"
+      [title]="'identity.openTooltip' | transloco"
+      [attr.aria-label]="'identity.openTooltip' | transloco"
+    >
+      <img
+        src="/svg/share.svg"
+        width="18"
+        height="18"
+        [attr.alt]="'identity.title' | transloco"
+      />
+    </button>
+  </div>
 </header>
 
 <!-- Identity dialog -->

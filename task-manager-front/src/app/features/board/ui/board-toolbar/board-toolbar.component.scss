@@ -131,6 +131,16 @@
     }
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    @include bp.md-down {
+      gap: 1rem;
+    }
+  }
+
   /* Small circular button for ID dialog */
   .uid-btn {
     display: inline-grid;
@@ -164,7 +174,7 @@
   }
 
   .delete-all-btn {
-    margin-left: 0.6rem;
+    margin-left: 0;
     display: flex;
     align-items: center;
     gap: 0.6em;
@@ -187,7 +197,6 @@
     }
 
     @include bp.md-down {
-      margin-left: 0.4rem;
       min-width: 0;
       width: 32px;
       height: 32px;
@@ -199,7 +208,6 @@
       .delete-all-label {
         display: none;
       }
-
       img {
         width: 16px;
         height: 16px;

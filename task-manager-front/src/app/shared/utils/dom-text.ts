@@ -8,13 +8,13 @@ export function insertAtCaret(
   textarea: HTMLTextAreaElement,
   text: string
 ): void {
-  textarea.focus();
-
   const prevScroll = textarea.scrollTop;
   const start = textarea.selectionStart ?? textarea.value.length;
   const end = textarea.selectionEnd ?? start;
 
-  if (typeof textarea.setRangeText === "function") {
+  textarea.focus();
+
+  if (typeof (textarea as any).setRangeText === "function") {
     textarea.setRangeText(text, start, end, "end");
   } else {
     const v = textarea.value;
@@ -23,9 +23,10 @@ export function insertAtCaret(
     try {
       textarea.setSelectionRange(caret, caret);
     } catch {
-      /* noop - older browsers */
+      /* noop */
     }
   }
 
+  // Restore original scroll position after any caret movement.
   textarea.scrollTop = prevScroll;
 }

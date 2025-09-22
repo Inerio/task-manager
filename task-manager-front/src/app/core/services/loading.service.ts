@@ -5,7 +5,7 @@ import {
   type Signal,
   type WritableSignal,
 } from "@angular/core";
-import { Observable, finalize, firstValueFrom } from "rxjs";
+import { Observable, finalize, firstValueFrom, defer } from "rxjs";
 
 /**
  * Global + scoped loading manager with reference counters.
@@ -69,10 +69,15 @@ export class LoadingService {
     }
   }
 
-  /** Wrap an Observable and auto-toggle the spinner (global or scoped). */
+  /**
+   * Wrap an Observable and auto-toggle the spinner (global or scoped).
+   * Loading starts **on subscribe**, not on wrap$ call.
+   */
   wrap$<T>(obs$: Observable<T>, scope?: string): Observable<T> {
-    const done = this.show(scope);
-    return obs$.pipe(finalize(done));
+    return defer(() => {
+      const done = this.show(scope);
+      return obs$.pipe(finalize(done));
+    });
   }
 
   /** Convenience for Observable -> Promise with spinner (global or scoped). */

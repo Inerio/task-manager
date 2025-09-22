@@ -35,6 +35,7 @@ import { TaskAttachmentsFacade } from "../../../attachments/state/attachments.fa
 import { BrowserInfoService } from "../../../../core/services/browser-info.service";
 import { insertAtCaret } from "../../../../shared/utils/dom-text";
 import { AutofocusOnInitDirective } from "../../../../shared/directives/autofocus-on-init.directive";
+import { AttachmentService } from "../../../attachments/data/attachment.service";
 
 @Component({
   selector: "app-task-form",
@@ -80,6 +81,7 @@ export class TaskFormComponent
   private readonly guard = inject(NativeDialogGuardService);
   private readonly attachments = inject(TaskAttachmentsFacade);
   private readonly browserInfo = inject(BrowserInfoService);
+  private readonly attachmentService = inject(AttachmentService); // NEW
 
   readonly form = this.fb.group({
     title: this.fb.control<string>("", { validators: [Validators.required] }),
@@ -169,8 +171,7 @@ export class TaskFormComponent
     const next = !this.showEmojiPicker();
     this.showEmojiPicker.set(next);
 
-    // When opening, wait for the DOM to paint the web component
-    // then ensure it is visible inside the viewport.
+    // When opening, wait for the DOM to paint the web component then ensure it is visible inside the viewport.
     if (next) {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => this.ensureEmojiPickerVisible());
@@ -245,7 +246,6 @@ export class TaskFormComponent
   // ===== Files (delegated to facade) =====
   onFilesBuffered(files: File[]): void {
     if (!this.localTask().id) {
-      // Creation mode: buffer + dedupe by name.
       this.attachments.buffer(files);
     } else {
       void this.uploadFilesInEditMode(files);
@@ -287,6 +287,19 @@ export class TaskFormComponent
   /** Clear all buffered files. */
   onClearAllBuffered(): void {
     this.attachments.flushBuffer();
+  }
+
+  /** Delete ALL attachments on the server while editing. */
+  async onDeleteAllEdit(): Promise<void> {
+    const id = this.localTask().id;
+    if (!id) return;
+    const updated = await this.attachmentService.deleteAll(id);
+    if (updated?.attachments) {
+      this.localTask.set({
+        ...this.localTask(),
+        attachments: updated.attachments,
+      });
+    }
   }
 
   // ===== Save / Cancel =====

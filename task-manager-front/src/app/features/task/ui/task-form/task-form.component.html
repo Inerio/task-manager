@@ -73,6 +73,7 @@
     [creationMode]="!localTask().id"
     [pendingFiles]="pendingFiles()"
     (dialogOpen)="onDialogOpen($event)"
+    (clearAll)="onClearAllBuffered()"
   ></app-attachment-zone>
   }
 

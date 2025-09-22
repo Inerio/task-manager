@@ -256,6 +256,20 @@ export class TaskComponent implements OnChanges, OnDestroy {
     this.attachmentService.downloadAttachment(taskId, filename);
   }
 
+  /** Delete all attachments for this task. */
+  async onDeleteAllAttachments(): Promise<void> {
+    const taskId = this.localTask().id!;
+    if (!taskId) return;
+    const updated = await this.attachmentService.deleteAll(taskId);
+    if (updated?.attachments) {
+      this.localTask.set({
+        ...this.localTask(),
+        attachments: updated.attachments,
+      });
+      this.taskService.updateTaskFromApi(updated);
+    }
+  }
+
   /** Refetch a task and sync both local and global state. */
   async refreshFromBackend(id: number): Promise<void> {
     const fresh = await this.taskService.fetchTaskById(id);

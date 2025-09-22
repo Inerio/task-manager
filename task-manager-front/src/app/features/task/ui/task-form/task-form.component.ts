@@ -284,6 +284,11 @@ export class TaskFormComponent
     this.attachments.download(id, filename);
   }
 
+  /** Clear all buffered files. */
+  onClearAllBuffered(): void {
+    this.attachments.flushBuffer();
+  }
+
   // ===== Save / Cancel =====
   private clearBufferIfNeeded(): void {
     if (!this.localTask().id) this.attachments.flushBuffer();

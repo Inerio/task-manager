@@ -51,6 +51,11 @@ export class AttachmentZoneComponent {
   @Output() readonly fileDownloaded = new EventEmitter<string>();
   @Output() readonly dialogOpen = new EventEmitter<boolean>();
 
+  /** Emitted after confirm: delete all on server (edit/read). */
+  @Output() readonly deleteAll = new EventEmitter<void>();
+  /** Emitted after confirm: clear buffered files (create). */
+  @Output() readonly clearAll = new EventEmitter<void>();
+
   @ViewChild("fileInput") fileInput!: ElementRef<HTMLInputElement>;
 
   private readonly alertService = inject(AlertService);
@@ -67,7 +72,6 @@ export class AttachmentZoneComponent {
   readonly previewFilename = signal<string | null>(null);
   readonly previewTop = signal(0);
   readonly previewLeft = signal(0);
-
   readonly expanded = signal(false);
   readonly needsToggle = signal(false);
   readonly collapsedMaxHeight = signal(0);
@@ -88,7 +92,7 @@ export class AttachmentZoneComponent {
     return file.name;
   }
 
-  /** Safety: force-hide any preview (used before actions and on container exits). */
+  /** Force-hide any preview. */
   private hidePreview(): void {
     this.previewUrl.set(null);
     this.previewFilename.set(null);
@@ -103,6 +107,36 @@ export class AttachmentZoneComponent {
     const e = ev as KeyboardEvent;
     const key = e.key || "";
     if (key === "Enter" || key === " ") e.preventDefault();
+  }
+
+  /** True if there is anything to clear/delete. */
+  hasAny(): boolean {
+    return (
+      (this.attachments?.length ?? 0) > 0 ||
+      (this.creationMode && (this.pendingFiles?.length ?? 0) > 0)
+    );
+  }
+
+  async onDeleteAllClick(ev: Event): Promise<void> {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.hidePreview();
+
+    // Title/message are generic and work both for delete/clear
+    const ok = await this.confirmDialog.open(
+      this.i18n.translate("attachments.confirmDeleteAll.title"),
+      this.i18n.translate("attachments.confirmDeleteAll.message"),
+      { allowEnterConfirm: true }
+    );
+    if (!ok) return;
+
+    if (this.creationMode) {
+      // buffer only
+      this.clearAll.emit();
+    } else {
+      // server delete
+      this.deleteAll.emit();
+    }
   }
 
   private async openWithService(): Promise<void> {
@@ -285,12 +319,12 @@ export class AttachmentZoneComponent {
     this.toggleExpand();
   }
 
-  /** Safety: close preview whenever pointer leaves the whole zone. */
+  /** Close preview whenever pointer leaves the whole zone. */
   onZoneMouseLeave(): void {
     this.hidePreview();
   }
 
-  /** Safety: close preview when pointer leaves the list wrapper. */
+  /** Close preview when pointer leaves the list wrapper. */
   onListMouseLeave(): void {
     this.hidePreview();
   }

@@ -21,7 +21,9 @@
     "download": "Download",
     "remove": "Remove",
     "chooseFile": "Choose a file",
-    "toBeUploaded": "To be uploaded"
+    "toBeUploaded": "To be uploaded",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "boards": {
     "title": "Boards",
@@ -50,7 +52,6 @@
       "skip": "Skip",
       "oneColumn": "1 column",
       "nColumns": "{{count}} columns",
-
       "t1Desc": "One list. Jot things down fast and tick them off.",
       "t2Desc": "Two steps: start when ready, then move to Done.",
       "t3Desc": "Plan → Do → Done. The classic, clear three-stage board.",
@@ -106,7 +107,14 @@
   "attachments": {
     "downloadConfirmTitle": "Download file",
     "downloadConfirmMessage": "Do you want to download “{{filename}}”?",
+    "deleteAll": "Delete all files",
+    "clearAll": "Clear selection",
+    "confirmDeleteAll": {
+      "title": "Delete all attachments",
+      "message": "Delete all files for this task? This action cannot be undone."
+    },
     "errors": {
+      "notAccepted": "Some files didn't match the accepted types.",
       "tooLarge": "Some files exceeded the size limit and were ignored.",
       "alreadyAttached": "Some files were already attached and have been ignored.",
       "upload": "Error uploading attachment.",

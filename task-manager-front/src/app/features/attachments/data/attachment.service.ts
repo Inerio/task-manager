@@ -24,6 +24,11 @@ export class AttachmentService {
     )}`;
   }
 
+  /** Build the API URL for the attachments *root* of a task. */
+  private buildAttachmentsRoot(taskId: TaskId): string {
+    return `${this.apiUrl}/tasks/${taskId}/attachments`;
+  }
+
   /**
    * Returns an object URL for preview.
    * Caller must revoke it with URL.revokeObjectURL(...) when no longer needed.
@@ -85,6 +90,21 @@ export class AttachmentService {
     try {
       return await firstValueFrom(
         this.http.delete<Task>(this.buildAttachmentUrl(taskId, filename))
+      );
+    } catch {
+      this.alert.show(
+        "error",
+        this.i18n.translate("attachments.errors.delete")
+      );
+      return null;
+    }
+  }
+
+  /** Delete *all* attachments of a task; returns updated Task or null on failure. */
+  async deleteAll(taskId: TaskId): Promise<Task | null> {
+    try {
+      return await firstValueFrom(
+        this.http.delete<Task>(this.buildAttachmentsRoot(taskId))
       );
     } catch {
       this.alert.show(

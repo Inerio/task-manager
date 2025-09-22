@@ -21,7 +21,9 @@
     "download": "Télécharger",
     "remove": "Retirer",
     "chooseFile": "Choisir un fichier",
-    "toBeUploaded": "À téléverser"
+    "toBeUploaded": "À téléverser",
+    "expand": "Développer",
+    "collapse": "Réduire"
   },
   "boards": {
     "title": "Tableaux",
@@ -50,7 +52,6 @@
       "skip": "Ignorer",
       "oneColumn": "1 colonne",
       "nColumns": "{{count}} colonnes",
-
       "t1Desc": "Une seule liste. Notez rapidement et cochez au fur et à mesure.",
       "t2Desc": "Deux étapes : démarrer quand vous êtes prêt, puis passer en Terminé.",
       "t3Desc": "Planifier → Faire → Terminé. Le classique en 3 colonnes, simple et efficace.",
@@ -106,7 +107,14 @@
   "attachments": {
     "downloadConfirmTitle": "Télécharger le fichier",
     "downloadConfirmMessage": "Voulez-vous télécharger « {{filename}} » ?",
+    "deleteAll": "Supprimer tous les fichiers",
+    "clearAll": "Vider la sélection",
+    "confirmDeleteAll": {
+      "title": "Supprimer toutes les pièces jointes",
+      "message": "Supprimer tous les fichiers de cette tâche ? Cette action est irréversible."
+    },
     "errors": {
+      "notAccepted": "Certains fichiers ne correspondent pas aux types autorisés.",
       "tooLarge": "Certains fichiers dépassaient la limite de taille et ont été ignorés.",
       "alreadyAttached": "Certains fichiers étaient déjà joints et ont été ignorés.",
       "upload": "Erreur lors du téléversement de la pièce jointe.",

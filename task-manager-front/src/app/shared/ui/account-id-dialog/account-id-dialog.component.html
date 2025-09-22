@@ -69,6 +69,26 @@
         <div class="error">{{ errorMsg() }}</div>
         }
       </div>
+
+      <!-- Recent UIDs -->
+      <div class="row history-row">
+        <label class="label">{{ "identity.recentLabel" | transloco }}</label>
+        <div class="history-list">
+          @if (history().length === 0) {
+          <div class="muted">{{ "identity.noRecent" | transloco }}</div>
+          } @else { @for (id of history(); track id) {
+          <button
+            type="button"
+            class="chip"
+            (click)="fillFromHistory(id)"
+            [title]="'identity.useThis' | transloco"
+          >
+            <!-- Display short code for readability -->
+            {{ id }}
+          </button>
+          } }
+        </div>
+      </div>
     </section>
 
     <footer class="dialog-actions">

@@ -139,7 +139,7 @@
   "identity": {
     "openTooltip": "Open account ID",
     "title": "Account ID",
-    "note": "Use this ID to access your boards on another device. Copy it or paste an existing one.",
+    "note": "This ID lets you access your boards on another device or share them with someone you trust. Copy it, paste an existing ID, or send the short code.",
     "currentLabel": "Current ID",
     "copy": "Copy",
     "copied": "Copied!",
@@ -150,7 +150,10 @@
     "useId": "Use this ID",
     "cancel": "Cancel",
     "invalid": "Invalid ID format.",
-    "switched": "ID updated. Reloaded your data."
+    "switched": "ID updated. Reloaded your data.",
+    "recentLabel": "Recent IDs",
+    "noRecent": "No history yet",
+    "useThis": "Use"
   },
   "errors": {
     "loadingTasks": "Error loading tasks.",

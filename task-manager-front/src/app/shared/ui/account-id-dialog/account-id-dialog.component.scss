@@ -157,6 +157,41 @@
       grid-column: 1 / -1;
     }
   }
+
+  /* === Recent UIDs === */
+  .history-row {
+    align-items: start;
+  }
+
+  .history-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .chip {
+    border: 1px solid var(--border-2);
+    background: var(--surface-1);
+    color: var(--text-1);
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    line-height: 1.1;
+    cursor: pointer;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover {
+      background: color-mix(in oklab, var(--surface-1) 92%, #000);
+      border-color: color-mix(in oklab, var(--brand) 45%, var(--border-2));
+    }
+  }
+
+  .muted {
+    color: var(--text-2);
+  }
 }
 
 .dialog-actions {
@@ -176,7 +211,6 @@
   }
 }
 
-/* Dark theme subtle tweaks */
 :host-context([data-theme="dark"]) {
   .dialog-body .note {
     background: color-mix(in oklab, var(--brand) 16%, var(--surface-2));

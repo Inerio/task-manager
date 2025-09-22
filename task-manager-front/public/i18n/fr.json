@@ -139,7 +139,7 @@
   "identity": {
     "openTooltip": "Ouvrir l’identifiant",
     "title": "Identifiant de compte",
-    "note": "Utilisez cet ID pour retrouver vos tableaux sur un autre appareil. Copiez-le ou collez-en un existant.",
+    "note": "Cet ID vous permet d’accéder à vos tableaux depuis un autre appareil ou de les partager avec une personne de confiance. Copiez-le, collez un ID existant ou envoyez le code court.",
     "currentLabel": "ID actuel",
     "copy": "Copier",
     "copied": "Copié !",
@@ -150,7 +150,10 @@
     "useId": "Utiliser cet ID",
     "cancel": "Annuler",
     "invalid": "Format d’ID invalide.",
-    "switched": "ID mis à jour. Données rechargées."
+    "switched": "ID mis à jour. Données rechargées.",
+    "recentLabel": "Derniers IDs utilisés",
+    "noRecent": "Aucun historique",
+    "useThis": "Utiliser"
   },
   "errors": {
     "loadingTasks": "Erreur lors du chargement des tâches.",

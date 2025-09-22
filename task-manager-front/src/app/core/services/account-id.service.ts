@@ -22,6 +22,11 @@ export class AccountIdService {
   readonly headerName = environment.clientIdHeader ?? "X-Client-Id";
   readonly storageKey = ANON_ID_LS_KEY;
 
+  /** LocalStorage key to persist a short history of used UIDs (UUID canonical form). */
+  private readonly historyKey = "tasukeru_uid_history";
+  /** Max number of entries to keep (most recent first). */
+  private readonly historyLimit = 5;
+
   /** Canonical UUID (lowercase) used in headers/storage. */
   getUid(): string {
     return readAnonId();
@@ -51,7 +56,46 @@ export class AccountIdService {
     if (!isUuid(v)) {
       throw new Error("Invalid UID");
     }
-    setAnonIdFromDialog(v.toLowerCase());
+    const canonical = v.toLowerCase();
+    setAnonIdFromDialog(canonical);
+    this.rememberUid(canonical);
+  }
+
+  /** Return recent UIDs (UUID canonical form, newest first). */
+  getUidHistory(): string[] {
+    try {
+      const raw = localStorage.getItem(this.historyKey);
+      if (!raw) return [];
+      const arr = JSON.parse(raw) as unknown;
+      if (!Array.isArray(arr)) return [];
+      // Keep only valid UUID strings; ignore garbage.
+      return (arr as string[]).filter(
+        (s) => typeof s === "string" && isUuid(s)
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  /** Clear history (not used by UI yet, but handy). */
+  clearUidHistory(): void {
+    try {
+      localStorage.removeItem(this.historyKey);
+    } catch {}
+  }
+
+  /** Push uid into history (de-dup, clamp to historyLimit). */
+  private rememberUid(uid: string): void {
+    const cur = this.getUidHistory();
+    const next = [uid, ...cur.filter((x) => x !== uid)].slice(
+      0,
+      this.historyLimit
+    );
+    try {
+      localStorage.setItem(this.historyKey, JSON.stringify(next));
+    } catch {
+      // ignore quota / private mode errors
+    }
   }
 
   async copyToClipboard(text: string): Promise<boolean> {

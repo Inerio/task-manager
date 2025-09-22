@@ -15,6 +15,7 @@ import {
 } from "@angular/forms";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AccountIdService } from "../../../core/services/account-id.service";
+import { uuidToShort } from "../../../utils/uid-codec";
 
 @Component({
   selector: "app-account-id-dialog",
@@ -44,6 +45,7 @@ export class AccountIdDialogComponent {
   readonly copied = signal<boolean>(false);
   readonly applying = signal<boolean>(false);
   readonly errorMsg = signal<string>("");
+  readonly history = signal<string[]>(this.account.getUidHistory());
 
   // Form
   readonly uidCtrl = this.fb.control<string>("", {
@@ -55,6 +57,7 @@ export class AccountIdDialogComponent {
     if (this.open()) {
       this.currentUid.set(this.account.getUid());
       this.currentShort.set(this.account.getShortCode());
+      this.history.set(this.account.getUidHistory());
       this.uidCtrl.setValue("", { emitEvent: false });
       this.errorMsg.set("");
       this.copied.set(false);
@@ -87,9 +90,20 @@ export class AccountIdDialogComponent {
       const canonical = this.account.getUid();
       this.currentUid.set(canonical);
       this.currentShort.set(this.account.getShortCode());
+      this.history.set(this.account.getUidHistory());
       this.switched.emit(canonical);
     } finally {
       this.applying.set(false);
+    }
+  }
+
+  /** Fill input with a value from history. */
+  fillFromHistory(uuid: string): void {
+    // For readability we paste the short code; the service accepts both.
+    try {
+      this.uidCtrl.setValue(uuidToShort(uuid));
+    } catch {
+      this.uidCtrl.setValue(uuid);
     }
   }
 

@@ -82,7 +82,7 @@ public class TaskController {
         }
     }
 
-    /** ✅ Return all tasks for this UID (used by the front on refresh). */
+    /** Return all tasks for this UID (used by the front on refresh). */
     @GetMapping
     public ResponseEntity<List<TaskDto>> getAllTasks(@RequestHeader("X-Client-Id") String uid) {
         userAccountService.touch(uid);
@@ -209,6 +209,15 @@ public class TaskController {
         userAccountService.touch(uid);
         if (!taskService.ownsTask(uid, id)) return ResponseEntity.notFound().build();
         TaskDto updatedTask = TaskMapperDto.toDto(taskService.deleteAttachment(id, filename));
+        return ResponseEntity.ok(updatedTask);
+    }
+    
+    @DeleteMapping("/{id}/attachments")
+    public ResponseEntity<?> deleteAllAttachments(@RequestHeader("X-Client-Id") String uid,
+                                                  @PathVariable Long id) {
+        userAccountService.touch(uid);
+        if (!taskService.ownsTask(uid, id)) return ResponseEntity.notFound().build();
+        TaskDto updatedTask = TaskMapperDto.toDto(taskService.deleteAllAttachments(id));
         return ResponseEntity.ok(updatedTask);
     }
 }

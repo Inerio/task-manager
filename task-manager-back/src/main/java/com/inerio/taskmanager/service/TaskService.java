@@ -380,6 +380,27 @@ public class TaskService {
         }
         return task;
     }
+    
+    /**
+     * Deletes all attachments (files + DB list) for the given task.
+     * Best-effort on disk removal; DB list is cleared atomically.
+     *
+     * @param taskId task identifier
+     * @return updated task after cleanup
+     * @throws TaskNotFoundException if the task is not found
+     */
+    @Transactional
+    public Task deleteAllAttachments(Long taskId) {
+        Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
+
+        // Wipe on-disk folder even if DB list is out-of-sync
+        deleteAttachmentsFolder(taskId);
+
+        // Clear ElementCollection and persist
+        task.getAttachments().clear();
+        return taskRepository.save(task);
+    }
 
     /**
      * Recursively deletes the attachment directory for a task if it exists.

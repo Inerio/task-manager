@@ -18,6 +18,45 @@
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent);
   }
 
+  /* Compact delete-all button pinned to the top-left corner */
+  .edge-delete {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-45%, -45%);
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, #000 12%, transparent);
+    background: #e53935; /* red */
+    color: #fff;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18), 0 0 0 2px var(--surface-1);
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+    &:active {
+      transform: translate(-45%, -45%) scale(0.98);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 1px;
+    }
+    img {
+      pointer-events: none;
+      display: block;
+    }
+  }
+
   .visually-hidden-file-input {
     position: absolute;
     width: 1px;
@@ -32,15 +71,18 @@
   .attachments-list {
     position: relative;
     overflow: visible;
+
     &.clamped {
       overflow: hidden;
       background: color-mix(in oklab, var(--brand) 7%, var(--surface-1));
       border-radius: var(--radius-2);
     }
+
     &.has-toggle {
       padding-bottom: 1.6rem;
     }
   }
+
   &:has(.attachments-toggle) .attachments-list {
     padding-bottom: 1.6rem;
   }

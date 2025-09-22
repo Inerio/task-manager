@@ -1,0 +1,109 @@
+@if (open()) {
+<div class="backdrop" (click)="onBackdropClick($event)">
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'identity.title' | transloco"
+  >
+    <header class="dialog-header">
+      <h3 class="dialog-title">{{ "identity.title" | transloco }}</h3>
+      <button
+        type="button"
+        class="x-btn"
+        (click)="onCloseClick()"
+        [attr.aria-label]="'common.close' | transloco"
+        [title]="'common.close' | transloco"
+      >
+        <img src="/svg/x.svg" width="16" height="16" alt="x" />
+      </button>
+    </header>
+
+    <section class="dialog-body">
+      <p class="note">
+        {{ "identity.note" | transloco }}
+      </p>
+
+      <!-- Long UUID (canonical, used for headers) -->
+      <div class="row">
+        <label class="label">{{ "identity.currentLabel" | transloco }}</label>
+        <div class="current-id" [title]="currentUid()">{{ currentUid() }}</div>
+        <button class="btn" type="button" (click)="copyLong()">
+          {{
+            copied()
+              ? ("identity.copied" | transloco)
+              : ("identity.copy" | transloco)
+          }}
+        </button>
+      </div>
+
+      <!-- Short code (22-char Base64URL) -->
+      <div class="row">
+        <label class="label">{{ "identity.shortLabel" | transloco }}</label>
+        <div class="current-id" [title]="currentShort()">
+          {{ currentShort() }}
+        </div>
+        <button class="btn" type="button" (click)="copyShort()">
+          {{
+            copied()
+              ? ("identity.copied" | transloco)
+              : ("identity.copyShort" | transloco)
+          }}
+        </button>
+      </div>
+
+      <!-- Accepts either UUID or short code -->
+      <div class="row">
+        <label class="label" for="uidInput">
+          {{ "identity.pasteLabel" | transloco }}
+        </label>
+        <input
+          id="uidInput"
+          class="input"
+          type="text"
+          [placeholder]="'identity.pastePlaceholder' | transloco"
+          [formControl]="uidCtrl"
+          autocomplete="off"
+        />
+        @if (errorMsg()) {
+        <div class="error">{{ errorMsg() }}</div>
+        }
+      </div>
+
+      <!-- Recent UIDs -->
+      <div class="row history-row">
+        <label class="label">{{ "identity.recentLabel" | transloco }}</label>
+        <div class="history-list">
+          @if (history().length === 0) {
+          <div class="muted">{{ "identity.noRecent" | transloco }}</div>
+          } @else { @for (id of history(); track id) {
+          <button
+            type="button"
+            class="chip"
+            (click)="fillFromHistory(id)"
+            [title]="'identity.useThis' | transloco"
+          >
+            <!-- Display short code for readability -->
+            {{ id }}
+          </button>
+          } }
+        </div>
+      </div>
+    </section>
+
+    <footer class="dialog-actions">
+      <button
+        class="btn btn-primary"
+        type="button"
+        (click)="apply()"
+        [disabled]="applying()"
+      >
+        {{ "identity.useId" | transloco }}
+      </button>
+      <button class="btn btn-secondary" type="button" (click)="onCloseClick()">
+        {{ "identity.cancel" | transloco }}
+      </button>
+    </footer>
+  </div>
+</div>
+}

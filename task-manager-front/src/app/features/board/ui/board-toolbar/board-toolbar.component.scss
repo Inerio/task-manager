@@ -98,7 +98,6 @@
       }
     }
 
-    /* Light mode hover */
     &:hover,
     &:focus {
       background: #f5f5f9;
@@ -132,8 +131,50 @@
     }
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    @include bp.md-down {
+      gap: 1rem;
+    }
+  }
+
+  /* Small circular button for ID dialog */
+  .uid-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: var(--surface-1);
+    box-shadow: 0 2px 12px #0001;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+      background: color-mix(in oklab, var(--surface-1) 92%, #000);
+    }
+
+    @include bp.md-down {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+
+      img {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
   .delete-all-btn {
-    margin-left: 2.2rem;
+    margin-left: 0;
     display: flex;
     align-items: center;
     gap: 0.6em;
@@ -156,7 +197,6 @@
     }
 
     @include bp.md-down {
-      margin-left: 0;
       min-width: 0;
       width: 32px;
       height: 32px;
@@ -168,7 +208,6 @@
       .delete-all-label {
         display: none;
       }
-
       img {
         width: 16px;
         height: 16px;

@@ -16,7 +16,7 @@ import { anonIdInterceptor } from "./core/interceptors/anon-id.interceptor";
 
 // Read saved language early to avoid initial flicker on bootstrap.
 const savedLang =
-  (localStorage.getItem("translocoLang") as "en" | "fr") || "en";
+  (globalThis.localStorage?.getItem("translocoLang") as "en" | "fr") || "en";
 
 /** Build per-env upload overrides only when defined. */
 const uploadOverrides = {

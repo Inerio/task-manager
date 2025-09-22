@@ -15,11 +15,12 @@ import { ConfirmDialogService } from "../../../../core/services/dialog/confirm-d
 import { TaskService } from "../../../task/data/task.service";
 import { AlertService } from "../../../../core/services/alert.service";
 import { BoardService } from "../../data/board.service";
+import { AccountIdDialogComponent } from "../../../../shared/ui/account-id-dialog/account-id-dialog.component";
 
 @Component({
   selector: "app-board-toolbar",
   standalone: true,
-  imports: [CommonModule, TranslocoModule],
+  imports: [CommonModule, TranslocoModule, AccountIdDialogComponent],
   templateUrl: "./board-toolbar.component.html",
   styleUrls: ["./board-toolbar.component.scss"],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,7 +31,7 @@ export class BoardToolbarComponent {
   boardId = input.required<number>();
   boardName = input<string>("");
 
-  /** Ask parent to open the sidebar (burger). */
+  /** Ask parent to open the sidebar. */
   requestOpenSidebar = output<void>();
   /** Inform parent which board should become selected after deletion. */
   boardChangeAfterDelete = output<number | null>();
@@ -45,6 +46,9 @@ export class BoardToolbarComponent {
   // ---- Local edit state ----
   readonly editingSelectedBoard = signal(false);
   readonly editingSelectedBoardValue = signal<string>("");
+
+  // Dialog visibility
+  readonly showAccountDialog = signal(false);
 
   @ViewChild("editSelectedBoardInput", { read: ElementRef })
   private editSelectedBoardInput?: ElementRef<HTMLInputElement>;
@@ -155,5 +159,14 @@ export class BoardToolbarComponent {
           this.i18n.translate("errors.deletingAllTasksForBoard")
         )
       );
+  }
+
+  // Called when user applied a new UID in the dialog
+  onUidSwitched(_uid: string): void {
+    this.showAccountDialog.set(false);
+    // Reload data so the new UID reflects immediately
+    this.boardService.loadBoards();
+    this.taskService.loadTasks({ force: true });
+    this.alert.show("success", this.i18n.translate("identity.switched"));
   }
 }

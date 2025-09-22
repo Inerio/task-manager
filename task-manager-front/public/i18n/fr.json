@@ -21,7 +21,11 @@
     "download": "Télécharger",
     "remove": "Retirer",
     "chooseFile": "Choisir un fichier",
-    "toBeUploaded": "À téléverser"
+    "toBeUploaded": "À téléverser",
+    "expand": "Développer",
+    "collapse": "Réduire",
+    "close": "Fermer",
+    "openMenu": "Ouvrir le menu"
   },
   "boards": {
     "title": "Tableaux",
@@ -50,7 +54,6 @@
       "skip": "Ignorer",
       "oneColumn": "1 colonne",
       "nColumns": "{{count}} colonnes",
-
       "t1Desc": "Une seule liste. Notez rapidement et cochez au fur et à mesure.",
       "t2Desc": "Deux étapes : démarrer quand vous êtes prêt, puis passer en Terminé.",
       "t3Desc": "Planifier → Faire → Terminé. Le classique en 3 colonnes, simple et efficace.",
@@ -106,7 +109,14 @@
   "attachments": {
     "downloadConfirmTitle": "Télécharger le fichier",
     "downloadConfirmMessage": "Voulez-vous télécharger « {{filename}} » ?",
+    "deleteAll": "Supprimer tous les fichiers",
+    "clearAll": "Vider la sélection",
+    "confirmDeleteAll": {
+      "title": "Supprimer toutes les pièces jointes",
+      "message": "Supprimer tous les fichiers de cette tâche ? Cette action est irréversible."
+    },
     "errors": {
+      "notAccepted": "Certains fichiers ne correspondent pas aux types autorisés.",
       "tooLarge": "Certains fichiers dépassaient la limite de taille et ont été ignorés.",
       "alreadyAttached": "Certains fichiers étaient déjà joints et ont été ignorés.",
       "upload": "Erreur lors du téléversement de la pièce jointe.",
@@ -125,6 +135,25 @@
   },
   "emoji": {
     "searchPlaceholder": "Rechercher"
+  },
+  "identity": {
+    "openTooltip": "Ouvrir l’identifiant",
+    "title": "Identifiant de compte",
+    "note": "Cet ID vous permet d’accéder à vos tableaux depuis un autre appareil ou de les partager avec une personne de confiance. Copiez-le, collez un ID existant ou envoyez le code court.",
+    "currentLabel": "ID actuel",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "shortLabel": "Code court",
+    "copyShort": "Copier le code court",
+    "pasteLabel": "Coller un ID",
+    "pastePlaceholder": "ex. 80210551-b01d-4be5-b9bc-ba12a18…",
+    "useId": "Utiliser cet ID",
+    "cancel": "Annuler",
+    "invalid": "Format d’ID invalide.",
+    "switched": "ID mis à jour. Données rechargées.",
+    "recentLabel": "Derniers IDs utilisés",
+    "noRecent": "Aucun historique",
+    "useThis": "Utiliser"
   },
   "errors": {
     "loadingTasks": "Erreur lors du chargement des tâches.",

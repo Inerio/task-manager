@@ -17,6 +17,25 @@
   (keydown.space)="onZoneKeydown($event)"
   [attr.aria-label]="'common.chooseFile' | transloco"
 >
+  <!-- Left-edge delete-all/clear-all button -->
+  @if (hasAny()) {
+  <button
+    type="button"
+    class="edge-delete"
+    (click)="onDeleteAllClick($event)"
+    [attr.title]="
+      (creationMode ? 'attachments.clearAll' : 'attachments.deleteAll')
+        | transloco
+    "
+    [attr.aria-label]="
+      (creationMode ? 'attachments.clearAll' : 'attachments.deleteAll')
+        | transloco
+    "
+  >
+    <img src="/svg/x-white.svg" width="12" height="12" alt="x" />
+  </button>
+  }
+
   <input
     type="file"
     #fileInput

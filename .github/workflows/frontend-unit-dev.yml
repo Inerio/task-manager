@@ -1,0 +1,57 @@
+name: Frontend unit tests (dev only)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "task-manager-front/**"
+      - ".github/workflows/frontend-unit-dev.yml"
+  pull_request:
+    branches: [dev]
+    paths:
+      - "task-manager-front/**"
+      - ".github/workflows/frontend-unit-dev.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-unit-dev
+  cancel-in-progress: true
+
+jobs:
+  karma-tests:
+    name: Run Angular Karma/Jasmine (ChromeHeadless)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: task-manager-front
+    env:
+      CI: "true"
+      CHROME_BIN: /usr/bin/google-chrome
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: task-manager-front/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run unit tests (headless)
+        run: |
+          npx ng test --watch=false --browsers=ChromeHeadless --code-coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: coverage/task-manager-front
+          retention-days: 7

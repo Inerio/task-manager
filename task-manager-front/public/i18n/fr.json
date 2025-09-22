@@ -23,7 +23,9 @@
     "chooseFile": "Choisir un fichier",
     "toBeUploaded": "À téléverser",
     "expand": "Développer",
-    "collapse": "Réduire"
+    "collapse": "Réduire",
+    "close": "Fermer",
+    "openMenu": "Ouvrir le menu"
   },
   "boards": {
     "title": "Tableaux",
@@ -133,6 +135,22 @@
   },
   "emoji": {
     "searchPlaceholder": "Rechercher"
+  },
+  "identity": {
+    "openTooltip": "Ouvrir l’identifiant",
+    "title": "Identifiant de compte",
+    "note": "Utilisez cet ID pour retrouver vos tableaux sur un autre appareil. Copiez-le ou collez-en un existant.",
+    "currentLabel": "ID actuel",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "shortLabel": "Code court",
+    "copyShort": "Copier le code court",
+    "pasteLabel": "Coller un ID",
+    "pastePlaceholder": "ex. 80210551-b01d-4be5-b9bc-ba12a18…",
+    "useId": "Utiliser cet ID",
+    "cancel": "Annuler",
+    "invalid": "Format d’ID invalide.",
+    "switched": "ID mis à jour. Données rechargées."
   },
   "errors": {
     "loadingTasks": "Erreur lors du chargement des tâches.",

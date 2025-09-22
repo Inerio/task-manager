@@ -23,7 +23,9 @@
     "chooseFile": "Choose a file",
     "toBeUploaded": "To be uploaded",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "close": "Close",
+    "openMenu": "Open menu"
   },
   "boards": {
     "title": "Boards",
@@ -133,6 +135,22 @@
   },
   "emoji": {
     "searchPlaceholder": "Search"
+  },
+  "identity": {
+    "openTooltip": "Open account ID",
+    "title": "Account ID",
+    "note": "Use this ID to access your boards on another device. Copy it or paste an existing one.",
+    "currentLabel": "Current ID",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "shortLabel": "Short code",
+    "copyShort": "Copy short code",
+    "pasteLabel": "Paste an ID",
+    "pastePlaceholder": "e.g. 80210551-b01d-4be5-b9bc-ba12a18…",
+    "useId": "Use this ID",
+    "cancel": "Cancel",
+    "invalid": "Invalid ID format.",
+    "switched": "ID updated. Reloaded your data."
   },
   "errors": {
     "loadingTasks": "Error loading tasks.",

@@ -54,6 +54,17 @@
     }
   </div>
 
+  <!-- NEW: identity button (top-right) -->
+  <button
+    type="button"
+    class="uid-btn"
+    (click)="showAccountDialog.set(true)"
+    [title]="'identity.openTooltip' | transloco"
+    [attr.aria-label]="'identity.openTooltip' | transloco"
+  >
+    <img src="/svg/pencil.svg" width="18" height="18" alt="id" />
+  </button>
+
   <button
     class="delete-btn styled-trash-btn delete-all-btn"
     (click)="deleteAllTasks()"
@@ -71,3 +82,10 @@
     </span>
   </button>
 </header>
+
+<!-- Identity dialog -->
+<app-account-id-dialog
+  [open]="showAccountDialog()"
+  (close)="showAccountDialog.set(false)"
+  (switched)="onUidSwitched($event)"
+></app-account-id-dialog>

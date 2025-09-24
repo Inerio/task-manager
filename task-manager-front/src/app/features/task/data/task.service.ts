@@ -17,30 +17,30 @@ import { LoadingService } from "../../../core/services/loading.service";
 /** Tasks CRUD + reordering. Signals are the single source of truth. */
 @Injectable({ providedIn: "root" })
 export class TaskService {
-  // ---- deps & config ----
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/tasks`;
   private readonly alert = inject(AlertService);
   private readonly i18n = inject(TranslocoService);
   private readonly loading = inject(LoadingService);
 
-  // ---- state ----
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
-  /** Read-only signal consumed by components. */
   readonly tasks: Signal<Task[]> = computed(() => this.tasksSignal());
 
-  /** Load barrier to avoid repeated refetches. */
   private readonly _loaded = signal(false);
   readonly loaded = computed(() => this._loaded());
 
-  // ===========================================================================
+  /** In-flight create dedup (key -> Promise). Prevents duplicate POSTs. */
+  private readonly inflightCreates = new Map<string, Promise<Task>>();
+  private mkCreateKey(t: Task): string {
+    return [
+      t.kanbanColumnId,
+      (t.title ?? "").trim(),
+      (t.description ?? "").trim(),
+      t.dueDate ?? "",
+    ].join("|");
+  }
 
   // === Fetch ===
-
-  /**
-   * Load all tasks (overlay scope: "board").
-   * Pass `{ force: true }` to bypass the "already loaded" guard.
-   */
   loadTasks(options?: { force?: boolean }): void {
     if (!options?.force && this._loaded()) return;
 
@@ -54,14 +54,12 @@ export class TaskService {
     });
   }
 
-  /** Derived signal containing only tasks for a given kanban column. */
   getTasksByKanbanColumnId(kanbanColumnId: number): Signal<Task[]> {
     return computed(() =>
       this.tasksSignal().filter((t) => t.kanbanColumnId === kanbanColumnId)
     );
   }
 
-  /** Fetch a task by id (null on error). */
   async fetchTaskById(taskId: TaskId): Promise<Task | null> {
     try {
       return await firstValueFrom(
@@ -72,7 +70,6 @@ export class TaskService {
     }
   }
 
-  /** Refetch a task and update local state. */
   async refreshTaskById(taskId: TaskId): Promise<void> {
     const fresh = await this.fetchTaskById(taskId);
     if (fresh) this.updateTaskFromApi(fresh);
@@ -80,21 +77,28 @@ export class TaskService {
 
   // === Create & Update ===
 
-  /** Create a task; updates local state on success. */
   async createTask(task: Task): Promise<Task> {
-    try {
-      const created = await firstValueFrom(
-        this.http.post<Task>(this.apiUrl, task)
-      );
-      this.tasksSignal.set([...this.tasksSignal(), created]);
-      return created;
-    } catch (err) {
-      this.alert.show("error", this.i18n.translate("errors.creatingTask"));
-      throw err;
-    }
+    const key = this.mkCreateKey(task);
+    const existing = this.inflightCreates.get(key);
+    if (existing) return existing;
+
+    const request = firstValueFrom(this.http.post<Task>(this.apiUrl, task))
+      .then((created) => {
+        this.tasksSignal.set([...this.tasksSignal(), created]);
+        return created;
+      })
+      .catch((err) => {
+        this.alert.show("error", this.i18n.translate("errors.creatingTask"));
+        throw err;
+      })
+      .finally(() => {
+        setTimeout(() => this.inflightCreates.delete(key), 1200);
+      });
+
+    this.inflightCreates.set(key, request);
+    return request;
   }
 
-  /** Update a task; replaces it in local state on success. */
   async updateTask(id: TaskId, updatedTask: Task): Promise<void> {
     try {
       const updated = await firstValueFrom(
@@ -107,7 +111,6 @@ export class TaskService {
     }
   }
 
-  /** Replace a task in state from an API-returned payload. */
   updateTaskFromApi(updated: Task): void {
     this.replaceInState(updated);
   }
@@ -167,11 +170,6 @@ export class TaskService {
   }
 
   // === Reorder ===
-
-  /**
-   * Optimistically reorder a subset of tasks and sync with backend.
-   * Accepts a readonly array to prevent accidental mutation by callers.
-   */
   async reorderTasks(tasks: ReadonlyArray<Task>): Promise<void> {
     const updatedIds = new Set(tasks.map((t) => t.id));
     const nextState = [
@@ -185,7 +183,6 @@ export class TaskService {
 
     this.tasksSignal.set(nextState);
 
-    // Guard: only send persisted ids to the backend.
     const dto = tasks
       .filter((t): t is Task & { id: number } => typeof t.id === "number")
       .map((t) => ({ id: t.id, position: t.position ?? 0 }));
@@ -198,12 +195,6 @@ export class TaskService {
     }
   }
 
-  /**
-   * Optimistic cross-column move + reorder.
-   * - Immediately updates local `tasksSignal` (UI feels instant).
-   * - Persists `kanbanColumnId` change and new positions in parallel.
-   * - Rolls back on failure.
-   */
   async moveTaskOptimistic(
     taskId: TaskId,
     toColumnId: number,
@@ -215,7 +206,6 @@ export class TaskService {
 
     const fromColumnId = dragged.kanbanColumnId;
 
-    // Same-column: delegate to reorder (already optimistic).
     if (fromColumnId === toColumnId) {
       const inCol = current.filter((t) => t.kanbanColumnId === fromColumnId);
       const fromIdx = inCol.findIndex((t) => t.id === taskId);
@@ -230,7 +220,6 @@ export class TaskService {
     }
     const snapshot: Task[] = current.map((t) => ({ ...t }));
 
-    // Build new source/target arrays with updated positions.
     const source = current.filter(
       (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
     );
@@ -248,16 +237,12 @@ export class TaskService {
       updatedMap.set(t.id!, { ...t, position: idx })
     );
 
-    // Apply optimistic state.
     const next = current.map((t) => {
       const upd = t.id != null ? updatedMap.get(t.id) : undefined;
       return upd ? upd : t;
     });
     this.tasksSignal.set(next);
 
-    // Persist concurrently:
-    // - update kanbanColumnId of the moved task
-    // - reorder all affected tasks (both columns)
     const reorderDto = Array.from(updatedMap.values())
       .filter((t): t is Task & { id: number } => typeof t.id === "number")
       .map((t) => ({ id: t.id, position: t.position ?? 0 }));
@@ -275,7 +260,6 @@ export class TaskService {
         ),
       ]);
     } catch (err) {
-      // Rollback visual state if server rejects.
       this.tasksSignal.set(snapshot);
       this.alert.show(
         "error",
@@ -286,8 +270,6 @@ export class TaskService {
   }
 
   // === Private helpers ===
-
-  /** Replace by id in local state; no-op if not found. */
   private replaceInState(updated: Task): void {
     this.tasksSignal.set(
       this.tasksSignal().map((t) => (t.id === updated.id ? updated : t))

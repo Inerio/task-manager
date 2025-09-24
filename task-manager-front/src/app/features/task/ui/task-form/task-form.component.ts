@@ -51,7 +51,6 @@ import { AttachmentService } from "../../../attachments/data/attachment.service"
   ],
   templateUrl: "./task-form.component.html",
   styleUrls: ["./task-form.component.scss"],
-  // Keep schema in case other custom elements appear inside the form.
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [NativeDialogGuardService],
@@ -81,7 +80,7 @@ export class TaskFormComponent
   private readonly guard = inject(NativeDialogGuardService);
   private readonly attachments = inject(TaskAttachmentsFacade);
   private readonly browserInfo = inject(BrowserInfoService);
-  private readonly attachmentService = inject(AttachmentService); // NEW
+  private readonly attachmentService = inject(AttachmentService);
 
   readonly form = this.fb.group({
     title: this.fb.control<string>("", { validators: [Validators.required] }),
@@ -91,6 +90,10 @@ export class TaskFormComponent
 
   // ===== Local state =====
   readonly showEmojiPicker = signal(false);
+
+  /** UI-level submit guard to prevent double-click spamming. */
+  readonly submitting = signal(false);
+  private static readonly SUBMIT_DEBOUNCE_MS = 1200;
 
   private readonly emptyTask: Task = {
     id: undefined,
@@ -119,7 +122,6 @@ export class TaskFormComponent
   // ===== Lifecycle =====
   ngOnInit(): void {
     this.applyTaskToState(this.task);
-    // Delegate Brave detection to service (result cached in service).
     void this.browserInfo
       .isBrave()
       .then((v) => this.isBrave.set(v))
@@ -153,25 +155,17 @@ export class TaskFormComponent
     }
   }
 
-  ngAfterViewInit(): void {
-    // No global listeners here (handled by directives/services).
-  }
-
-  ngOnDestroy(): void {
-    // Nothing local to clean up.
-  }
+  ngAfterViewInit(): void {}
+  ngOnDestroy(): void {}
 
   // ===== UI actions =====
   onDialogOpen(open: boolean): void {
-    // Delegate to the scoped guard service.
     this.guard.setOpen(open);
   }
 
   toggleEmojiPicker(): void {
     const next = !this.showEmojiPicker();
     this.showEmojiPicker.set(next);
-
-    // When opening, wait for the DOM to paint the web component then ensure it is visible inside the viewport.
     if (next) {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => this.ensureEmojiPickerVisible());
@@ -179,11 +173,6 @@ export class TaskFormComponent
     }
   }
 
-  /**
-   * Ensure the emoji picker is visible in the viewport.
-   * If the TOP of the form is above the viewport, scroll UP first.
-   * Else, if the picker overflows the bottom, scroll DOWN a bit.
-   */
   private ensureEmojiPickerVisible(): void {
     const container = this.formContainer?.nativeElement;
     if (!container) return;
@@ -194,30 +183,22 @@ export class TaskFormComponent
     if (!dropdown) return;
 
     const vpH = window.innerHeight || document.documentElement.clientHeight;
-
-    // --- tweakables ---
     const FORM_TOP_SAFE = 12;
     const TOP_MARGIN = 8;
     const BOTTOM_SAFE = 240;
-    // ------------------
 
     let dy = 0;
-
-    // Ensure the top of the task form (title/desc) is visible.
     const contRect = container.getBoundingClientRect();
     if (contRect.top < FORM_TOP_SAFE) {
-      dy = contRect.top - FORM_TOP_SAFE; // negative = scroll up
+      dy = contRect.top - FORM_TOP_SAFE;
     } else {
-      // Ensure the dropdown itself doesn't overflow the viewport.
       const dropRect = dropdown.getBoundingClientRect();
-
       if (dropRect.top < TOP_MARGIN) {
         dy = dropRect.top - TOP_MARGIN;
       } else if (dropRect.bottom > vpH - BOTTOM_SAFE) {
-        dy = dropRect.bottom - (vpH - BOTTOM_SAFE) + 30; // extra down
+        dy = dropRect.bottom - (vpH - BOTTOM_SAFE) + 30;
       }
     }
-
     if (Math.abs(dy) > 1) {
       window.scrollBy({ top: dy, behavior: "smooth" });
     }
@@ -228,22 +209,19 @@ export class TaskFormComponent
     const ctrl = this.form.controls.description;
 
     if (!ta) {
-      // Fallback when textarea isn't available yet.
       ctrl.setValue((ctrl.value ?? "") + emoji);
       ctrl.markAsDirty();
       ctrl.markAsTouched();
       return;
     }
 
-    // Use shared DOM utility to insert at caret.
     insertAtCaret(ta, emoji);
-
     ctrl.setValue(ta.value);
     ctrl.markAsDirty();
     ctrl.markAsTouched();
   }
 
-  // ===== Files (delegated to facade) =====
+  // ===== Files =====
   onFilesBuffered(files: File[]): void {
     if (!this.localTask().id) {
       this.attachments.buffer(files);
@@ -284,12 +262,10 @@ export class TaskFormComponent
     this.attachments.download(id, filename);
   }
 
-  /** Clear all buffered files. */
   onClearAllBuffered(): void {
     this.attachments.flushBuffer();
   }
 
-  /** Delete ALL attachments on the server while editing. */
   async onDeleteAllEdit(): Promise<void> {
     const id = this.localTask().id;
     if (!id) return;
@@ -309,13 +285,26 @@ export class TaskFormComponent
 
   handleSave(): void {
     if (this.form.invalid) return;
-    const values = this.form.getRawValue();
-    this.save.emit({
-      ...this.localTask(),
-      ...values,
-      _pendingFiles: this.pendingFiles(),
-    });
-    this.clearBufferIfNeeded();
+
+    // Ignore while a previous submit is being processed.
+    if (this.submitting()) return;
+    this.submitting.set(true);
+
+    try {
+      const values = this.form.getRawValue();
+      this.save.emit({
+        ...this.localTask(),
+        ...values,
+        _pendingFiles: this.pendingFiles(),
+      });
+      this.clearBufferIfNeeded();
+    } finally {
+      // Release the UI lock after a short debounce window.
+      setTimeout(
+        () => this.submitting.set(false),
+        TaskFormComponent.SUBMIT_DEBOUNCE_MS
+      );
+    }
   }
 
   handleCancel(): void {

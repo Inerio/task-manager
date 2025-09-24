@@ -17,7 +17,6 @@
   (keydown.space)="onZoneKeydown($event)"
   [attr.aria-label]="'common.chooseFile' | transloco"
 >
-  <!-- Left-edge delete-all/clear-all button -->
   @if (hasAny()) {
   <button
     type="button"
@@ -32,7 +31,7 @@
         | transloco
     "
   >
-    <img src="/svg/x-white.svg" width="12" height="12" alt="x" />
+    <img src="/svg/x.svg" width="12" height="12" alt="x" />
   </button>
   }
 

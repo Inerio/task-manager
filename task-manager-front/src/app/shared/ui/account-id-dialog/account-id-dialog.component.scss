@@ -6,14 +6,9 @@
   display: grid;
   place-items: center;
   background: color-mix(in oklab, #000 35%, transparent);
-
-  /* Always above sidebar and other UI */
   z-index: var(--z-overlay, 99999);
-
-  /* Small horizontal breathing room */
   padding: 0 1rem;
 
-  /* On desktop/tablet: reserve sidebar width for proper centering */
   @include bp.up(bp.$bp-md) {
     padding-left: var(--sidebar-w, 230px);
   }
@@ -28,7 +23,6 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), 0 2px 10px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 
-  /* When sidebar is visible, subtract its width from available space */
   @include bp.up(bp.$bp-md) {
     width: min(640px, calc(100vw - var(--sidebar-w, 230px) - 2rem));
   }
@@ -173,6 +167,7 @@
     }
   }
 
+  /* === Recent named codes === */
   .history-row {
     align-items: start;
   }
@@ -197,6 +192,16 @@
     white-space: nowrap;
     transition: background 0.15s, border-color 0.15s;
 
+    .chip-label {
+      font-weight: 700;
+      margin-right: 0.4rem;
+    }
+    .chip-code {
+      opacity: 0.85;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Courier New", monospace;
+    }
+
     &:hover {
       background: color-mix(in oklab, var(--surface-1) 92%, #000);
       border-color: color-mix(in oklab, var(--brand) 45%, var(--border-2));
@@ -218,7 +223,6 @@
 
   .btn {
     min-width: 120px;
-
     @include bp.md-down {
       min-width: 0;
     }

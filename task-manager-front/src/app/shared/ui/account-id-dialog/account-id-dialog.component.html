@@ -24,35 +24,24 @@
         {{ "identity.note" | transloco }}
       </p>
 
-      <!-- Long UUID (canonical, used for headers) -->
+      <!-- Current Code (22-char Base64URL). No raw UUID displayed anywhere -->
       <div class="row">
-        <label class="label">{{ "identity.currentLabel" | transloco }}</label>
-        <div class="current-id" [title]="currentUid()">{{ currentUid() }}</div>
-        <button class="btn" type="button" (click)="copyLong()">
-          {{
-            copied()
-              ? ("identity.copied" | transloco)
-              : ("identity.copy" | transloco)
-          }}
-        </button>
-      </div>
-
-      <!-- Short code (22-char Base64URL) -->
-      <div class="row">
-        <label class="label">{{ "identity.shortLabel" | transloco }}</label>
-        <div class="current-id" [title]="currentShort()">
-          {{ currentShort() }}
+        <label class="label">{{
+          "identity.currentCodeLabel" | transloco
+        }}</label>
+        <div class="current-id" [title]="currentCode()">
+          {{ currentCode() }}
         </div>
-        <button class="btn" type="button" (click)="copyShort()">
+        <button class="btn" type="button" (click)="copyCode()">
           {{
             copied()
               ? ("identity.copied" | transloco)
-              : ("identity.copyShort" | transloco)
+              : ("identity.copyCode" | transloco)
           }}
         </button>
       </div>
 
-      <!-- Accepts either UUID or short code -->
+      <!-- Paste a code (accepts code or full UUID) -->
       <div class="row">
         <label class="label" for="uidInput">
           {{ "identity.pasteLabel" | transloco }}
@@ -65,26 +54,44 @@
           [formControl]="uidCtrl"
           autocomplete="off"
         />
-        @if (errorMsg()) {
-        <div class="error">{{ errorMsg() }}</div>
+        @if (codeError()) {
+        <div class="error">{{ codeError() }}</div>
         }
       </div>
 
-      <!-- Recent UIDs -->
+      <!-- Name to save this code under -->
+      <div class="row">
+        <label class="label" for="nameInput">
+          {{ "identity.nameLabel" | transloco }}
+        </label>
+        <input
+          id="nameInput"
+          class="input"
+          type="text"
+          [placeholder]="'identity.namePlaceholder' | transloco"
+          [formControl]="nameCtrl"
+          autocomplete="off"
+        />
+        @if (nameError()) {
+        <div class="error">{{ nameError() }}</div>
+        }
+      </div>
+
+      <!-- Recent named codes -->
       <div class="row history-row">
         <label class="label">{{ "identity.recentLabel" | transloco }}</label>
         <div class="history-list">
-          @if (history().length === 0) {
+          @if (namedHistory().length === 0) {
           <div class="muted">{{ "identity.noRecent" | transloco }}</div>
-          } @else { @for (id of history(); track id) {
+          } @else { @for (e of namedHistory(); track e.uid) {
           <button
             type="button"
             class="chip"
-            (click)="fillFromHistory(id)"
+            (click)="fillFromHistory(e)"
             [title]="'identity.useThis' | transloco"
           >
-            <!-- Display short code for readability -->
-            {{ id }}
+            <span class="chip-label">{{ e.label }}</span>
+            <span class="chip-code">{{ e.code }}</span>
           </button>
           } }
         </div>
@@ -96,9 +103,9 @@
         class="btn btn-primary"
         type="button"
         (click)="apply()"
-        [disabled]="applying()"
+        [disabled]="applying() || !uidCtrl.valid || !nameCtrl.valid"
       >
-        {{ "identity.useId" | transloco }}
+        {{ "identity.useCode" | transloco }}
       </button>
       <button class="btn btn-secondary" type="button" (click)="onCloseClick()">
         {{ "identity.cancel" | transloco }}

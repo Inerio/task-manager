@@ -84,15 +84,21 @@
           @if (namedHistory().length === 0) {
           <div class="muted">{{ "identity.noRecent" | transloco }}</div>
           } @else { @for (e of namedHistory(); track e.uid) {
-          <button
-            type="button"
-            class="chip"
-            (click)="fillFromHistory(e)"
-            [title]="'identity.useThis' | transloco"
-          >
-            <span class="chip-label">{{ e.label }}</span>
-            <span class="chip-code">{{ e.code }}</span>
-          </button>
+          <div class="chip-wrap">
+            <button
+              type="button"
+              class="chip"
+              (click)="fillFromHistory(e)"
+              [title]="'identity.useThis' | transloco"
+            >
+              <span class="chip-label">{{ e.label }}</span>
+              <span class="chip-code">{{ e.code }}</span>
+            </button>
+
+            @if (copiedChip() === e.uid) {
+            <span class="copied-hint">{{ "identity.copied" | transloco }}</span>
+            }
+          </div>
           } }
         </div>
       </div>

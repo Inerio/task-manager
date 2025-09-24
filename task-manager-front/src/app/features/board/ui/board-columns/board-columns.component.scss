@@ -140,22 +140,28 @@
   pointer-events: auto;
 }
 
+/* Theme-aware empty state */
 .empty-column-drop {
-  border: 2px dashed #e0e7ef;
+  --drop-border: color-mix(in oklab, var(--border-1) 75%, transparent);
+  --drop-bg: color-mix(in oklab, var(--surface-2) 88%, var(--surface-1) 12%);
+  --drop-fg: color-mix(in oklab, var(--text-2) 72%, var(--surface-2));
+
+  border: 2px dashed var(--drop-border);
   border-radius: var(--radius-2);
   height: 100%;
   width: 100%;
-  background: #f9fbff;
+  background: var(--drop-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #b1b9d2;
+  color: var(--drop-fg);
   font-size: 1.01rem;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 
   .task-drag-active & {
-    border-color: var(--brand);
-    background: #e3f2fd;
-    color: var(--brand);
+    --drop-border: color-mix(in oklab, var(--brand) 80%, transparent);
+    --drop-bg: color-mix(in oklab, var(--brand) 12%, var(--surface-2) 88%);
+    --drop-fg: var(--brand);
   }
 }
 
@@ -325,6 +331,12 @@
   display: flex;
   align-items: flex-start;
   flex: 0 0 auto;
+}
+
+@include bp.md-down {
+  .task-columns > .add-column-tile:first-child {
+    margin-left: var(--space-4);
+  }
 }
 
 .column-draggable {

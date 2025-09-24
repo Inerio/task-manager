@@ -10,6 +10,17 @@
     <app-language-switcher></app-language-switcher>
     <app-theme-switcher></app-theme-switcher>
 
+    <!-- Account ID (mobile) -->
+    <button
+      type="button"
+      class="sidebar-uid-btn"
+      (click)="showAccountDialog.set(true)"
+      [attr.aria-label]="'identity.openTooltip' | transloco"
+      title="{{ 'identity.openTooltip' | transloco }}"
+    >
+      <img src="/svg/share.svg" alt="id" width="16" height="16" />
+    </button>
+
     <!-- Close on mobile/tablet (hidden when fullscreen/no boards) -->
     @if (!(isMdDown() && forceFullscreen())) {
     <button
@@ -90,4 +101,11 @@
       aria-hidden="true"
     ></div>
   </nav>
+
+  <!-- Local dialog instance for mobile access inside sidebar -->
+  <app-account-id-dialog
+    [open]="showAccountDialog()"
+    (close)="showAccountDialog.set(false)"
+    (switched)="onUidSwitchedFromSidebar($event)"
+  ></app-account-id-dialog>
 </aside>

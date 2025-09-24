@@ -31,26 +31,10 @@
       margin-right: var(--space-1);
       padding: 0;
 
-      span {
-        position: relative;
+      img {
+        display: block;
         width: 20px;
-        height: 2px;
-        background: var(--text-1);
-      }
-      span::before,
-      span::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: var(--text-1);
-      }
-      span::before {
-        top: -6px;
-      }
-      span::after {
-        top: 6px;
+        height: 20px;
       }
     }
   }

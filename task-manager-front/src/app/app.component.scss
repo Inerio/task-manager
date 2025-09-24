@@ -81,6 +81,54 @@
   }
 }
 
+/* Header actions for empty state (same placement as toolbar actions) */
+.board-area--empty {
+  position: relative;
+
+  .empty-actions {
+    position: absolute;
+    top: 1.25rem;
+    right: 2.5rem;
+    z-index: 2;
+
+    @include bp.md-down {
+      top: var(--space-3);
+      right: var(--space-3);
+    }
+
+    .uid-btn {
+      display: inline-grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: var(--surface-1);
+      box-shadow: 0 2px 12px #0001;
+      cursor: pointer;
+      padding: 0;
+
+      &:hover {
+        background: color-mix(in oklab, var(--surface-1) 92%, #000);
+      }
+
+      @include bp.md-down {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+
+        img {
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+  }
+}
+
 /* Keep descendant <app-board> full width/height */
 .board-area app-board {
   display: block;

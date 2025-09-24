@@ -3,11 +3,17 @@
   <button
     type="button"
     class="sidebar-burger"
-    (click)="(openSidebar)"
+    (click)="openSidebar()"
     [attr.aria-label]="'common.openMenu' | transloco"
     title="{{ 'common.openMenu' | transloco }}"
   >
-    <span aria-hidden="true"></span>
+    <img
+      src="/svg/menu.svg"
+      width="20"
+      height="20"
+      alt="menu"
+      aria-hidden="true"
+    />
   </button>
 
   <div class="board-title-wrapper">

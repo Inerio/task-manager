@@ -178,6 +178,12 @@
     gap: 0.4rem;
   }
 
+  .chip-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
   .chip {
     border: 1px solid var(--border-2);
     background: var(--surface-1);
@@ -205,6 +211,39 @@
     &:hover {
       background: color-mix(in oklab, var(--surface-1) 92%, #000);
       border-color: color-mix(in oklab, var(--brand) 45%, var(--border-2));
+    }
+  }
+
+  .copied-hint {
+    font-size: 0.8rem;
+    color: var(--brand);
+    background: color-mix(in oklab, var(--brand) 10%, var(--surface-1));
+    border: 1px solid color-mix(in oklab, var(--brand) 32%, transparent);
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    line-height: 1;
+    opacity: 0;
+    transform: translateY(2px);
+    animation: copiedFade 1.2s ease both;
+    white-space: nowrap;
+  }
+
+  @keyframes copiedFade {
+    0% {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    20% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    80% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-2px);
     }
   }
 

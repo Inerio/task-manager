@@ -7,7 +7,7 @@ import {
   computed,
   effect,
 } from "@angular/core";
-import { TranslocoModule } from "@jsverse/transloco";
+import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { AlertComponent } from "./shared/ui/alert/alert.component";
 import { ConfirmDialogComponent } from "./shared/ui/confirm-dialog/confirm-dialog.component";
 import { LoadingOverlayComponent } from "./shared/ui/loading-overlay/loading-overlay.component";
@@ -16,6 +16,9 @@ import { BoardComponent } from "./features/board/ui/board/board.component";
 import { BoardSidebarComponent } from "./features/board/ui/board-sidebar/board-sidebar.component";
 import { BoardToolbarComponent } from "./features/board/ui/board-toolbar/board-toolbar.component";
 import { BoardService } from "./features/board/data/board.service";
+import { AccountIdDialogComponent } from "./shared/ui/account-id-dialog/account-id-dialog.component";
+import { TaskService } from "./features/task/data/task.service";
+import { AlertService } from "./core/services/alert.service";
 
 @Component({
   selector: "app-root",
@@ -35,10 +38,15 @@ import { BoardService } from "./features/board/data/board.service";
     BoardToolbarComponent,
     // existing board view
     BoardComponent,
+    // account id dialog for empty-state / global access
+    AccountIdDialogComponent,
   ],
 })
 export class AppComponent implements OnDestroy {
   private readonly boardService = inject(BoardService);
+  private readonly taskService = inject(TaskService);
+  private readonly alert = inject(AlertService);
+  private readonly i18n = inject(TranslocoService);
 
   // Boards list (signal from service)
   readonly boards = this.boardService.boards;
@@ -62,6 +70,9 @@ export class AppComponent implements OnDestroy {
 
   // --- persistence key (scoped) ---
   private readonly STORAGE_KEY = "tasukeru:lastBoardId";
+
+  // Account dialog for empty-state / global access
+  readonly showAccountDialog = signal(false);
 
   constructor() {
     this.boardService.loadBoards();
@@ -145,5 +156,14 @@ export class AppComponent implements OnDestroy {
   }
   onAfterDelete(nextId: number | null): void {
     this.selectedBoardId.set(nextId);
+  }
+
+  /** Called when switching ID from the app-level dialog (empty state / global). */
+  onUidSwitchedFromApp(_uid: string): void {
+    this.showAccountDialog.set(false);
+    // Reload everything so the new identity is applied
+    this.boardService.loadBoards();
+    this.taskService.loadTasks({ force: true });
+    this.alert.show("success", this.i18n.translate("identity.switched"));
   }
 }

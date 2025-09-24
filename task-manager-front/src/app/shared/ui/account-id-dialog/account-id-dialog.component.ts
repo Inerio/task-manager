@@ -44,6 +44,7 @@ export class AccountIdDialogComponent {
   // State
   readonly currentCode = signal<string>(this.account.getShortCode());
   readonly copied = signal<boolean>(false);
+  readonly copiedChip = signal<string | null>(null);
   readonly applying = signal<boolean>(false);
   readonly codeError = signal<string>("");
   readonly nameError = signal<string>("");
@@ -69,6 +70,7 @@ export class AccountIdDialogComponent {
       this.codeError.set("");
       this.nameError.set("");
       this.copied.set(false);
+      this.copiedChip.set(null);
     }
   });
 
@@ -112,12 +114,21 @@ export class AccountIdDialogComponent {
     }
   }
 
-  /** Prefills form from a named history entry. */
-  fillFromHistory(e: NamedIdEntry): void {
+  /** Prefills form from a named history entry, copies it and shows a hint. */
+  async fillFromHistory(e: NamedIdEntry): Promise<void> {
     this.nameCtrl.setValue(e.label);
-    this.uidCtrl.setValue(e.code); // display short code; service accepts both
+    this.uidCtrl.setValue(e.code);
     this.codeError.set("");
     this.nameError.set("");
+
+    // Copy the short code to clipboard for quick reuse.
+    const ok = await this.account.copyToClipboard(e.code);
+    this.copied.set(ok);
+
+    this.copiedChip.set(e.uid);
+    setTimeout(() => this.copiedChip.set(null), 1200);
+
+    setTimeout(() => this.copied.set(false), 1200);
   }
 
   onBackdropClick(e: Event): void {

@@ -23,6 +23,7 @@ import {
   getBoardDragData,
   setBoardDragData,
 } from "../../../../shared/utils/drag-drop-utils";
+import { AccountIdDialogComponent } from "../../../../shared/ui/account-id-dialog/account-id-dialog.component";
 
 /** Local board typing kept minimal to match existing code. */
 type BoardLike = { id?: number | null; name: string };
@@ -41,6 +42,7 @@ interface TempBoard {
     TranslocoModule,
     LanguageSwitcherComponent,
     ThemeSwitcherComponent,
+    AccountIdDialogComponent,
   ],
   templateUrl: "./board-sidebar.component.html",
   styleUrls: ["./board-sidebar.component.scss"],
@@ -82,6 +84,9 @@ export class BoardSidebarComponent {
 
   readonly dragOverBoardIndex = signal<number | null>(null);
   readonly dropEndOver = signal(false);
+
+  // Local Account ID dialog state (mobile only)
+  readonly showAccountDialog = signal(false);
 
   // Displayed list.
   readonly displayedBoards = computed<ReadonlyArray<BoardLike | TempBoard>>(
@@ -253,5 +258,11 @@ export class BoardSidebarComponent {
     });
 
     this.dragDropGlobal.endDrag();
+  }
+
+  /** Reload boards after switching ID from the sidebar dialog. */
+  onUidSwitchedFromSidebar(_uid: string): void {
+    this.showAccountDialog.set(false);
+    this.boardService.loadBoards();
   }
 }

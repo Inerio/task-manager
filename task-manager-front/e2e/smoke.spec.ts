@@ -84,8 +84,12 @@ test.describe("@smoke — basic (lang, theme, board, columns, task create/edit)"
     page,
   }) => {
     // --- OPEN HOME ---
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    // Wait for app shell to be visible instead of network idle (SSE keeps the network busy)
+    await page
+      .getByRole("button", { name: /^EN$|^FR$/ })
+      .first()
+      .waitFor({ state: "visible", timeout: 20_000 });
 
     // Verify the app sees our UID (check new key, then legacy as fallback)
     const uidInApp = await page.evaluate<

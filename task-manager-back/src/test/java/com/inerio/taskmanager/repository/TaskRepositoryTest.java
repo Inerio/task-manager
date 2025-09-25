@@ -37,64 +37,46 @@ class TaskRepositoryTest {
     @Autowired EntityManager em;
 
     @Test
-    @DisplayName("findByKanbanColumnOrderByPositionAsc returns tasks ordered within the column")
+    @DisplayName("findByKanbanColumnOrderByPositionAscIdAsc — orders by position within the column")
     void orderByPositionWithinColumn() {
-        // owner + board
-        UserAccount owner = new UserAccount();
-        owner.setUid("u-1");
-        owner = userAccountRepository.save(owner);
+        UserAccount owner = userAccount("u-1");
+        Board board = board(owner, "B1");
+        KanbanColumn colA = column(board, "A", 0);
+        KanbanColumn colB = column(board, "B", 1);
 
-        Board board = new Board("B1");
-        board.setOwner(owner);
-        board = boardRepository.save(board);
+        Task a0 = taskRepository.save(task("A-0", colA, 0));
+        Task a1 = taskRepository.save(task("A-1", colA, 1));
+        Task a2 = taskRepository.save(task("A-2", colA, 2));
 
-        // two columns: A (target) and B (noise)
-        KanbanColumn colA = new KanbanColumn("A", 0);
-        colA.setBoard(board);
-        KanbanColumn savedColA = kanbanColumnRepository.save(colA);
-
-        KanbanColumn colB = new KanbanColumn("B", 1);
-        colB.setBoard(board);
-        KanbanColumn savedColB = kanbanColumnRepository.save(colB);
-
-        // tasks in A (shuffled)
-        taskRepository.save(newTask("A-2", savedColA, 2));
-        taskRepository.save(newTask("A-0", savedColA, 0));
-        taskRepository.save(newTask("A-1", savedColA, 1));
-
-        // noise in B
-        taskRepository.save(newTask("B-0", savedColB, 0));
-        taskRepository.save(newTask("B-1", savedColB, 1));
+        taskRepository.save(task("B-0", colB, 0));
+        taskRepository.save(task("B-1", colB, 1));
 
         em.flush();
         em.clear();
 
-        // Act
-        List<Task> a = taskRepository.findByKanbanColumnOrderByPositionAsc(savedColA);
+        List<Task> a = taskRepository.findByKanbanColumnOrderByPositionAscIdAsc(colA);
 
-        // Assert
         assertThat(a).hasSize(3);
-        assertThat(a).extracting(Task::getTitle).containsExactly("A-0", "A-1", "A-2");
+        assertThat(a).allMatch(t -> t.getKanbanColumn().getId().equals(colA.getId()));
         assertThat(a).extracting(Task::getPosition).containsExactly(0, 1, 2);
-        assertThat(a).allMatch(t -> t.getKanbanColumn().getId().equals(savedColA.getId()));
+        assertThat(a).extracting(Task::getTitle).containsExactly("A-0", "A-1", "A-2");
+        assertThat(a.getFirst().getId()).isEqualTo(a0.getId());
+        assertThat(a.get(1).getId()).isEqualTo(a1.getId());
+        assertThat(a.get(2).getId()).isEqualTo(a2.getId());
     }
 
     @Test
     @DisplayName("existsByIdAndKanbanColumnBoardOwnerUid works as ownership guard")
     void ownershipGuard_works() {
-        // owner A + board/column/task
-        UserAccount ownerA = new UserAccount(); ownerA.setUid("owner-A");
-        ownerA = userAccountRepository.save(ownerA);
-        Board bA = new Board("BA"); bA.setOwner(ownerA); bA = boardRepository.save(bA);
-        KanbanColumn cA = new KanbanColumn("CA", 0); cA.setBoard(bA); KanbanColumn savedCA = kanbanColumnRepository.save(cA);
-        Task tA = taskRepository.save(newTask("T-A", savedCA, 0));
+        UserAccount ownerA = userAccount("owner-A");
+        Board bA = board(ownerA, "BA");
+        KanbanColumn cA = column(bA, "CA", 0);
+        Task tA = taskRepository.save(task("T-A", cA, 0));
 
-        // owner B + board/column/task
-        UserAccount ownerB = new UserAccount(); ownerB.setUid("owner-B");
-        ownerB = userAccountRepository.save(ownerB);
-        Board bB = new Board("BB"); bB.setOwner(ownerB); bB = boardRepository.save(bB);
-        KanbanColumn cB = new KanbanColumn("CB", 0); cB.setBoard(bB); KanbanColumn savedCB = kanbanColumnRepository.save(cB);
-        Task tB = taskRepository.save(newTask("T-B", savedCB, 0));
+        UserAccount ownerB = userAccount("owner-B");
+        Board bB = board(ownerB, "BB");
+        KanbanColumn cB = column(bB, "CB", 0);
+        Task tB = taskRepository.save(task("T-B", cB, 0));
 
         em.flush(); em.clear();
 
@@ -104,7 +86,66 @@ class TaskRepositoryTest {
         assertThat(taskRepository.existsByIdAndKanbanColumnBoardOwnerUid(tB.getId(), "owner-A")).isFalse();
     }
 
-    private static Task newTask(String title, KanbanColumn column, int pos) {
+    @Test
+    @DisplayName("findAllForOwnerOrdered returns only owner's tasks ordered by board -> column -> task -> id")
+    void findAllForOwnerOrdered_scopedAndOrdered() {
+        UserAccount ownerA = userAccount("oa");
+        UserAccount ownerB = userAccount("ob");
+
+        Board a1 = board(ownerA, "A1");
+        Board a2 = board(ownerA, "A2");
+
+        KanbanColumn a1c0 = column(a1, "A1-C0", 0);
+        KanbanColumn a1c1 = column(a1, "A1-C1", 1);
+        KanbanColumn a2c0 = column(a2, "A2-C0", 0);
+
+        Task a1c0_t0 = taskRepository.save(task("a1c0-t0", a1c0, 0));
+        Task a1c0_t1 = taskRepository.save(task("a1c0-t1", a1c0, 1));
+        Task a1c1_t0 = taskRepository.save(task("a1c1-t0", a1c1, 0));
+        Task a2c0_t0 = taskRepository.save(task("a2c0-t0", a2c0, 0));
+
+        Board b1 = board(ownerB, "B1");
+        KanbanColumn b1c0 = column(b1, "B1-C0", 0);
+        taskRepository.save(task("noise", b1c0, 0));
+
+        em.flush(); em.clear();
+
+        List<Task> out = taskRepository.findAllForOwnerOrdered("oa");
+
+        assertThat(out).extracting(t -> t.getKanbanColumn().getBoard().getOwner().getUid())
+                .containsOnly("oa");
+
+        assertThat(out).extracting(t -> t.getKanbanColumn().getBoard().getId())
+                .isSorted();
+
+        assertThat(out.stream().map(Task::getTitle).toList())
+                .containsExactly(
+                        a1c0_t0.getTitle(),
+                        a1c0_t1.getTitle(),
+                        a1c1_t0.getTitle(),
+                        a2c0_t0.getTitle()
+                );
+    }
+
+    private UserAccount userAccount(String uid) {
+        UserAccount u = new UserAccount();
+        u.setUid(uid);
+        return userAccountRepository.save(u);
+    }
+
+    private Board board(UserAccount owner, String name) {
+        Board b = new Board(name);
+        b.setOwner(owner);
+        return boardRepository.save(b);
+    }
+
+    private KanbanColumn column(Board board, String name, int pos) {
+        KanbanColumn c = new KanbanColumn(name, pos);
+        c.setBoard(board);
+        return kanbanColumnRepository.save(c);
+    }
+
+    private static Task task(String title, KanbanColumn column, int pos) {
         Task t = new Task();
         t.setTitle(title);
         t.setKanbanColumn(column);

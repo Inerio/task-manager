@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -128,13 +129,21 @@ class TaskServiceTest {
     @Test
     @DisplayName("moveTask: changes column and appends at destination end")
     void moveTask_nominal() {
+        KanbanColumn source = new KanbanColumn("S", 0);
+        setId(source, 5L);
+
         KanbanColumn target = new KanbanColumn("T", 0);
         setId(target, 7L);
 
-        Task t = task(42L, 3, new KanbanColumn());
+        Task t = task(42L, 3, source);
+
         when(taskRepository.findById(42L)).thenReturn(Optional.of(t));
         when(kanbanColumnRepository.findById(7L)).thenReturn(Optional.of(target));
         when(taskRepository.findByKanbanColumnOrderByPositionAsc(target)).thenReturn(List.of());
+        when(taskRepository.findByKanbanColumnAndPositionGreaterThanOrderByPositionAsc(any(), anyInt()))
+                .thenReturn(List.of());
+        // stub local
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.moveTask(42L, 7L, 1);
 
@@ -153,6 +162,7 @@ class TaskServiceTest {
         Task existing1 = task(101L, 1, col);
         when(taskRepository.findByKanbanColumnOrderByPositionAsc(col))
                 .thenReturn(List.of(existing0, existing1));
+        // stub local
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TaskDto dto = new TaskDto();
@@ -177,6 +187,7 @@ class TaskServiceTest {
         existing.setCompleted(false);
 
         when(taskRepository.findById(5L)).thenReturn(Optional.of(existing));
+        // stub local
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TaskDto dto = new TaskDto();
@@ -228,6 +239,7 @@ class TaskServiceTest {
     void uploadAttachment_ok() throws Exception {
         Task t = task(1L, 0, new KanbanColumn());
         when(taskRepository.findById(1L)).thenReturn(Optional.of(t));
+        // stub local
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         MockMultipartFile file = new MockMultipartFile("file", "hello.txt", "text/plain", "hi".getBytes());
@@ -282,6 +294,8 @@ class TaskServiceTest {
         Task t = task(7L, 0, new KanbanColumn());
         t.getAttachments().add("del.txt");
         when(taskRepository.findById(7L)).thenReturn(Optional.of(t));
+        // stub local
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Path dir = tmp.resolve("7");
         Files.createDirectories(dir);

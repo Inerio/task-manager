@@ -1,21 +1,15 @@
 package com.inerio.taskmanager.service;
 
-import com.inerio.taskmanager.config.AppProperties;
-import com.inerio.taskmanager.dto.TaskDto;
-import com.inerio.taskmanager.dto.TaskMapperDto;
-import com.inerio.taskmanager.dto.TaskReorderDto;
-import com.inerio.taskmanager.exception.TaskNotFoundException;
-import com.inerio.taskmanager.model.KanbanColumn;
-import com.inerio.taskmanager.model.Task;
-import com.inerio.taskmanager.repository.KanbanColumnRepository;
-import com.inerio.taskmanager.repository.TaskRepository;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -26,19 +20,34 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.inerio.taskmanager.config.AppProperties;
+import com.inerio.taskmanager.dto.TaskDto;
+import com.inerio.taskmanager.dto.TaskMapperDto;
+import com.inerio.taskmanager.dto.TaskReorderDto;
+import com.inerio.taskmanager.exception.TaskNotFoundException;
+import com.inerio.taskmanager.model.KanbanColumn;
+import com.inerio.taskmanager.model.Task;
+import com.inerio.taskmanager.realtime.EventType;
+import com.inerio.taskmanager.realtime.SseHub;
+import com.inerio.taskmanager.repository.KanbanColumnRepository;
+import com.inerio.taskmanager.repository.TaskRepository;
+
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
     private final KanbanColumnRepository kanbanColumnRepository;
     private final Path baseUploadDir;
+    private final SseHub sse;
 
     public TaskService(TaskRepository taskRepository,
                        KanbanColumnRepository kanbanColumnRepository,
-                       AppProperties appProperties) {
+                       AppProperties appProperties,
+                       SseHub sse) {
         this.taskRepository = taskRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
         this.baseUploadDir = Paths.get(appProperties.getUploadDir()).toAbsolutePath().normalize();
+        this.sse = sse;
     }
 
     // ==============================
@@ -71,7 +80,6 @@ public class TaskService {
 
     /**
      * Returns tasks for a column, ordered stably by (position ASC, id ASC).
-     * Requires repository method: findByKanbanColumnOrderByPositionAscIdAsc.
      */
     @Transactional(readOnly = true)
     public List<Task> getTasksByKanbanColumnId(Long kanbanColumnId) {
@@ -96,7 +104,13 @@ public class TaskService {
             maxPosition = current.get(current.size() - 1).getPosition() + 1;
         }
         task.setPosition(maxPosition);
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+
+        if (kanbanColumn.getBoard() != null && kanbanColumn.getBoard().getId() != null) {
+            sse.emitBoard(kanbanColumn.getBoard().getId(), EventType.TASKS_CHANGED);
+        }
+
+        return saved;
     }
 
     /**
@@ -120,6 +134,9 @@ public class TaskService {
                 && targetColumn != null
                 && !sourceColumn.getId().equals(targetColumn.getId());
 
+        Long srcBoardId = sourceColumn != null && sourceColumn.getBoard() != null ? sourceColumn.getBoard().getId() : null;
+        Long dstBoardId = targetColumn != null && targetColumn.getBoard() != null ? targetColumn.getBoard().getId() : null;
+
         if (columnChanged) {
             int oldPos = existing.getPosition();
 
@@ -138,11 +155,17 @@ public class TaskService {
             }
             taskRepository.saveAll(toShift);
         } else {
-            // Same column: do not touch position here; /reorder will handle it if needed
             existing.setKanbanColumn(targetColumn);
         }
 
-        return taskRepository.save(existing);
+        Task saved = taskRepository.save(existing);
+
+        if (srcBoardId != null) sse.emitBoard(srcBoardId, EventType.TASKS_CHANGED);
+        if (dstBoardId != null && !dstBoardId.equals(srcBoardId)) {
+            sse.emitBoard(dstBoardId, EventType.TASKS_CHANGED);
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -151,6 +174,7 @@ public class TaskService {
                 .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + id));
         KanbanColumn kanbanColumn = task.getKanbanColumn();
         int deletedPos = task.getPosition();
+        Long boardId = kanbanColumn != null && kanbanColumn.getBoard() != null ? kanbanColumn.getBoard().getId() : null;
 
         deleteAttachmentsFolder(id);
         taskRepository.deleteById(id);
@@ -160,23 +184,30 @@ public class TaskService {
             t.setPosition(t.getPosition() - 1);
         }
         taskRepository.saveAll(toShift);
+
+        if (boardId != null) sse.emitBoard(boardId, EventType.TASKS_CHANGED);
     }
 
     @Transactional
     public void deleteTasksByKanbanColumnId(Long kanbanColumnId) {
         KanbanColumn kanbanColumn = kanbanColumnRepository.findById(kanbanColumnId)
             .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + kanbanColumnId));
+        Long boardId = kanbanColumn.getBoard() != null ? kanbanColumn.getBoard().getId() : null;
+
         List<Task> tasks = taskRepository.findByKanbanColumn(kanbanColumn);
         for (Task task : tasks) {
             deleteAttachmentsFolder(task.getId());
         }
         taskRepository.deleteAll(tasks);
+
+        if (boardId != null) sse.emitBoard(boardId, EventType.TASKS_CHANGED);
     }
 
     @Transactional
     public void deleteTasksByBoardId(Long boardId) {
         kanbanColumnRepository.findByBoardId(boardId)
                 .forEach(column -> deleteTasksByKanbanColumnId(column.getId()));
+        sse.emitBoard(boardId, EventType.TASKS_CHANGED);
     }
 
     public void deleteAllTasks() {
@@ -200,10 +231,12 @@ public class TaskService {
             .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + targetKanbanColumnId));
 
         KanbanColumn source = task.getKanbanColumn();
+        Long srcBoardId = source != null && source.getBoard() != null ? source.getBoard().getId() : null;
+        Long dstBoardId = targetColumn.getBoard() != null ? targetColumn.getBoard().getId() : null;
+
         boolean columnChanged = source == null || !source.getId().equals(targetColumn.getId());
 
         if (!columnChanged) {
-            // Same column: leave as-is; /reorder will handle final positions
             return;
         }
 
@@ -225,6 +258,12 @@ public class TaskService {
                 t.setPosition(t.getPosition() - 1);
             }
             taskRepository.saveAll(toShift);
+        }
+
+        // Notify boards
+        if (srcBoardId != null) sse.emitBoard(srcBoardId, EventType.TASKS_CHANGED);
+        if (dstBoardId != null && !dstBoardId.equals(srcBoardId)) {
+            sse.emitBoard(dstBoardId, EventType.TASKS_CHANGED);
         }
     }
 
@@ -254,6 +293,9 @@ public class TaskService {
             KanbanColumn c = t.getKanbanColumn();
             if (c != null) colToEntity.putIfAbsent(c.getId(), c);
         }
+
+        // Track boards to notify at the end
+        Set<Long> boardsTouched = new HashSet<>();
 
         for (var entry : colToEntity.entrySet()) {
             KanbanColumn column = entry.getValue();
@@ -285,6 +327,16 @@ public class TaskService {
             for (int i = 0; i < ordered.size(); i++) ordered.get(i).setPosition(i);
             taskRepository.saveAll(ordered);
             taskRepository.flush();
+
+            // Mark board for notification
+            if (column.getBoard() != null && column.getBoard().getId() != null) {
+                boardsTouched.add(column.getBoard().getId());
+            }
+        }
+
+        // Notify affected boards once per board
+        for (Long bId : boardsTouched) {
+            sse.emitBoard(bId, EventType.TASKS_CHANGED);
         }
     }
 

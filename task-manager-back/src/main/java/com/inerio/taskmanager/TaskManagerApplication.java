@@ -5,13 +5,11 @@ import com.inerio.taskmanager.config.CorsProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Spring Boot entry point for the Task Manager application.
  * Enables scheduling and binds {@code app.*} properties.
  */
-@EnableScheduling
 @EnableConfigurationProperties({AppProperties.class, CorsProperties.class})
 @SpringBootApplication
 public class TaskManagerApplication {

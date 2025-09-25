@@ -1,13 +1,5 @@
 package com.inerio.taskmanager.service;
 
-import com.inerio.taskmanager.config.AppProperties;
-import com.inerio.taskmanager.dto.BoardReorderDto;
-import com.inerio.taskmanager.model.Board;
-import com.inerio.taskmanager.model.KanbanColumn;
-import com.inerio.taskmanager.model.UserAccount;
-import com.inerio.taskmanager.repository.BoardRepository;
-import com.inerio.taskmanager.repository.KanbanColumnRepository;
-import com.inerio.taskmanager.repository.TaskRepository;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,8 +10,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
+
+import com.inerio.taskmanager.config.AppProperties;
+import com.inerio.taskmanager.dto.BoardReorderDto;
+import com.inerio.taskmanager.model.Board;
+import com.inerio.taskmanager.model.KanbanColumn;
+import com.inerio.taskmanager.model.UserAccount;
+import com.inerio.taskmanager.realtime.EventType;
+import com.inerio.taskmanager.realtime.SseHub;
+import com.inerio.taskmanager.repository.BoardRepository;
+import com.inerio.taskmanager.repository.KanbanColumnRepository;
+import com.inerio.taskmanager.repository.TaskRepository;
 
 /**
  * Service for managing Kanban boards and related data, scoped by an anonymous user UID.
@@ -32,6 +36,7 @@ public class BoardService {
     private final TaskRepository taskRepository;
     private final UserAccountService userAccountService;
     private final Path baseUploadDir;
+    private final SseHub sse;
 
     /** Tracks which owners have had their legacy null positions initialized. */
     private final Set<String> ownersWithPositionsInitialized =
@@ -41,12 +46,14 @@ public class BoardService {
                         KanbanColumnRepository kanbanColumnRepository,
                         TaskRepository taskRepository,
                         UserAccountService userAccountService,
-                        AppProperties props) {
+                        AppProperties props,
+                        SseHub sse) {
         this.boardRepository = boardRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
         this.taskRepository = taskRepository;
         this.userAccountService = userAccountService;
         this.baseUploadDir = Path.of(props.getUploadDir()).toAbsolutePath().normalize();
+        this.sse = sse;
     }
 
     public List<Board> getAllBoards(String uid) {
@@ -64,14 +71,18 @@ public class BoardService {
         int next = (max == null) ? 0 : (max + 1);
         board.setPosition(next);
         board.setOwner(owner);
-        return boardRepository.save(board);
+        Board saved = boardRepository.save(board);
+        sse.emitBoards(uid, EventType.BOARDS_CREATED);
+        return saved;
     }
 
     public Board updateBoard(String uid, Long id, Board updated) {
         Board existing = boardRepository.findByIdAndOwnerUid(id, uid)
                 .orElseThrow(() -> new RuntimeException("Board not found with id " + id));
         existing.setName(updated.getName());
-        return boardRepository.save(existing);
+        Board saved = boardRepository.save(existing);
+        sse.emitBoards(uid, EventType.BOARDS_UPDATED);
+        return saved;
     }
 
     public void reorderBoards(String uid, List<BoardReorderDto> items) {
@@ -97,6 +108,9 @@ public class BoardService {
             if (b != null) b.setPosition(e.getValue());
         }
         boardRepository.saveAll(boards);
+
+        // Notify sidebar list (order changed)
+        sse.emitBoards(uid, EventType.BOARDS_UPDATED);
     }
 
     public void deleteBoard(String uid, Long id) {
@@ -110,6 +124,8 @@ public class BoardService {
 
         boardRepository.delete(board);
         taskIds.forEach(this::deleteTaskFolderQuiet);
+
+        sse.emitBoards(uid, EventType.BOARDS_DELETED);
     }
 
     public boolean ownsBoard(String uid, Long boardId) {

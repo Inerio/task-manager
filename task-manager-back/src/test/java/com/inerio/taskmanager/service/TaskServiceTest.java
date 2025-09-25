@@ -1,25 +1,14 @@
 package com.inerio.taskmanager.service;
 
-import com.inerio.taskmanager.config.AppProperties;
-import com.inerio.taskmanager.dto.TaskDto;
-import com.inerio.taskmanager.dto.TaskReorderDto;
-import com.inerio.taskmanager.exception.TaskNotFoundException;
-import com.inerio.taskmanager.model.KanbanColumn;
-import com.inerio.taskmanager.model.Task;
-import com.inerio.taskmanager.repository.KanbanColumnRepository;
-import com.inerio.taskmanager.repository.TaskRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockMultipartFile;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -28,14 +17,34 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
+
+import com.inerio.taskmanager.config.AppProperties;
+import com.inerio.taskmanager.dto.TaskDto;
+import com.inerio.taskmanager.dto.TaskReorderDto;
+import com.inerio.taskmanager.model.KanbanColumn;
+import com.inerio.taskmanager.model.Task;
+import com.inerio.taskmanager.realtime.SseHub;
+import com.inerio.taskmanager.repository.KanbanColumnRepository;
+import com.inerio.taskmanager.repository.TaskRepository;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
 
     @Mock TaskRepository taskRepository;
     @Mock KanbanColumnRepository kanbanColumnRepository;
+    @Mock SseHub sse;
 
     @TempDir Path tmp;
 
@@ -47,10 +56,9 @@ class TaskServiceTest {
     void setUp() {
         AppProperties props = new AppProperties();
         props.setUploadDir(tmp.toString());
-        service = new TaskService(taskRepository, kanbanColumnRepository, props);
+        service = new TaskService(taskRepository, kanbanColumnRepository, props, sse);
     }
 
-    // -------- helpers --------
     private static void setId(Object entity, Long id) {
         try {
             Field f = entity.getClass().getDeclaredField("id");
@@ -60,6 +68,7 @@ class TaskServiceTest {
             throw new RuntimeException(e);
         }
     }
+
     private static Task task(Long id, int pos, KanbanColumn col) {
         Task t = new Task();
         t.setTitle("t-" + id);
@@ -69,16 +78,18 @@ class TaskServiceTest {
         return t;
     }
 
-    // -------- reorder / move --------
-    @Test @DisplayName("reorderTasks: updates positions then saveAll once")
+    @Test
+    @DisplayName("reorderTasks: bump+flush then write final order")
     void reorderTasks_nominal() {
-        Task t1 = task(1L, 0, new KanbanColumn());
-        Task t2 = task(2L, 1, new KanbanColumn());
-        Task t3 = task(3L, 2, new KanbanColumn());
+        KanbanColumn col = new KanbanColumn();
+        setId(col, 100L);
+        Task t1 = task(1L, 0, col);
+        Task t2 = task(2L, 1, col);
+        Task t3 = task(3L, 2, col);
 
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(t1));
-        when(taskRepository.findById(2L)).thenReturn(Optional.of(t2));
-        when(taskRepository.findById(3L)).thenReturn(Optional.of(t3));
+        when(taskRepository.findAllById(any())).thenReturn(List.of(t1, t2, t3));
+        when(taskRepository.findByKanbanColumnOrderByPositionAscIdAsc(col))
+                .thenReturn(List.of(t1, t2, t3));
 
         service.reorderTasks(List.of(
                 new TaskReorderDto(1L, 2),
@@ -86,32 +97,36 @@ class TaskServiceTest {
                 new TaskReorderDto(3L, 1)
         ));
 
-        verify(taskRepository).saveAll(listCaptor.capture());
-        verifyNoMoreInteractions(taskRepository);
-
         assertThat(t1.getPosition()).isEqualTo(2);
         assertThat(t2.getPosition()).isEqualTo(0);
         assertThat(t3.getPosition()).isEqualTo(1);
-        assertThat(listCaptor.getValue()).containsExactlyInAnyOrder(t1, t2, t3);
+
+        verify(taskRepository, times(2)).saveAll(anyList());
+        verify(taskRepository, times(2)).flush();
     }
 
-    @Test @DisplayName("reorderTasks: throws TaskNotFoundException and saves nothing if an id is missing")
-    void reorderTasks_missing_isAtomic() {
-        Task ok = task(1L, 0, new KanbanColumn());
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(ok));
-        when(taskRepository.findById(999L)).thenReturn(Optional.empty());
+    @Test
+    @DisplayName("reorderTasks: ignores unknown IDs (no exception)")
+    void reorderTasks_ignoresUnknownIds() {
+        KanbanColumn col = new KanbanColumn();
+        setId(col, 200L);
+        Task t1 = task(1L, 0, col);
 
-        assertThatThrownBy(() ->
-                service.reorderTasks(List.of(
-                        new TaskReorderDto(1L, 5),
-                        new TaskReorderDto(999L, 0)
-                ))
-        ).isInstanceOf(TaskNotFoundException.class);
+        when(taskRepository.findAllById(any())).thenReturn(List.of(t1));
+        when(taskRepository.findByKanbanColumnOrderByPositionAscIdAsc(col))
+                .thenReturn(List.of(t1));
 
-        verify(taskRepository, never()).saveAll(anyList());
+        assertThatCode(() -> service.reorderTasks(List.of(
+                new TaskReorderDto(1L, 5),
+                new TaskReorderDto(999L, 0)
+        ))).doesNotThrowAnyException();
+
+        verify(taskRepository, times(2)).saveAll(anyList());
+        verify(taskRepository, times(2)).flush();
     }
 
-    @Test @DisplayName("moveTask: changes column and position then saves")
+    @Test
+    @DisplayName("moveTask: changes column and appends at destination end")
     void moveTask_nominal() {
         KanbanColumn target = new KanbanColumn("T", 0);
         setId(target, 7L);
@@ -119,16 +134,17 @@ class TaskServiceTest {
         Task t = task(42L, 3, new KanbanColumn());
         when(taskRepository.findById(42L)).thenReturn(Optional.of(t));
         when(kanbanColumnRepository.findById(7L)).thenReturn(Optional.of(target));
+        when(taskRepository.findByKanbanColumnOrderByPositionAsc(target)).thenReturn(List.of());
 
         service.moveTask(42L, 7L, 1);
 
         assertThat(t.getKanbanColumn()).isEqualTo(target);
-        assertThat(t.getPosition()).isEqualTo(1);
+        assertThat(t.getPosition()).isEqualTo(0);
         verify(taskRepository).save(t);
     }
 
-    // -------- create / update --------
-    @Test @DisplayName("createTaskFromDto: appends at end of column (position = last + 1)")
+    @Test
+    @DisplayName("createTaskFromDto: appends at end of column (last + 1)")
     void createTaskFromDto_appends() {
         KanbanColumn col = new KanbanColumn("A", 0);
         setId(col, 10L);
@@ -149,7 +165,8 @@ class TaskServiceTest {
         verify(taskRepository).save(saved);
     }
 
-    @Test @DisplayName("updateTaskFromDto: updates fields and saves")
+    @Test
+    @DisplayName("updateTaskFromDto: updates fields and saves")
     void updateTaskFromDto_updates() {
         KanbanColumn col = new KanbanColumn("A", 0);
         setId(col, 10L);
@@ -176,8 +193,8 @@ class TaskServiceTest {
         verify(taskRepository).save(existing);
     }
 
-    // -------- delete + compaction --------
-    @Test @DisplayName("deleteTask: removes the task and compacts positions > deletedPos")
+    @Test
+    @DisplayName("deleteTask: deletes and compacts positions > deletedPos")
     void deleteTask_compacts() {
         KanbanColumn col = new KanbanColumn("A", 0);
         setId(col, 1L);
@@ -197,8 +214,8 @@ class TaskServiceTest {
         assertThat(t2.getPosition()).isEqualTo(1);
     }
 
-    // -------- column fetch --------
-    @Test @DisplayName("getTasksByKanbanColumnId: throws RuntimeException when column missing")
+    @Test
+    @DisplayName("getTasksByKanbanColumnId: throws when column is missing")
     void getTasksByKanbanColumnId_missing() {
         when(kanbanColumnRepository.findById(404L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.getTasksByKanbanColumnId(404L))
@@ -206,8 +223,8 @@ class TaskServiceTest {
                 .hasMessageContaining("KanbanColumn not found");
     }
 
-    // -------- attachments --------
-    @Test @DisplayName("uploadAttachment: stores file on disk, updates attachments and saves task")
+    @Test
+    @DisplayName("uploadAttachment: writes to disk and updates DB")
     void uploadAttachment_ok() throws Exception {
         Task t = task(1L, 0, new KanbanColumn());
         when(taskRepository.findById(1L)).thenReturn(Optional.of(t));
@@ -223,7 +240,8 @@ class TaskServiceTest {
         verify(taskRepository).save(t);
     }
 
-    @Test @DisplayName("uploadAttachment: rejects path traversal / invalid names")
+    @Test
+    @DisplayName("uploadAttachment: rejects invalid/traversal names")
     void uploadAttachment_traversal() {
         MockMultipartFile file = new MockMultipartFile("file", "../..", "text/plain", "x".getBytes());
 
@@ -233,7 +251,8 @@ class TaskServiceTest {
         verifyNoInteractions(taskRepository);
     }
 
-    @Test @DisplayName("downloadAttachment: 200 with proper headers when file exists")
+    @Test
+    @DisplayName("downloadAttachment: 200 with proper headers when file exists")
     void downloadAttachment_ok() throws Exception {
         Path dir = tmp.resolve("5");
         Files.createDirectories(dir);
@@ -248,7 +267,8 @@ class TaskServiceTest {
         assertThat(body.exists()).isTrue();
     }
 
-    @Test @DisplayName("downloadAttachment: 404 when missing; 400 on invalid name")
+    @Test
+    @DisplayName("downloadAttachment: 404 if missing; 400 if invalid name")
     void downloadAttachment_404_and_400() {
         assertThat(service.downloadAttachment(6L, "missing.txt").getStatusCode().value())
                 .isEqualTo(404);
@@ -256,7 +276,8 @@ class TaskServiceTest {
                 .isEqualTo(400);
     }
 
-    @Test @DisplayName("deleteAttachment: removes file and updates attachments")
+    @Test
+    @DisplayName("deleteAttachment: deletes file and updates attachments")
     void deleteAttachment_ok() throws Exception {
         Task t = task(7L, 0, new KanbanColumn());
         t.getAttachments().add("del.txt");

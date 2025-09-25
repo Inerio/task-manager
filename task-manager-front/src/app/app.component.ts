@@ -19,6 +19,7 @@ import { BoardService } from "./features/board/data/board.service";
 import { AccountIdDialogComponent } from "./shared/ui/account-id-dialog/account-id-dialog.component";
 import { TaskService } from "./features/task/data/task.service";
 import { AlertService } from "./core/services/alert.service";
+import { RealtimeService } from "./core/services/realtime/realtime.service";
 
 @Component({
   selector: "app-root",
@@ -47,6 +48,7 @@ export class AppComponent implements OnDestroy {
   private readonly taskService = inject(TaskService);
   private readonly alert = inject(AlertService);
   private readonly i18n = inject(TranslocoService);
+  private readonly realtime = inject(RealtimeService);
 
   // Boards list (signal from service)
   readonly boards = this.boardService.boards;
@@ -76,6 +78,9 @@ export class AppComponent implements OnDestroy {
 
   constructor() {
     this.boardService.loadBoards();
+
+    // Start global SSE as early as possible
+    this.realtime.connectGlobal();
 
     this._onMqChange = this._onMqChange.bind(this);
     this._mql.addEventListener("change", this._onMqChange);
@@ -121,10 +126,16 @@ export class AppComponent implements OnDestroy {
         this.sidebarOpen.set(!hasBoards || selected === null);
       }
     });
+
+    // Switch board-scoped SSE whenever selection changes
+    effect(() => {
+      this.realtime.switchBoard(this.selectedBoardId());
+    });
   }
 
   ngOnDestroy(): void {
     this._mql.removeEventListener("change", this._onMqChange);
+    this.realtime.destroy();
   }
 
   private _onMqChange(e: MediaQueryListEvent): void {
@@ -165,5 +176,10 @@ export class AppComponent implements OnDestroy {
     this.boardService.loadBoards();
     this.taskService.loadTasks({ force: true });
     this.alert.show("success", this.i18n.translate("identity.switched"));
+
+    // Reconnect global SSE with the new UID, and reset board stream
+    this.realtime.destroy();
+    this.realtime.connectGlobal();
+    this.realtime.switchBoard(this.selectedBoardId());
   }
 }

@@ -13,10 +13,6 @@ import { BoardColumnsComponent } from "../board-columns/board-columns.component"
 import { KanbanColumnService } from "../../data/kanban-column.service";
 import { TaskService } from "../../../task/data/task.service";
 
-/**
- * Board container: loads data + shows scoped overlay.
- * All UI (grid, DnD, inline edit) is delegated to BoardColumnsComponent.
- */
 @Component({
   selector: "app-board",
   standalone: true,
@@ -34,13 +30,11 @@ export class BoardComponent implements OnChanges {
   private readonly taskService = inject(TaskService);
 
   constructor() {
-    // Load columns + tasks when boardId changes.
     effect(() => {
       const id = this._boardId();
       if (id != null) {
         this.kanbanColumnService.loadKanbanColumns(id);
-        // Service guards repeated loads internally.
-        this.taskService.loadTasks();
+        this.taskService.loadTasks({ force: true });
       }
     });
   }

@@ -60,7 +60,6 @@
     autocomplete="off"
   />
 
-  <!-- Hide attachments zone ONLY on Brave (both create & edit use this form) -->
   @if (!isBrave()) {
   <app-attachment-zone
     [attachments]="localTask().attachments ?? []"
@@ -84,6 +83,8 @@
       type="button"
       data-testid="save-task"
       (click)="handleSave()"
+      [disabled]="submitting() || form.invalid"
+      [attr.aria-disabled]="submitting() || form.invalid ? 'true' : 'false'"
     >
       {{
         editMode ? ("common.save" | transloco) : ("common.create" | transloco)

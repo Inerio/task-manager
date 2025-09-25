@@ -1,21 +1,23 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  effect,
   inject,
   input,
   output,
   signal,
-  effect,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import {
-  ReactiveFormsModule,
   NonNullableFormBuilder,
+  ReactiveFormsModule,
   Validators,
 } from "@angular/forms";
 import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
-import { AccountIdService } from "../../../core/services/account-id.service";
-import { uuidToShort } from "../../../utils/uid-codec";
+import {
+  AccountIdService,
+  NamedIdEntry,
+} from "../../../core/services/account-id.service";
 
 @Component({
   selector: "app-account-id-dialog",
@@ -40,71 +42,93 @@ export class AccountIdDialogComponent {
   private readonly account = inject(AccountIdService);
 
   // State
-  readonly currentUid = signal<string>(this.account.getUid());
-  readonly currentShort = signal<string>(this.account.getShortCode());
+  readonly currentCode = signal<string>(this.account.getShortCode());
   readonly copied = signal<boolean>(false);
+  readonly copiedChip = signal<string | null>(null);
   readonly applying = signal<boolean>(false);
-  readonly errorMsg = signal<string>("");
-  readonly history = signal<string[]>(this.account.getUidHistory());
+  readonly codeError = signal<string>("");
+  readonly nameError = signal<string>("");
+  readonly namedHistory = signal<NamedIdEntry[]>(
+    this.account.getNamedHistory()
+  );
 
   // Form
   readonly uidCtrl = this.fb.control<string>("", {
     validators: [Validators.required],
   });
+  readonly nameCtrl = this.fb.control<string>("", {
+    validators: [Validators.required, Validators.maxLength(80)],
+  });
 
-  // Reset when opened.
+  // Reset when opened
   private _onOpen = effect(() => {
     if (this.open()) {
-      this.currentUid.set(this.account.getUid());
-      this.currentShort.set(this.account.getShortCode());
-      this.history.set(this.account.getUidHistory());
+      this.currentCode.set(this.account.getShortCode());
+      this.namedHistory.set(this.account.getNamedHistory());
       this.uidCtrl.setValue("", { emitEvent: false });
-      this.errorMsg.set("");
+      this.nameCtrl.setValue("", { emitEvent: false });
+      this.codeError.set("");
+      this.nameError.set("");
       this.copied.set(false);
+      this.copiedChip.set(null);
     }
   });
 
   // Actions
-  async copyLong(): Promise<void> {
-    const ok = await this.account.copyToClipboard(this.currentUid());
-    this.copied.set(ok);
-    setTimeout(() => this.copied.set(false), 1200);
-  }
-
-  async copyShort(): Promise<void> {
-    const ok = await this.account.copyToClipboard(this.currentShort());
+  async copyCode(): Promise<void> {
+    const ok = await this.account.copyToClipboard(this.currentCode());
     this.copied.set(ok);
     setTimeout(() => this.copied.set(false), 1200);
   }
 
   apply(): void {
-    const raw = this.uidCtrl.value.trim();
+    const raw = (this.uidCtrl.value ?? "").trim();
+    const name = (this.nameCtrl.value ?? "").trim();
+
+    // Basic validation feedback
     if (!this.account.isValid(raw)) {
-      this.errorMsg.set(this.i18n.translate("identity.invalid"));
+      this.codeError.set(this.i18n.translate("identity.invalidCode"));
       return;
     }
-    this.errorMsg.set("");
+    if (!name) {
+      this.nameError.set(this.i18n.translate("identity.nameRequired"));
+      return;
+    }
+
+    this.codeError.set("");
+    this.nameError.set("");
     this.applying.set(true);
     try {
-      this.account.setUid(raw);
-      const canonical = this.account.getUid();
-      this.currentUid.set(canonical);
-      this.currentShort.set(this.account.getShortCode());
-      this.history.set(this.account.getUidHistory());
-      this.switched.emit(canonical);
+      // Persist named entry (normalizes to UUID internally)
+      const { uid } = this.account.saveNamedEntry(name, raw);
+
+      // Switch active ID to this uid
+      this.account.setUid(uid);
+
+      // Refresh UI state
+      this.currentCode.set(this.account.getShortCode());
+      this.namedHistory.set(this.account.getNamedHistory());
+      this.switched.emit(uid);
     } finally {
       this.applying.set(false);
     }
   }
 
-  /** Fill input with a value from history. */
-  fillFromHistory(uuid: string): void {
-    // For readability we paste the short code; the service accepts both.
-    try {
-      this.uidCtrl.setValue(uuidToShort(uuid));
-    } catch {
-      this.uidCtrl.setValue(uuid);
-    }
+  /** Prefills form from a named history entry, copies it and shows a hint. */
+  async fillFromHistory(e: NamedIdEntry): Promise<void> {
+    this.nameCtrl.setValue(e.label);
+    this.uidCtrl.setValue(e.code);
+    this.codeError.set("");
+    this.nameError.set("");
+
+    // Copy the short code to clipboard for quick reuse.
+    const ok = await this.account.copyToClipboard(e.code);
+    this.copied.set(ok);
+
+    this.copiedChip.set(e.uid);
+    setTimeout(() => this.copiedChip.set(null), 1200);
+
+    setTimeout(() => this.copied.set(false), 1200);
   }
 
   onBackdropClick(e: Event): void {

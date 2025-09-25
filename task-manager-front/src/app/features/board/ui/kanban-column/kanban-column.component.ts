@@ -35,7 +35,7 @@ import { EnsureVisibleDirective } from "../../../task/directives/ensure-visible.
     TranslocoModule,
     TaskComponent,
     TaskFormComponent,
-    EnsureVisibleDirective, // ⬅️ added
+    EnsureVisibleDirective,
   ],
   templateUrl: "./kanban-column.component.html",
   styleUrls: ["./kanban-column.component.scss"],

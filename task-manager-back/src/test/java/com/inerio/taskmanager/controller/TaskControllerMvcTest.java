@@ -31,10 +31,6 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Controller slice: fast check of HTTP contract for POST /api/v1/tasks.
- * Services are provided as Mockito beans via @TestConfiguration (replacement for @MockBean).
- */
 @WebMvcTest(controllers = TaskController.class)
 @Import(TaskControllerMvcTest.MockConfig.class)
 class TaskControllerMvcTest {
@@ -50,7 +46,6 @@ class TaskControllerMvcTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper om;
 
-    // Inject the beans so we can stub/verify them
     @Autowired TaskService taskService;
     @Autowired KanbanColumnService kanbanColumnService;
     @Autowired UserAccountService userAccountService;
@@ -58,7 +53,6 @@ class TaskControllerMvcTest {
 
     @AfterEach
     void resetMocks() {
-        // Keep context; just reset interactions/state between tests
         reset(taskService, kanbanColumnService, userAccountService, boardService);
     }
 
@@ -68,20 +62,17 @@ class TaskControllerMvcTest {
     @Test
     @DisplayName("POST /api/v1/tasks -> 201 Created + JSON body (happy path)")
     void createTask_created201_withBody() throws Exception {
-        // Given request
-        var req = new TaskDto();
+        TaskDto req = new TaskDto();
         req.setTitle("Hello world");
         req.setKanbanColumnId(10L);
 
-        var col = new KanbanColumn();
+        KanbanColumn col = new KanbanColumn();
         col.setId(10L);
 
-        // Controller flow: ownsColumn -> getKanbanColumnById -> createTaskFromDto
         given(taskService.ownsColumn(UID, 10L)).willReturn(true);
         given(kanbanColumnService.getKanbanColumnById(10L)).willReturn(Optional.of(col));
 
-        // Service returns entity; controller maps to DTO and returns 201
-        var saved = new Task();
+        Task saved = new Task();
         saved.setTitle("Hello world");
         saved.setKanbanColumn(col);
         saved.setPosition(0);
@@ -91,7 +82,6 @@ class TaskControllerMvcTest {
 
         given(taskService.createTaskFromDto(any(TaskDto.class), eq(col))).willReturn(saved);
 
-        // When / Then
         mvc.perform(post(BASE)
                 .header("X-Client-Id", UID)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -104,7 +94,6 @@ class TaskControllerMvcTest {
            .andExpect(jsonPath("$.kanbanColumnId", is(10)))
            .andExpect(jsonPath("$.position", is(0)));
 
-        // Verify exact interactions (including ownsColumn)
         verify(userAccountService).touch(UID);
         verify(taskService).ownsColumn(UID, 10L);
         ArgumentCaptor<TaskDto> dtoCap = ArgumentCaptor.forClass(TaskDto.class);
@@ -117,7 +106,7 @@ class TaskControllerMvcTest {
     @Test
     @DisplayName("POST /api/v1/tasks -> 404 when column is not owned by UID")
     void createTask_404_whenNotOwner() throws Exception {
-        var reqJson = """
+        String reqJson = """
           { "title": "X", "kanbanColumnId": 42 }
         """;
 
@@ -129,7 +118,6 @@ class TaskControllerMvcTest {
                 .content(reqJson))
            .andExpect(status().isNotFound());
 
-        // Verify we checked ownership and early-returned
         verify(userAccountService).touch(UID);
         verify(taskService).ownsColumn(UID, 42L);
         verify(taskService, never()).createTaskFromDto(any(), any());
@@ -140,7 +128,7 @@ class TaskControllerMvcTest {
     @Test
     @DisplayName("POST /api/v1/tasks -> 400 when target column does not exist")
     void createTask_400_whenColumnMissing() throws Exception {
-        var reqJson = """
+        String reqJson = """
           { "title": "X", "kanbanColumnId": 77 }
         """;
 
@@ -153,7 +141,6 @@ class TaskControllerMvcTest {
                 .content(reqJson))
            .andExpect(status().isBadRequest());
 
-        // Verify we checked ownership then tried to load the column, but never created
         verify(userAccountService).touch(UID);
         verify(taskService).ownsColumn(UID, 77L);
         verify(kanbanColumnService).getKanbanColumnById(77L);

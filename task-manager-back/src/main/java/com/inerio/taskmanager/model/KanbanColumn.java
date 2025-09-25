@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,12 +37,13 @@ public class KanbanColumn {
 
     /** Tasks contained in this column. */
     @OneToMany(
-        mappedBy = "kanbanColumn",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true,
-        fetch = FetchType.LAZY
-    )
-    private List<Task> tasks = new ArrayList<>();
+    	    mappedBy = "kanbanColumn",
+    	    cascade = CascadeType.ALL,
+    	    orphanRemoval = true,
+    	    fetch = FetchType.LAZY
+    	)
+    	@OrderBy("position ASC, id ASC")
+    	private List<Task> tasks = new ArrayList<>();
 
     /** Parent board (required). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

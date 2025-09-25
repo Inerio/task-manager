@@ -93,16 +93,31 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     boolean existsByIdAndKanbanColumnBoardOwnerUid(Long id, String uid);
 
     /**
+     * Returns all tasks for the given column ordered by position ascending, then by id ascending.
+     * <p>
+     * The secondary key (id) guarantees a deterministic order when multiple rows
+     * temporarily share the same {@code position} value (e.g., during migrations,
+     * optimistic UI updates, or partial writes). This is useful for stable UI rendering
+     * and for server-side reorder operations that need a consistent, tie-broken order.
+     * </p>
+     *
+     * @param kanbanColumn the column whose tasks should be fetched (required)
+     * @return the list of tasks ordered by {@code position ASC}, then {@code id ASC}
+     */
+    List<Task> findByKanbanColumnOrderByPositionAscIdAsc(KanbanColumn kanbanColumn);
+    
+    /**
      * Returns all tasks that belong to boards owned by the given UID.
      * Results are ordered to be stable for UI rendering: by board -> column -> task position.
      */
     @Query("""
-           SELECT t
-           FROM Task t
-           WHERE t.kanbanColumn.board.owner.uid = :uid
-           ORDER BY t.kanbanColumn.board.id ASC,
-                    t.kanbanColumn.position ASC,
-                    t.position ASC
-           """)
+    	       SELECT t
+    	       FROM Task t
+    	       WHERE t.kanbanColumn.board.owner.uid = :uid
+    	       ORDER BY t.kanbanColumn.board.id ASC,
+    	                t.kanbanColumn.position ASC,
+    	                t.position ASC,
+    	                t.id ASC
+    	       """)
     List<Task> findAllForOwnerOrdered(@Param("uid") String uid);
 }

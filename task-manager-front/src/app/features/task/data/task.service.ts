@@ -171,9 +171,10 @@ export class TaskService {
 
   // === Reorder ===
   async reorderTasks(tasks: ReadonlyArray<Task>): Promise<void> {
+    const prev = this.tasksSignal();
     const updatedIds = new Set(tasks.map((t) => t.id));
     const nextState = [
-      ...this.tasksSignal().filter((t) => !updatedIds.has(t.id)),
+      ...prev.filter((t) => !updatedIds.has(t.id)),
       ...tasks,
     ].sort((a, b) =>
       a.kanbanColumnId !== b.kanbanColumnId
@@ -190,6 +191,7 @@ export class TaskService {
     try {
       await firstValueFrom(this.http.put<void>(`${this.apiUrl}/reorder`, dto));
     } catch (err) {
+      this.tasksSignal.set(prev);
       this.alert.show("error", this.i18n.translate("errors.reorderingTasks"));
       throw err;
     }
@@ -248,17 +250,15 @@ export class TaskService {
       .map((t) => ({ id: t.id, position: t.position ?? 0 }));
 
     try {
-      await Promise.all([
-        firstValueFrom(
-          this.http.put<Task>(`${this.apiUrl}/${taskId}`, {
-            ...dragged,
-            kanbanColumnId: toColumnId,
-          } as Task)
-        ),
-        firstValueFrom(
-          this.http.put<void>(`${this.apiUrl}/reorder`, reorderDto)
-        ),
-      ]);
+      await firstValueFrom(
+        this.http.put<Task>(`${this.apiUrl}/${taskId}`, {
+          ...dragged,
+          kanbanColumnId: toColumnId,
+        } as Task)
+      );
+      await firstValueFrom(
+        this.http.put<void>(`${this.apiUrl}/reorder`, reorderDto)
+      );
     } catch (err) {
       this.tasksSignal.set(snapshot);
       this.alert.show(

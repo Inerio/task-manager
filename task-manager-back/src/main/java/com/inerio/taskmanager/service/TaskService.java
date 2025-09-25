@@ -13,7 +13,6 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -27,18 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-/**
- * Service layer for {@link Task} domain logic and persistence.
- * <p>
- * Responsibilities:
- * <ul>
- *   <li>CRUD operations and position management (drag-and-drop ordering)</li>
- *   <li>Ownership checks by anonymous owner UID</li>
- *   <li>Attachment handling (upload/download/delete + local filesystem)</li>
- * </ul>
- * <p>
- * Note: HTTP header {@code X-Client-Id} is enforced globally and not duplicated here.
- */
 @Service
 public class TaskService {
 
@@ -46,13 +33,6 @@ public class TaskService {
     private final KanbanColumnRepository kanbanColumnRepository;
     private final Path baseUploadDir;
 
-    /**
-     * Constructs the service with required repositories and application properties.
-     *
-     * @param taskRepository          repository for tasks
-     * @param kanbanColumnRepository  repository for kanban columns
-     * @param appProperties           application properties (upload directory)
-     */
     public TaskService(TaskRepository taskRepository,
                        KanbanColumnRepository kanbanColumnRepository,
                        AppProperties appProperties) {
@@ -65,25 +45,11 @@ public class TaskService {
     //   OWNERSHIP HELPERS
     // ==============================
 
-    /**
-     * Checks whether the given owner UID owns the specified column.
-     *
-     * @param uid       owner UID
-     * @param columnId  column identifier
-     * @return {@code true} if owned by the given UID, {@code false} otherwise
-     */
     @Transactional(readOnly = true)
     public boolean ownsColumn(String uid, Long columnId) {
         return kanbanColumnRepository.existsByIdAndBoardOwnerUid(columnId, uid);
     }
 
-    /**
-     * Checks whether the given owner UID owns the specified task.
-     *
-     * @param uid     owner UID
-     * @param taskId  task identifier
-     * @return {@code true} if owned by the given UID, {@code false} otherwise
-     */
     @Transactional(readOnly = true)
     public boolean ownsTask(String uid, Long taskId) {
         return taskRepository.existsByIdAndKanbanColumnBoardOwnerUid(taskId, uid);
@@ -93,40 +59,25 @@ public class TaskService {
     //   TASK READ OPERATIONS
     // ==============================
 
-    /**
-     * Returns all tasks for the given owner UID in a stable UI-friendly order.
-     *
-     * @param uid owner UID
-     * @return ordered list of tasks
-     */
     @Transactional(readOnly = true)
     public List<Task> getAllTasksForOwner(String uid) {
         return taskRepository.findAllForOwnerOrdered(uid);
     }
 
-    /**
-     * Finds a task by its identifier.
-     *
-     * @param id task identifier
-     * @return optional containing the task if found
-     */
     @Transactional(readOnly = true)
     public Optional<Task> getTaskById(Long id) {
         return taskRepository.findById(id);
     }
 
     /**
-     * Returns the tasks of a given column ordered by their position.
-     *
-     * @param kanbanColumnId column identifier
-     * @return ordered list of tasks for the column
-     * @throws RuntimeException if the column is not found
+     * Returns tasks for a column, ordered stably by (position ASC, id ASC).
+     * Requires repository method: findByKanbanColumnOrderByPositionAscIdAsc.
      */
     @Transactional(readOnly = true)
     public List<Task> getTasksByKanbanColumnId(Long kanbanColumnId) {
         KanbanColumn kanbanColumn = kanbanColumnRepository.findById(kanbanColumnId)
             .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + kanbanColumnId));
-        return taskRepository.findByKanbanColumnOrderByPositionAsc(kanbanColumn);
+        return taskRepository.findByKanbanColumnOrderByPositionAscIdAsc(kanbanColumn);
     }
 
     // ==============================
@@ -134,11 +85,7 @@ public class TaskService {
     // ==============================
 
     /**
-     * Creates a new task from a DTO at the end of the target column.
-     *
-     * @param dto           request DTO
-     * @param kanbanColumn  target column
-     * @return persisted task
+     * Creates a task appended at the end of the target column.
      */
     @Transactional
     public Task createTaskFromDto(TaskDto dto, KanbanColumn kanbanColumn) {
@@ -153,32 +100,51 @@ public class TaskService {
     }
 
     /**
-     * Updates an existing task from a DTO and column.
-     *
-     * @param id            task identifier
-     * @param dto           request DTO
-     * @param kanbanColumn  target column
-     * @return persisted task
-     * @throws TaskNotFoundException if the task is not found
+     * If the column changes, place the task temporarily at the end of the destination
+     * column (free position) and compact the source column. A subsequent /reorder will
+     * assign the final dense order.
      */
     @Transactional
-    public Task updateTaskFromDto(Long id, TaskDto dto, KanbanColumn kanbanColumn) {
+    public Task updateTaskFromDto(Long id, TaskDto dto, KanbanColumn targetColumn) {
         Task existing = taskRepository.findById(id)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + id));
+
+        // Business fields
         existing.setTitle(dto.getTitle());
         existing.setDescription(dto.getDescription());
         existing.setCompleted(dto.isCompleted());
         existing.setDueDate(dto.getDueDate());
-        existing.setKanbanColumn(kanbanColumn);
+
+        KanbanColumn sourceColumn = existing.getKanbanColumn();
+        boolean columnChanged = sourceColumn != null
+                && targetColumn != null
+                && !sourceColumn.getId().equals(targetColumn.getId());
+
+        if (columnChanged) {
+            int oldPos = existing.getPosition();
+
+            // Append into destination column at a free position
+            List<Task> dest = taskRepository.findByKanbanColumnOrderByPositionAsc(targetColumn);
+            int appendPos = dest.isEmpty() ? 0 : dest.get(dest.size() - 1).getPosition() + 1;
+
+            existing.setKanbanColumn(targetColumn);
+            existing.setPosition(appendPos);
+
+            // Compact source column (shift down all positions > oldPos)
+            List<Task> toShift = taskRepository
+                .findByKanbanColumnAndPositionGreaterThanOrderByPositionAsc(sourceColumn, oldPos);
+            for (Task t : toShift) {
+                t.setPosition(t.getPosition() - 1);
+            }
+            taskRepository.saveAll(toShift);
+        } else {
+            // Same column: do not touch position here; /reorder will handle it if needed
+            existing.setKanbanColumn(targetColumn);
+        }
+
         return taskRepository.save(existing);
     }
 
-    /**
-     * Deletes a task, removes its attachment folder, and compacts positions in the column.
-     *
-     * @param id task identifier
-     * @throws TaskNotFoundException if the task is not found
-     */
     @Transactional
     public void deleteTask(Long id) {
         Task task = taskRepository.findById(id)
@@ -196,12 +162,6 @@ public class TaskService {
         taskRepository.saveAll(toShift);
     }
 
-    /**
-     * Deletes all tasks from a given column and removes their attachment folders.
-     *
-     * @param kanbanColumnId column identifier
-     * @throws RuntimeException if the column is not found
-     */
     @Transactional
     public void deleteTasksByKanbanColumnId(Long kanbanColumnId) {
         KanbanColumn kanbanColumn = kanbanColumnRepository.findById(kanbanColumnId)
@@ -213,21 +173,12 @@ public class TaskService {
         taskRepository.deleteAll(tasks);
     }
 
-    /**
-     * Deletes all tasks across all columns of a board.
-     *
-     * @param boardId board identifier
-     */
     @Transactional
     public void deleteTasksByBoardId(Long boardId) {
         kanbanColumnRepository.findByBoardId(boardId)
                 .forEach(column -> deleteTasksByKanbanColumnId(column.getId()));
     }
 
-    /**
-     * Deletes every task in the system and their attachments.
-     * Intended for maintenance/admin operations.
-     */
     public void deleteAllTasks() {
         taskRepository.findAll().forEach(t -> deleteAttachmentsFolder(t.getId()));
         taskRepository.deleteAll();
@@ -238,60 +189,109 @@ public class TaskService {
     // ==============================
 
     /**
-     * Moves a task to a target column and sets its tentative position.
-     * <p>
-     * Note: On the frontend flow, a subsequent explicit reorder may fine-tune positions.
-     *
-     * @param taskId               task identifier
-     * @param targetKanbanColumnId target column identifier
-     * @param targetPosition       target position within the column
-     * @throws TaskNotFoundException if the task is not found
-     * @throws RuntimeException      if the target column is not found
+     * Ignore the requested position, append to the destination column, and compact the source.
+     * The client will call /reorder to assign the final order.
      */
     @Transactional
-    public void moveTask(Long taskId, Long targetKanbanColumnId, int targetPosition) {
+    public void moveTask(Long taskId, Long targetKanbanColumnId, int _targetPositionIgnored) {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
         KanbanColumn targetColumn = kanbanColumnRepository.findById(targetKanbanColumnId)
             .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + targetKanbanColumnId));
 
+        KanbanColumn source = task.getKanbanColumn();
+        boolean columnChanged = source == null || !source.getId().equals(targetColumn.getId());
+
+        if (!columnChanged) {
+            // Same column: leave as-is; /reorder will handle final positions
+            return;
+        }
+
+        int oldPos = task.getPosition();
+
+        // Append into destination column at a free position
+        List<Task> dest = taskRepository.findByKanbanColumnOrderByPositionAsc(targetColumn);
+        int appendPos = dest.isEmpty() ? 0 : dest.get(dest.size() - 1).getPosition() + 1;
+
         task.setKanbanColumn(targetColumn);
-        task.setPosition(targetPosition);
+        task.setPosition(appendPos);
         taskRepository.save(task);
+
+        // Compact source column
+        if (source != null) {
+            List<Task> toShift = taskRepository
+                .findByKanbanColumnAndPositionGreaterThanOrderByPositionAsc(source, oldPos);
+            for (Task t : toShift) {
+                t.setPosition(t.getPosition() - 1);
+            }
+            taskRepository.saveAll(toShift);
+        }
     }
 
     /**
-     * Persists a batch of task position changes (within their current columns).
-     *
-     * @param reorderedTasks list of (taskId, position)
-     * @throws TaskNotFoundException if any referenced task is not found
+     * Two-phase reorder per affected column to respect the unique constraint (kanban_column_id, position).
+     * Phase 1: bump all tasks in the column to a high temporary range to free final positions.
+     * Phase 2: assign final dense positions 0..n-1 based on client intent, with id as tie-breaker.
      */
     @Transactional
     public void reorderTasks(List<TaskReorderDto> reorderedTasks) {
-        List<Task> tasksToUpdate = new ArrayList<>();
+        if (reorderedTasks == null || reorderedTasks.isEmpty()) return;
+
+        final int BUMP = 100_000;
+
+        // Client-provided target positions
+        var targetPos = new java.util.HashMap<Long, Integer>(reorderedTasks.size());
         for (TaskReorderDto dto : reorderedTasks) {
-            Task task = taskRepository.findById(dto.getId())
-                .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + dto.getId()));
-            task.setPosition(dto.getPosition());
-            tasksToUpdate.add(task);
+            targetPos.put(dto.getId(), dto.getPosition());
         }
-        taskRepository.saveAll(tasksToUpdate);
+
+        // Identify affected columns from the touched tasks
+        List<Task> touched = taskRepository.findAllById(targetPos.keySet());
+        if (touched.isEmpty()) return;
+
+        var colToEntity = new java.util.HashMap<Long, KanbanColumn>();
+        for (Task t : touched) {
+            KanbanColumn c = t.getKanbanColumn();
+            if (c != null) colToEntity.putIfAbsent(c.getId(), c);
+        }
+
+        for (var entry : colToEntity.entrySet()) {
+            KanbanColumn column = entry.getValue();
+
+            // Load the full set of tasks for this column (not only the touched ones)
+            List<Task> allInColumn = taskRepository.findByKanbanColumnOrderByPositionAscIdAsc(column);
+            if (allInColumn.isEmpty()) continue;
+
+            // Current positions snapshot for fallback
+            var curPos = new java.util.HashMap<Long, Integer>(allInColumn.size());
+            for (Task t : allInColumn) curPos.put(t.getId(), t.getPosition());
+
+            // Compute final order based on client target positions (fallback to current),
+            // with id as stable tie-breaker
+            java.util.List<Task> ordered = new java.util.ArrayList<>(allInColumn);
+            ordered.sort((a, b) -> {
+                int pa = targetPos.getOrDefault(a.getId(), curPos.get(a.getId()));
+                int pb = targetPos.getOrDefault(b.getId(), curPos.get(b.getId()));
+                int c = Integer.compare(pa, pb);
+                return (c != 0) ? c : Long.compare(a.getId(), b.getId());
+            });
+
+            // Phase 1: bump positions to free the final range
+            for (Task t : allInColumn) t.setPosition(t.getPosition() + BUMP);
+            taskRepository.saveAll(allInColumn);
+            taskRepository.flush(); // ensure uniqueness at this step
+
+            // Phase 2: assign final dense positions
+            for (int i = 0; i < ordered.size(); i++) ordered.get(i).setPosition(i);
+            taskRepository.saveAll(ordered);
+            taskRepository.flush();
+        }
     }
 
     // ==============================
     //   ATTACHMENT MANAGEMENT
     // ==============================
 
-    /**
-     * Uploads a file to the task's attachment directory with basic sanitization and uniqueness checks.
-     * The filename is sanitized and path traversal is prevented.
-     *
-     * @param taskId task identifier
-     * @param file   multipart file
-     * @return updated task including the new attachment name
-     * @throws Exception if IO or validation fails (signature preserved)
-     * @throws TaskNotFoundException if the task is not found
-     */
     public Task uploadAttachment(Long taskId, MultipartFile file) throws Exception {
         Path uploadPath = baseUploadDir.resolve(taskId.toString()).normalize();
         Files.createDirectories(uploadPath);
@@ -327,13 +327,6 @@ public class TaskService {
         }
     }
 
-    /**
-     * Streams a task attachment as a downloadable resource with proper headers.
-     *
-     * @param taskId   task identifier
-     * @param filename client-provided filename
-     * @return HTTP 200 with resource if found; 404 if missing; 400 on invalid input
-     */
     public ResponseEntity<Resource> downloadAttachment(Long taskId, String filename) {
         try {
             String safeName = sanitizeFilename(filename);
@@ -353,15 +346,6 @@ public class TaskService {
         }
     }
 
-    /**
-     * Deletes an attachment from the filesystem and removes it from the task.
-     * Best-effort cleanup: directory is removed if it becomes empty.
-     *
-     * @param taskId   task identifier
-     * @param filename client-provided filename
-     * @return updated task after removal
-     * @throws TaskNotFoundException if the task is not found
-     */
     public Task deleteAttachment(Long taskId, String filename) {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
@@ -376,37 +360,21 @@ public class TaskService {
                 if (!s.iterator().hasNext()) Files.deleteIfExists(dirPath);
             }
         } catch (Exception ignored) {
-            // best-effort cleanup
         }
         return task;
     }
-    
-    /**
-     * Deletes all attachments (files + DB list) for the given task.
-     * Best-effort on disk removal; DB list is cleared atomically.
-     *
-     * @param taskId task identifier
-     * @return updated task after cleanup
-     * @throws TaskNotFoundException if the task is not found
-     */
+
     @Transactional
     public Task deleteAllAttachments(Long taskId) {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
 
-        // Wipe on-disk folder even if DB list is out-of-sync
         deleteAttachmentsFolder(taskId);
 
-        // Clear ElementCollection and persist
         task.getAttachments().clear();
         return taskRepository.save(task);
     }
 
-    /**
-     * Recursively deletes the attachment directory for a task if it exists.
-     *
-     * @param taskId task identifier
-     */
     private void deleteAttachmentsFolder(Long taskId) {
         Path taskUploadDir = baseUploadDir.resolve(taskId.toString()).normalize();
         try (var walk = Files.walk(taskUploadDir)) {
@@ -414,27 +382,11 @@ public class TaskService {
                 .forEach(path -> {
                     try {
                         Files.deleteIfExists(path);
-                    } catch (Exception ignored) {
-                        // ignore best-effort deletions
-                    }
+                    } catch (Exception ignored) { }
                 });
-        } catch (Exception ignored) {
-            // ignore if folder does not exist or cannot be walked
-        }
+        } catch (Exception ignored) { }
     }
 
-    /**
-     * Basic filename sanitizer:
-     * <ul>
-     *   <li>Removes any path component, keeps the basename only</li>
-     *   <li>Replaces unsafe characters and control chars with underscores</li>
-     *   <li>Trims to a maximum length</li>
-     * </ul>
-     *
-     * @param name client-provided filename
-     * @return sanitized file name safe for local storage
-     * @throws IllegalArgumentException for empty or invalid names
-     */
     private static String sanitizeFilename(String name) {
         String base = Paths.get(name).getFileName().toString();
         base = base.replaceAll("[\\r\\n\\t]", "_");

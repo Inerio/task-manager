@@ -11,6 +11,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,6 +23,11 @@ import java.util.List;
  * Belongs to a {@link KanbanColumn}, supports ordering within the column,
  * timestamps, and optional file attachments.
  */
+
+@Table(
+	    name = "task",
+	    uniqueConstraints = @UniqueConstraint(columnNames = {"kanbanColumn_id", "position"})
+	)
 @Entity
 public class Task {
 

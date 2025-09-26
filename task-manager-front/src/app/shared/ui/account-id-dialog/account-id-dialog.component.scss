@@ -7,15 +7,26 @@
   place-items: center;
   background: color-mix(in oklab, #000 35%, transparent);
   z-index: var(--z-overlay, 99999);
-  padding: 0 1rem;
 
+  /* Safe areas + small horizontal gutters */
+  padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom);
+  overscroll-behavior: contain;
+
+  /* Keep visual centering when sidebar is visible */
   @include bp.up(bp.$bp-md) {
-    padding-left: var(--sidebar-w, 230px);
+    padding-left: calc(var(--sidebar-w, 230px) + 1rem);
   }
 }
 
 .dialog {
+  /* Header | body scroll | footer */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+
   width: min(640px, calc(100vw - 2rem));
+  /* Cap to viewport height on iOS/Android */
+  max-height: min(100svh, 100dvh);
+
   background: var(--surface-1);
   color: var(--text-1);
   border: 1px solid var(--border-2);
@@ -72,6 +83,11 @@
 }
 
 .dialog-body {
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+
   padding: 1rem;
 
   .note {
@@ -176,6 +192,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+    min-width: 0;
   }
 
   .chip-wrap {

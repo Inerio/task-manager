@@ -60,18 +60,27 @@ export class AccountIdDialogComponent {
     validators: [Validators.required, Validators.maxLength(80)],
   });
 
-  // Reset when opened
+  // Seed current ID into history as "Tasukeru" if missing
   private _onOpen = effect(() => {
-    if (this.open()) {
-      this.currentCode.set(this.account.getShortCode());
-      this.namedHistory.set(this.account.getNamedHistory());
-      this.uidCtrl.setValue("", { emitEvent: false });
-      this.nameCtrl.setValue("", { emitEvent: false });
-      this.codeError.set("");
-      this.nameError.set("");
-      this.copied.set(false);
-      this.copiedChip.set(null);
+    if (!this.open()) return;
+
+    const currentShort = this.account.getShortCode();
+    const hist = this.account.getNamedHistory();
+
+    // Avoid duplicates (compare by short code)
+    if (!hist.some((e) => e.code === currentShort)) {
+      this.account.saveNamedEntry("Tasukeru", currentShort);
     }
+
+    // Refresh UI state
+    this.currentCode.set(currentShort);
+    this.namedHistory.set(this.account.getNamedHistory());
+    this.uidCtrl.setValue("", { emitEvent: false });
+    this.nameCtrl.setValue("", { emitEvent: false });
+    this.codeError.set("");
+    this.nameError.set("");
+    this.copied.set(false);
+    this.copiedChip.set(null);
   });
 
   // Actions

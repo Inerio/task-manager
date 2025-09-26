@@ -231,6 +231,30 @@
     }
   }
 
+  /* Red "X" button (aligned with attachments' remove-btn) */
+  .chip-remove {
+    border: none;
+    background: none;
+    color: color-mix(in oklab, var(--danger) 85%, #000);
+    cursor: pointer;
+    font-size: 1.02em;
+    margin-left: 0.13em;
+    line-height: 1;
+    border-radius: 4px;
+    padding: 0 2px;
+    transition: background 0.14s, color 0.14s;
+    flex: 0 0 auto;
+
+    &:hover {
+      background: color-mix(in oklab, var(--danger) 10%, var(--surface-1));
+      color: var(--danger);
+    }
+    &:focus-visible {
+      outline: 2px solid color-mix(in oklab, var(--danger) 55%, transparent);
+      outline-offset: 2px;
+    }
+  }
+
   .copied-hint {
     font-size: 0.8rem;
     color: var(--brand);

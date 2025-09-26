@@ -154,7 +154,9 @@
     "switched": "Code applied. Reloaded your data.",
     "recentLabel": "Recent codes",
     "noRecent": "No history yet",
-    "useThis": "Use"
+    "useThis": "Use",
+    "recentDeleteTitle": "Remove recent code",
+    "recentDeleteMessage": "Remove “{{name}}” ({{code}}) from recent codes? This won’t change your active Account ID."
   },
   "errors": {
     "loadingTasks": "Error loading tasks.",

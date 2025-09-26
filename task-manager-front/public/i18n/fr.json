@@ -154,7 +154,9 @@
     "switched": "Code appliqué. Données rechargées.",
     "recentLabel": "Codes récents",
     "noRecent": "Aucun historique",
-    "useThis": "Utiliser"
+    "useThis": "Utiliser",
+    "recentDeleteTitle": "Supprimer le code récent",
+    "recentDeleteMessage": "Supprimer « {{name}} » ({{code}}) de l’historique ? Cela ne change pas votre identifiant actif."
   },
   "errors": {
     "loadingTasks": "Erreur lors du chargement des tâches.",

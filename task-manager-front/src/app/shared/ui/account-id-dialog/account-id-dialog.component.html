@@ -95,6 +95,17 @@
               <span class="chip-code">{{ e.code }}</span>
             </button>
 
+            <!-- Red remove button (like attachments), does not trigger selection -->
+            <button
+              type="button"
+              class="chip-remove"
+              (click)="onDeleteRecent(e, $event)"
+              [attr.aria-label]="'common.delete' | transloco"
+              [title]="'common.delete' | transloco"
+            >
+              &times;
+            </button>
+
             @if (copiedChip() === e.uid) {
             <span class="copied-hint">{{ "identity.copied" | transloco }}</span>
             }

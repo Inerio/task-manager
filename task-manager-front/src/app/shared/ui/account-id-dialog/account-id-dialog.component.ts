@@ -18,6 +18,7 @@ import {
   AccountIdService,
   NamedIdEntry,
 } from "../../../core/services/account-id.service";
+import { ConfirmDialogService } from "../../../core/services/dialog/confirm-dialog.service";
 
 @Component({
   selector: "app-account-id-dialog",
@@ -40,6 +41,7 @@ export class AccountIdDialogComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly account = inject(AccountIdService);
+  private readonly confirm = inject(ConfirmDialogService);
 
   // State
   readonly currentCode = signal<string>(this.account.getShortCode());
@@ -138,6 +140,27 @@ export class AccountIdDialogComponent {
     setTimeout(() => this.copiedChip.set(null), 1200);
 
     setTimeout(() => this.copied.set(false), 1200);
+  }
+
+  /** Delete a recent named code after user confirmation. */
+  async onDeleteRecent(e: NamedIdEntry, ev: Event): Promise<void> {
+    ev.stopPropagation();
+    ev.preventDefault();
+
+    const title = this.i18n.translate("identity.recentDeleteTitle");
+    const message = this.i18n.translate("identity.recentDeleteMessage", {
+      name: e.label,
+      code: e.code,
+    });
+
+    const ok = await this.confirm.open(title, message, {
+      confirmText: this.i18n.translate("common.delete"),
+      cancelText: this.i18n.translate("common.cancel"),
+    });
+    if (!ok) return;
+
+    this.account.deleteNamedEntry(e.uid);
+    this.namedHistory.set(this.account.getNamedHistory());
   }
 
   onBackdropClick(e: Event): void {

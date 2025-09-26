@@ -109,6 +109,19 @@ export class AccountIdService {
     return { uid, code };
   }
 
+  /** Remove a named entry from history (by uid or short code). */
+  deleteNamedEntry(uidOrCode: string): void {
+    try {
+      const { uid } = this.normalize(uidOrCode);
+      const list = this.getNamedHistory();
+      const next = list.filter((e) => e.uid !== uid);
+      localStorage.setItem(this.historyKeyV2, JSON.stringify(next));
+    } catch {
+      // If normalization failed (shouldn't happen when called with e.uid),
+      // do nothing to avoid accidental data loss.
+    }
+  }
+
   /** Copy text to clipboard with a small fallback. */
   async copyToClipboard(text: string): Promise<boolean> {
     try {

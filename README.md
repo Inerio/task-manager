@@ -2,11 +2,15 @@
 
 Task management application built with **Angular** (frontend) and **Spring Boot** (backend), with **PostgreSQL** persistence.
 
+**Live:** https://app.tasukeru.org
+
 ---
 
-## Features
+## English
 
-### Backend (Spring Boot)
+### Features
+
+#### Backend (Spring Boot)
 
 - RESTful API for boards and tasks (CRUD)
 - Create, edit, delete lists (Kanban columns)
@@ -16,10 +20,10 @@ Task management application built with **Angular** (frontend) and **Spring Boot*
 - PostgreSQL integration via JPA/Hibernate
 - Docker configuration (`docker-compose.yml`)
 
-### Frontend (Angular)
+#### Frontend (Angular)
 
 - Responsive Kanban interface (drag & drop)
-- Add, edit, delete board, columns and tasks
+- Add, edit, delete boards, columns and tasks
 - Drag & drop columns and tasks between columns (with smart constraints)
 - Attachment management (upload, download, delete)
 - Confirmation dialogs & notifications
@@ -31,9 +35,7 @@ Task management application built with **Angular** (frontend) and **Spring Boot*
 - CORS support (`http://localhost:4200`)
 - Board limit: up to **12** boards
 
----
-
-## Tech Stack
+### Tech Stack
 
 | Technology  | Role              |
 | ----------- | ----------------- |
@@ -44,18 +46,16 @@ Task management application built with **Angular** (frontend) and **Spring Boot*
 | PostgreSQL  | Database          |
 | Docker      | DB container      |
 
----
+### Getting Started
 
-## Getting Started
-
-### Prerequisites
+#### Prerequisites
 
 - Java 21
 - Node.js + npm
 - Angular CLI
 - Docker (for the database)
 
-### Steps
+#### Steps
 
 ```bash
 # 1. Start PostgreSQL via Docker
@@ -74,6 +74,8 @@ ng serve
 # Tasukeru
 
 Application de gestion de tâches développée en **Angular** (frontend) et **Spring Boot** (backend), avec persistance **PostgreSQL**.
+
+**En ligne : https://app.tasukeru.org**
 
 ---
 
@@ -102,7 +104,7 @@ Application de gestion de tâches développée en **Angular** (frontend) et **Sp
 - Sélecteur d’émojis avec i18n (EN/FR) et recherche localisée
 - Configuration du tableau à partir d’un modèle lors de la création
 - Prise en charge du CORS (`http://localhost:4200`)
-- Limite de tableaux : jusqu’à **12** tableaux
+- Limite : jusqu’à **12** tableaux
 
 ---
 

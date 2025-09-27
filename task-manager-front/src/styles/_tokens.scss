@@ -69,4 +69,7 @@
   --clamp-bg: color-mix(in oklab, var(--brand) 7%, var(--surface-2));
   --clamp-ring-hover: color-mix(in oklab, var(--brand) 36%, var(--surface-2));
   --clamp-bg-hover: color-mix(in oklab, var(--brand) 10%, var(--surface-2));
+
+  /* High-contrast ring color for important icon buttons */
+  --ring-contrast: #000;
 }

@@ -133,14 +133,29 @@
     min-width: 40px;
     min-height: 40px;
     border-radius: 50%;
-    border: none;
+    border: 1px solid
+      color-mix(in oklab, var(--ring-contrast) 35%, var(--border-2));
     background: var(--surface-1);
-    box-shadow: 0 2px 12px #0001;
+    box-shadow: 0 0 0 2px var(--ring-contrast), var(--shadow-2);
     cursor: pointer;
     padding: 0;
+    transition: background 0.16s, box-shadow 0.18s, transform 0.06s;
 
     &:hover {
       background: color-mix(in oklab, var(--surface-1) 92%, #000);
+      box-shadow: 0 0 0 2px var(--ring-contrast),
+        0 0 0 6px color-mix(in oklab, var(--ring-contrast) 22%, transparent),
+        var(--shadow-2);
+    }
+
+    &:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    &:focus-visible {
+      outline: 2px solid
+        color-mix(in oklab, var(--ring-contrast) 70%, transparent);
+      outline-offset: 3px;
     }
 
     @include bp.md-down {

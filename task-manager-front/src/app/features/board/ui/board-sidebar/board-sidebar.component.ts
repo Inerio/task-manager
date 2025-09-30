@@ -87,6 +87,8 @@ export class BoardSidebarComponent {
 
   // Local Account ID dialog state (mobile only)
   readonly showAccountDialog = signal(false);
+  // Neutralise sidebar transform/transition before opening dialog
+  readonly dialogLayerActive = signal(false);
 
   // Displayed list.
   readonly displayedBoards = computed<ReadonlyArray<BoardLike | TempBoard>>(
@@ -119,7 +121,7 @@ export class BoardSidebarComponent {
   addBoard(): void {
     if (this.boards().length >= this.BOARD_LIMIT) return;
     if (this.editingBoardId() !== null) return;
-    this.editingBoardId.set(-1); // sentinel for "new"
+    this.editingBoardId.set(-1);
     this.editingBoardValue.set("");
     requestAnimationFrame(() => this.newBoardInput?.nativeElement.focus());
   }
@@ -260,9 +262,27 @@ export class BoardSidebarComponent {
     this.dragDropGlobal.endDrag();
   }
 
+  // ===== Account ID dialog handling =====
+  openAccountDialog(): void {
+    if (!this.isMdDown()) {
+      this.showAccountDialog.set(true);
+      return;
+    }
+    this.dialogLayerActive.set(true);
+    requestAnimationFrame(() => {
+      this.showAccountDialog.set(true);
+    });
+  }
+
+  onCloseDialog(): void {
+    this.showAccountDialog.set(false);
+    // Let the dialog close visually, then restore sidebar transitions
+    requestAnimationFrame(() => this.dialogLayerActive.set(false));
+  }
+
   /** Reload boards after switching ID from the sidebar dialog. */
   onUidSwitchedFromSidebar(_uid: string): void {
-    this.showAccountDialog.set(false);
+    this.onCloseDialog();
     this.boardService.loadBoards();
   }
 }

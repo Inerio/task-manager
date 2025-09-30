@@ -3,6 +3,7 @@
   class="sidebar"
   [class.open]="isMdDown() && open()"
   [class.fullscreen]="isMdDown() && forceFullscreen()"
+  [class.dialog-open]="dialogLayerActive()"
   [attr.aria-hidden]="isMdDown() ? (!open()).toString() : 'false'"
 >
   <!-- Switchers row -->
@@ -14,7 +15,7 @@
     <button
       type="button"
       class="sidebar-uid-btn"
-      (click)="showAccountDialog.set(true)"
+      (click)="openAccountDialog()"
       [attr.aria-label]="'identity.openTooltip' | transloco"
       title="{{ 'identity.openTooltip' | transloco }}"
     >
@@ -105,7 +106,7 @@
   <!-- Local dialog instance for mobile access inside sidebar -->
   <app-account-id-dialog
     [open]="showAccountDialog()"
-    (close)="showAccountDialog.set(false)"
+    (close)="onCloseDialog()"
     (switched)="onUidSwitchedFromSidebar($event)"
   ></app-account-id-dialog>
 </aside>

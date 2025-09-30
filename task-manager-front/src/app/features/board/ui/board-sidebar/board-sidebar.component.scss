@@ -40,6 +40,11 @@
       transform: translateX(0);
       box-shadow: none;
     }
+    &.dialog-open {
+      transform: none !important;
+      transition: none !important;
+      box-shadow: none;
+    }
   }
 
   .sidebar-header {

@@ -178,7 +178,7 @@ public class TaskController {
     @PostMapping("/{id}/attachments")
     public ResponseEntity<?> uploadAttachment(@RequestHeader("X-Client-Id") String uid,
                                               @PathVariable Long id,
-                                              @RequestParam("file") MultipartFile file) {
+                                              @RequestParam MultipartFile file) {
         userAccountService.touch(uid);
         if (!taskService.ownsTask(uid, id)) return ResponseEntity.notFound().build();
         try {

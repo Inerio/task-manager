@@ -114,5 +114,8 @@
     "@schematics/angular:module": { "typeSeparator": "." },
     "@schematics/angular:pipe": { "typeSeparator": "." },
     "@schematics/angular:resolver": { "typeSeparator": "." }
+  },
+  "cli": {
+    "analytics": "3d14d451-213d-48cd-92ba-f5388db1249e"
   }
 }

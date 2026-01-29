@@ -148,7 +148,7 @@ public class BoardService {
             all.sort(Comparator.comparing(Board::getName, Comparator.nullsLast(String::compareToIgnoreCase)));
             int idx = 0;
             for (Board b : all) b.setPosition(idx++);
-            boardRepository.saveAll(all);
+            boardRepository.saveAllAndFlush(all);
             ownersWithPositionsInitialized.add(uid);
         }
     }

@@ -1,4 +1,4 @@
-name: Backend CI & Deploy
+name: Backend CI & Deploy (OVH)
 
 on:
   push:
@@ -13,8 +13,11 @@ on:
       - "task-manager-back/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: backend-deploy
+  group: backend-ci
   cancel-in-progress: false
 
 jobs:
@@ -31,21 +34,73 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Install Maven
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y maven
-          mvn -v
-
-      - name: mvn -DskipTests package
+      - name: Make mvnw executable (Linux)
         working-directory: task-manager-back
-        run: mvn -B -DskipTests package
+        run: |
+          sed -i 's/\r$//' mvnw
+          chmod +x mvnw
+
+      - name: Build (skip tests)
+        working-directory: task-manager-back
+        run: ./mvnw -B -ntp -DskipTests package
 
   deploy:
-    if: github.ref == 'refs/heads/main'
-    name: Deploy backend on self-hosted runner
-    runs-on: [self-hosted, Linux, ARM64]
+    name: Deploy backend on OVH (SSH)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     needs: ci
+
+    concurrency:
+      group: ovh-prod-deploy
+      cancel-in-progress: false
+
     steps:
-      - name: Run server-side deploy script
-        run: /usr/local/bin/deploy_backend.sh
+      - name: Deploy (git pull + docker compose up)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OVH_HOST }}
+          username: ${{ secrets.OVH_USER }}
+          key: ${{ secrets.OVH_SSH_KEY }}
+          port: ${{ secrets.OVH_SSH_PORT }}
+          script: |
+            set -euo pipefail
+
+            REPO_DIR="/srv/tasukeru/src/taskmanager"
+
+            # Compose: on tente d'abord un répertoire "compose", sinon le repo
+            if [ -f "/srv/tasukeru/compose/docker-compose.prod.yml" ]; then
+              COMPOSE_DIR="/srv/tasukeru/compose"
+              COMPOSE_FILE="docker-compose.prod.yml"
+            elif [ -f "$REPO_DIR/docker-compose.prod.yml" ]; then
+              COMPOSE_DIR="$REPO_DIR"
+              COMPOSE_FILE="docker-compose.prod.yml"
+            else
+              echo "::error::docker-compose.prod.yml introuvable (ni /srv/tasukeru/compose, ni dans $REPO_DIR)"
+              exit 1
+            fi
+
+            echo "[backend] REPO_DIR=$REPO_DIR"
+            echo "[backend] COMPOSE_DIR=$COMPOSE_DIR"
+            echo "[backend] COMPOSE_FILE=$COMPOSE_FILE"
+
+            test -d "$REPO_DIR" || { echo "::error::REPO_DIR not found: $REPO_DIR"; exit 1; }
+            test -f "$COMPOSE_DIR/$COMPOSE_FILE" || { echo "::error::Compose file not found: $COMPOSE_DIR/$COMPOSE_FILE"; exit 1; }
+
+            command -v docker >/dev/null 2>&1 || { echo "::error::docker not installed on server"; exit 1; }
+            docker compose version >/dev/null 2>&1 || { echo "::error::docker compose not available on server"; exit 1; }
+
+            cd "$REPO_DIR"
+            git fetch --prune origin
+            git checkout -B main origin/main
+            git pull --ff-only origin main
+
+            cd "$COMPOSE_DIR"
+            docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans api
+            docker compose -f "$COMPOSE_FILE" ps
+
+            # Healthcheck (curl doit exister)
+            if command -v curl >/dev/null 2>&1; then
+              curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null
+            fi
+
+            echo "Backend OK"

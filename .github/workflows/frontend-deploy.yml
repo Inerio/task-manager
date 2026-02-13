@@ -1,4 +1,4 @@
-name: Frontend CI & Deploy
+name: Frontend CI & Deploy (OVH)
 
 on:
   push:
@@ -12,8 +12,11 @@ on:
       - "task-manager-front/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: frontend-deploy
+  group: frontend-ci
   cancel-in-progress: false
 
 jobs:
@@ -22,22 +25,85 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: task-manager-front/package-lock.json
+
       - name: npm ci + build
         working-directory: task-manager-front
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm ci
           npm run build -- --configuration production
 
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: task-manager-front/dist/task-manager-front/browser
+          retention-days: 3
+
   deploy:
-    if: github.ref == 'refs/heads/main'
-    name: Deploy frontend on self-hosted runner
-    runs-on: [self-hosted, Linux, ARM64]
+    name: Deploy frontend on OVH (rsync)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     needs: ci
+
+    # Empêche backend+frontend deploy de tourner en même temps
+    concurrency:
+      group: ovh-prod-deploy
+      cancel-in-progress: false
+
     steps:
-      - name: Run server-side deploy script
-        run: /usr/local/bin/deploy_frontend.sh
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: browser
+
+      - name: Ensure rsync is installed on runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rsync
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "${{ secrets.OVH_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.OVH_SSH_PORT }}" "${{ secrets.OVH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Rsync dist to OVH web root
+        env:
+          WEB_ROOT: ${{ secrets.OVH_WEB_ROOT }}
+        run: |
+          test -n "$WEB_ROOT"
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.OVH_SSH_PORT }}" \
+            ./browser/ \
+            "${{ secrets.OVH_USER }}@${{ secrets.OVH_HOST }}:${WEB_ROOT}/"
+
+      - name: Fix perms + reload nginx
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          OVH_WEB_ROOT: ${{ secrets.OVH_WEB_ROOT }}
+        with:
+          host: ${{ secrets.OVH_HOST }}
+          username: ${{ secrets.OVH_USER }}
+          key: ${{ secrets.OVH_SSH_KEY }}
+          port: ${{ secrets.OVH_SSH_PORT }}
+          envs: OVH_WEB_ROOT
+          script: |
+            set -euo pipefail
+
+            WEB_ROOT="${OVH_WEB_ROOT:-/var/www/tasukeru/browser}"
+
+            test -d "$WEB_ROOT" || { echo "::error::WEB_ROOT not found: $WEB_ROOT"; exit 1; }
+            test -f "$WEB_ROOT/index.html" || { echo "::error::index.html not found in $WEB_ROOT"; ls -la "$WEB_ROOT" | head; exit 1; }
+
+            chown -R www-data:www-data "$WEB_ROOT"
+            nginx -t
+            systemctl reload nginx
+            echo "Frontend OK"

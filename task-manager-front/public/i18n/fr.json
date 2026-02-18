@@ -158,6 +158,17 @@
     "recentDeleteTitle": "Supprimer le code récent",
     "recentDeleteMessage": "Supprimer « {{name}} » ({{code}}) de l’historique ? Cela ne change pas votre identifiant actif."
   },
+  "presence": {
+    "setName": "Définir votre nom",
+    "editName": "Modifier votre nom",
+    "namePlaceholder": "Votre nom…",
+    "online": "en ligne",
+    "onlineUsers": "En ligne",
+    "you": "vous",
+    "anonymous": "Anonyme",
+    "welcomeTitle": "Bienvenue !",
+    "welcomeSubtitle": "Définissez votre nom pour que les autres membres de cette session sachent qui vous êtes."
+  },
   "errors": {
     "loadingTasks": "Erreur lors du chargement des tâches.",
     "creatingTask": "Erreur lors de la création de la tâche",

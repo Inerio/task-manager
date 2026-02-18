@@ -16,11 +16,12 @@ import { TaskService } from "../../../task/data/task.service";
 import { AlertService } from "../../../../core/services/alert.service";
 import { BoardService } from "../../data/board.service";
 import { AccountIdDialogComponent } from "../../../../shared/ui/account-id-dialog/account-id-dialog.component";
+import { PresenceIndicatorComponent } from "../../../../shared/ui/presence-indicator/presence-indicator.component";
 
 @Component({
   selector: "app-board-toolbar",
   standalone: true,
-  imports: [CommonModule, TranslocoModule, AccountIdDialogComponent],
+  imports: [CommonModule, TranslocoModule, AccountIdDialogComponent, PresenceIndicatorComponent],
   templateUrl: "./board-toolbar.component.html",
   styleUrls: ["./board-toolbar.component.scss"],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -40,11 +40,14 @@ public class EventsController {
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<SseEmitter> subscribeGlobal(
             @RequestParam(name = "uid", required = false) @Nullable String uidParam,
-            @RequestHeader(name = "X-Client-Id", required = false) @Nullable String uidHeader) {
+            @RequestHeader(name = "X-Client-Id", required = false) @Nullable String uidHeader,
+            @RequestParam(name = "sessionId", required = false) @Nullable String sessionId,
+            @RequestParam(name = "displayName", required = false) @Nullable String displayName) {
         String uid = (uidParam != null && !uidParam.isBlank()) ? uidParam : uidHeader;
         if (uid == null || uid.isBlank()) return ResponseEntity.badRequest().build();
         users.touch(uid);
-        return ResponseEntity.ok(hub.subscribeGlobal(uid));
+        String sid = (sessionId != null && !sessionId.isBlank()) ? sessionId : "anon-" + System.nanoTime();
+        return ResponseEntity.ok(hub.subscribeGlobal(uid, sid, displayName));
     }
 
     @GetMapping(value = "/board/{boardId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

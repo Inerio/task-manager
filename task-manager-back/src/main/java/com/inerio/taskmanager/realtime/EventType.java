@@ -10,6 +10,7 @@ public enum EventType {
     BOARDS_DELETED("boards.deleted"),
     COLUMNS_CHANGED("columns.changed"),
     TASKS_CHANGED("tasks.changed"),
+    PRESENCE_CHANGED("presence.changed"),
     PING("ping");
 
     private final String wireName;

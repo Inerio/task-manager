@@ -158,6 +158,17 @@
     "recentDeleteTitle": "Remove recent code",
     "recentDeleteMessage": "Remove “{{name}}” ({{code}}) from recent codes? This won’t change your active Account ID."
   },
+  "presence": {
+    "setName": "Set your name",
+    "editName": "Edit your name",
+    "namePlaceholder": "Your name…",
+    "online": "online",
+    "onlineUsers": "Online now",
+    "you": "you",
+    "anonymous": "Anonymous",
+    "welcomeTitle": "Welcome!",
+    "welcomeSubtitle": "Set your name so others on this session know who you are."
+  },
   "errors": {
     "loadingTasks": "Error loading tasks.",
     "creatingTask": "Error creating task",

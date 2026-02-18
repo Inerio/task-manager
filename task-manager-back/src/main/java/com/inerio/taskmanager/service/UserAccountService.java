@@ -46,4 +46,17 @@ public class UserAccountService {
         acc.setLastActiveAt(Instant.now());
         repo.save(acc);
     }
+
+    /** Returns the display name for the given UID, or {@code null} if unset. */
+    public String getDisplayName(String uid) {
+        return repo.findByUid(uid).map(UserAccount::getDisplayName).orElse(null);
+    }
+
+    /** Sets the display name for the given UID (creates the account if needed). */
+    public void setDisplayName(String uid, String displayName) {
+        UserAccount acc = repo.findByUid(uid).orElseGet(() -> new UserAccount(uid));
+        acc.setDisplayName(displayName);
+        acc.setLastActiveAt(Instant.now());
+        repo.save(acc);
+    }
 }

@@ -35,3 +35,4 @@ build/
 
 # Ignore le dossier uploads (stockage des fichiers envoyés)
 uploads/
+.claude

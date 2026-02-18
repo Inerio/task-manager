@@ -23,16 +23,16 @@
     position: absolute;
     top: 0;
     left: 0;
-    transform: translate(-45%, -45%); /* conserve la position exacte */
+    transform: translate(-45%, -45%); /* preserve exact position */
     width: 18px;
     height: 18px;
     min-width: 18px;
     min-height: 18px;
     border-radius: 999px;
-    /* plus de rouge: pastille neutre, légèrement détachée du fond */
+    /* neutral badge, slightly detached from the background */
     border: 1px solid var(--border-2);
     background: color-mix(in oklab, var(--surface-1) 80%, white);
-    /* anneau pour lisibilité sur fonds sombres/clairs */
+    /* ring for readability on dark/light backgrounds */
     box-shadow: 0 1px 3px #0002, 0 0 0 2px var(--surface-1);
     z-index: 2;
 
@@ -45,7 +45,7 @@
     transition: background 0.15s ease, border-color 0.15s ease,
       transform 0.12s ease, opacity 0.12s ease;
 
-    /* icône blanche un peu adoucie au repos */
+    /* white icon, slightly softened at rest */
     img {
       pointer-events: none;
       display: block;

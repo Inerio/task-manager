@@ -25,9 +25,9 @@ import java.util.List;
  */
 
 @Table(
-	    name = "task",
-	    uniqueConstraints = @UniqueConstraint(columnNames = {"kanbanColumn_id", "position"})
-	)
+        name = "task",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"kanbanColumn_id", "position"})
+)
 @Entity
 public class Task {
 
@@ -89,72 +89,58 @@ public class Task {
         this.kanbanColumn = kanbanColumn;
     }
 
-    /** @return task id */
     public Long getId() {
         return id;
     }
 
-    /** @return title */
     public String getTitle() {
         return title;
     }
 
-    /** @param title new title */
     public void setTitle(String title) {
         this.title = title;
     }
 
-    /** @return description (nullable) */
     public String getDescription() {
         return description;
     }
 
-    /** @param description new description */
     public void setDescription(String description) {
         this.description = description;
     }
 
-    /** @return {@code true} if completed */
     public boolean isCompleted() {
         return completed;
     }
 
-    /** @param completed completion flag */
     public void setCompleted(boolean completed) {
         this.completed = completed;
     }
 
-    /** @return zero-based position */
     public int getPosition() {
         return position;
     }
 
-    /** @param position zero-based position */
     public void setPosition(int position) {
         this.position = position;
     }
 
-    /** @return parent column */
     public KanbanColumn getKanbanColumn() {
         return kanbanColumn;
     }
 
-    /** @param kanbanColumn parent column */
     public void setKanbanColumn(KanbanColumn kanbanColumn) {
         this.kanbanColumn = kanbanColumn;
     }
 
-    /** @return creation timestamp */
     public LocalDateTime getCreationDate() {
         return creationDate;
     }
 
-    /** @return due date (nullable) */
     public LocalDate getDueDate() {
         return dueDate;
     }
 
-    /** @param dueDate due date (nullable) */
     public void setDueDate(LocalDate dueDate) {
         this.dueDate = dueDate;
     }
@@ -162,8 +148,6 @@ public class Task {
     /**
      * Returns the attachment filenames. Never {@code null}; for legacy data
      * an empty list is returned if needed.
-     *
-     * @return list of attachment filenames
      */
     public List<String> getAttachments() {
         if (attachments == null) {
@@ -172,14 +156,11 @@ public class Task {
         return attachments;
     }
 
-    /** @param attachments list of attachment filenames */
     public void setAttachments(List<String> attachments) {
         this.attachments = attachments;
     }
 
-    /**
-     * Initializes the creation timestamp before first persist.
-     */
+    /** Initializes the creation timestamp before first persist. */
     @PrePersist
     protected void onCreate() {
         this.creationDate = LocalDateTime.now();

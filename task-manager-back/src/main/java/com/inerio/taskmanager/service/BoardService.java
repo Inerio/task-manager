@@ -16,6 +16,7 @@ import org.springframework.util.FileSystemUtils;
 
 import com.inerio.taskmanager.config.AppProperties;
 import com.inerio.taskmanager.dto.BoardReorderDto;
+import com.inerio.taskmanager.exception.BoardNotFoundException;
 import com.inerio.taskmanager.model.Board;
 import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.model.UserAccount;
@@ -78,7 +79,7 @@ public class BoardService {
 
     public Board updateBoard(String uid, Long id, Board updated) {
         Board existing = boardRepository.findByIdAndOwnerUid(id, uid)
-                .orElseThrow(() -> new RuntimeException("Board not found with id " + id));
+                .orElseThrow(() -> new BoardNotFoundException("Board not found with id " + id));
         existing.setName(updated.getName());
         Board saved = boardRepository.save(existing);
         sse.emitBoards(uid, EventType.BOARDS_UPDATED);
@@ -115,7 +116,7 @@ public class BoardService {
 
     public void deleteBoard(String uid, Long id) {
         Board board = boardRepository.findByIdAndOwnerUid(id, uid)
-                .orElseThrow(() -> new RuntimeException("Board not found with id " + id));
+                .orElseThrow(() -> new BoardNotFoundException("Board not found with id " + id));
 
         List<Long> taskIds = kanbanColumnRepository.findByBoardId(board.getId()).stream()
                 .flatMap((KanbanColumn col) -> taskRepository.findByKanbanColumn(col).stream())

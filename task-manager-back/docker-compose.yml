@@ -8,22 +8,22 @@ services:
 
     environment:
       POSTGRES_USER: Inerio
-      POSTGRES_PASSWORD: 1234          # à changer !
+      POSTGRES_PASSWORD: 1234          # change in production!
       POSTGRES_DB: TaskManagerDB
       PGDATA: /data/postgres
 
     volumes:
-      - db_data:/data/postgres         # volume persistant
+      - db_data:/data/postgres         # persistent volume
 
     ports:
       - "5432:5432"                    
 
     networks:
-      - backend                        # réseau interne pour API + DB
+      - backend                        # internal network for API + DB
 
 networks:
   backend:
-    driver: bridge                     # réseau Docker isolé
+    driver: bridge                     # isolated Docker network
 
 volumes:
   db_data:                             

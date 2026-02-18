@@ -61,22 +61,18 @@ public class Board {
         this.name = name;
     }
 
-    /** @return the board id */
     public Long getId() {
         return id;
     }
 
-    /** @return the board name */
     public String getName() {
         return name;
     }
 
-    /** @param name new display name */
     public void setName(String name) {
         this.name = name;
     }
 
-    /** @return the columns belonging to this board */
     public List<KanbanColumn> getKanbanColumns() {
         return kanbanColumns;
     }
@@ -110,22 +106,18 @@ public class Board {
         }
     }
 
-    /** @return the zero-based position */
     public Integer getPosition() {
         return position;
     }
 
-    /** @param position zero-based position */
     public void setPosition(Integer position) {
         this.position = position;
     }
 
-    /** @return the owner account */
     public UserAccount getOwner() {
         return owner;
     }
 
-    /** @param owner owner account */
     public void setOwner(UserAccount owner) {
         this.owner = owner;
     }

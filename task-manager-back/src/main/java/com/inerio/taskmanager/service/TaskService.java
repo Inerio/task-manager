@@ -4,9 +4,12 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -24,6 +27,7 @@ import com.inerio.taskmanager.config.AppProperties;
 import com.inerio.taskmanager.dto.TaskDto;
 import com.inerio.taskmanager.dto.TaskMapperDto;
 import com.inerio.taskmanager.dto.TaskReorderDto;
+import com.inerio.taskmanager.exception.ColumnNotFoundException;
 import com.inerio.taskmanager.exception.TaskNotFoundException;
 import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.model.Task;
@@ -34,6 +38,9 @@ import com.inerio.taskmanager.realtime.EventType;
 
 @Service
 public class TaskService {
+
+    private static final int POSITION_BUMP = 100_000;
+    private static final int MAX_FILENAME_LENGTH = 255;
 
     private final TaskRepository taskRepository;
     private final KanbanColumnRepository kanbanColumnRepository;
@@ -46,7 +53,7 @@ public class TaskService {
                        SseHub sse) {
         this.taskRepository = taskRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
-        this.baseUploadDir = Paths.get(appProperties.getUploadDir()).toAbsolutePath().normalize();
+        this.baseUploadDir = Path.of(appProperties.getUploadDir()).toAbsolutePath().normalize();
         this.sse = sse;
     }
 
@@ -73,7 +80,7 @@ public class TaskService {
     @Transactional(readOnly = true)
     public List<Task> getTasksByKanbanColumnId(Long kanbanColumnId) {
         KanbanColumn kanbanColumn = kanbanColumnRepository.findById(kanbanColumnId)
-            .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + kanbanColumnId));
+            .orElseThrow(() -> new ColumnNotFoundException("KanbanColumn not found with ID " + kanbanColumnId));
         return taskRepository.findByKanbanColumnOrderByPositionAscIdAsc(kanbanColumn);
     }
 
@@ -165,7 +172,7 @@ public class TaskService {
     @Transactional
     public void deleteTasksByKanbanColumnId(Long kanbanColumnId) {
         KanbanColumn kanbanColumn = kanbanColumnRepository.findById(kanbanColumnId)
-            .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + kanbanColumnId));
+            .orElseThrow(() -> new ColumnNotFoundException("KanbanColumn not found with ID " + kanbanColumnId));
         Long boardId = kanbanColumn.getBoard() != null ? kanbanColumn.getBoard().getId() : null;
 
         List<Task> tasks = taskRepository.findByKanbanColumn(kanbanColumn);
@@ -194,7 +201,7 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
         KanbanColumn targetColumn = kanbanColumnRepository.findById(targetKanbanColumnId)
-            .orElseThrow(() -> new RuntimeException("KanbanColumn not found with ID " + targetKanbanColumnId));
+            .orElseThrow(() -> new ColumnNotFoundException("KanbanColumn not found with ID " + targetKanbanColumnId));
 
         KanbanColumn source = task.getKanbanColumn();
         Long srcBoardId = source != null && source.getBoard() != null ? source.getBoard().getId() : null;
@@ -234,9 +241,7 @@ public class TaskService {
     public void reorderTasks(List<TaskReorderDto> reorderedTasks) {
         if (reorderedTasks == null || reorderedTasks.isEmpty()) return;
 
-        final int BUMP = 100_000;
-
-        var targetPos = new java.util.HashMap<Long, Integer>(reorderedTasks.size());
+        Map<Long, Integer> targetPos = new HashMap<>(reorderedTasks.size());
         for (TaskReorderDto dto : reorderedTasks) {
             targetPos.put(dto.getId(), dto.getPosition());
         }
@@ -244,7 +249,7 @@ public class TaskService {
         List<Task> touched = taskRepository.findAllById(targetPos.keySet());
         if (touched.isEmpty()) return;
 
-        var colToEntity = new java.util.HashMap<Long, KanbanColumn>();
+        Map<Long, KanbanColumn> colToEntity = new HashMap<>();
         for (Task t : touched) {
             KanbanColumn c = t.getKanbanColumn();
             if (c != null) colToEntity.putIfAbsent(c.getId(), c);
@@ -258,10 +263,10 @@ public class TaskService {
             List<Task> allInColumn = taskRepository.findByKanbanColumnOrderByPositionAscIdAsc(column);
             if (allInColumn.isEmpty()) continue;
 
-            var curPos = new java.util.HashMap<Long, Integer>(allInColumn.size());
+            Map<Long, Integer> curPos = new HashMap<>(allInColumn.size());
             for (Task t : allInColumn) curPos.put(t.getId(), t.getPosition());
 
-            java.util.List<Task> ordered = new java.util.ArrayList<>(allInColumn);
+            List<Task> ordered = new ArrayList<>(allInColumn);
             ordered.sort((a, b) -> {
                 int pa = targetPos.getOrDefault(a.getId(), curPos.get(a.getId()));
                 int pb = targetPos.getOrDefault(b.getId(), curPos.get(b.getId()));
@@ -269,7 +274,7 @@ public class TaskService {
                 return (c != 0) ? c : Long.compare(a.getId(), b.getId());
             });
 
-            for (Task t : allInColumn) t.setPosition(t.getPosition() + BUMP);
+            for (Task t : allInColumn) t.setPosition(t.getPosition() + POSITION_BUMP);
             taskRepository.saveAll(allInColumn);
             taskRepository.flush();
 
@@ -405,7 +410,7 @@ public class TaskService {
         String base = Paths.get(name).getFileName().toString();
         base = base.replaceAll("[\\r\\n\\t]", "_");
         base = base.replaceAll("[^A-Za-z0-9._-]", "_");
-        if (base.length() > 255) base = base.substring(0, 255);
+        if (base.length() > MAX_FILENAME_LENGTH) base = base.substring(0, MAX_FILENAME_LENGTH);
         if (base.equals(".") || base.equals("..") || base.isBlank()) throw new IllegalArgumentException("Invalid filename");
         return base;
     }

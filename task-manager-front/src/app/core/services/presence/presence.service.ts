@@ -1,7 +1,6 @@
 import { Injectable, inject, signal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { environment } from "../../../../environments/environment";
-import { readAnonId } from "../../interceptors/anon-id.interceptor";
 
 export interface PresenceEntry {
   sessionId: string;
@@ -52,22 +51,7 @@ export class PresenceService {
       });
   }
 
-  /** Fetch the display name from backend (used on init). */
-  loadMyName(): void {
-    this.http
-      .get<{ displayName: string }>(`${this.api}/presence/me`)
-      .subscribe({
-        next: (res) => {
-          if (res.displayName) {
-            this.displayName.set(res.displayName);
-            this.saveDisplayNameLocal(res.displayName);
-          }
-        },
-        error: () => {},
-      });
-  }
-
-  /** Update display name both locally and on backend. */
+  /** Update display name both locally and on the in-memory SSE session. */
   setDisplayName(name: string): void {
     const trimmed = name.trim().slice(0, 40);
     this.displayName.set(trimmed);

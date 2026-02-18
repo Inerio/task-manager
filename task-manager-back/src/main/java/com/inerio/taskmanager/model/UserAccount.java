@@ -41,10 +41,6 @@ public class UserAccount {
     @Column(nullable = false)
     private Instant lastActiveAt = Instant.now();
 
-    /** Optional display name chosen by the user. */
-    @Column(length = 40)
-    private String displayName;
-
     /**
      * Boards owned by this account.
      * Cascade deletes ensure user data is removed when the account is deleted.
@@ -62,57 +58,38 @@ public class UserAccount {
         this.lastActiveAt = this.createdAt;
     }
 
-    /** @return the account id */
     public Long getId() {
         return id;
     }
 
-    /** @return the stable client UID */
     public String getUid() {
         return uid;
     }
 
-    /** @param uid stable client UID */
     public void setUid(String uid) {
         this.uid = uid;
     }
 
-    /** @return creation timestamp */
     public Instant getCreatedAt() {
         return createdAt;
     }
 
-    /** @param createdAt creation timestamp */
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    /** @return last activity timestamp */
     public Instant getLastActiveAt() {
         return lastActiveAt;
     }
 
-    /** @param lastActiveAt last activity timestamp */
     public void setLastActiveAt(Instant lastActiveAt) {
         this.lastActiveAt = lastActiveAt;
     }
 
-    /** @return the user's display name (may be null) */
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    /** @param displayName chosen display name */
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
-    }
-
-    /** @return boards owned by this account */
     public List<Board> getBoards() {
         return boards;
     }
 
-    /** @param boards boards owned by this account */
     public void setBoards(List<Board> boards) {
         this.boards = boards;
     }

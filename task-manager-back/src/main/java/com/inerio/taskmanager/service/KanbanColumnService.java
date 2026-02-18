@@ -9,6 +9,8 @@ import org.springframework.util.FileSystemUtils;
 
 import com.inerio.taskmanager.config.AppProperties;
 import com.inerio.taskmanager.dto.KanbanColumnDto;
+import com.inerio.taskmanager.exception.BoardNotFoundException;
+import com.inerio.taskmanager.exception.ColumnNotFoundException;
 import com.inerio.taskmanager.model.Board;
 import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.realtime.EventType;
@@ -23,6 +25,8 @@ import com.inerio.taskmanager.repository.TaskRepository;
  */
 @Service
 public class KanbanColumnService {
+
+    private static final int MAX_COLUMNS = 5;
 
     private final KanbanColumnRepository kanbanColumnRepository;
     private final BoardRepository boardRepository;
@@ -54,7 +58,7 @@ public class KanbanColumnService {
     public KanbanColumn createKanbanColumn(KanbanColumn kanbanColumn, Long boardId) {
         Board board = getBoardOrThrow(boardId);
         long count = kanbanColumnRepository.countByBoard(board);
-        if (count >= 5) throw new IllegalStateException("Maximum number of columns (5) reached for this board");
+        if (count >= MAX_COLUMNS) throw new IllegalStateException("Maximum number of columns (" + MAX_COLUMNS + ") reached for this board");
 
         Integer maxPos = kanbanColumnRepository.findByBoardOrderByPositionAsc(board).stream()
                 .map(KanbanColumn::getPosition).max(Integer::compareTo).orElse(0);
@@ -70,7 +74,7 @@ public class KanbanColumnService {
 
     public KanbanColumn updateKanbanColumn(Long id, KanbanColumn updated) {
         KanbanColumn existing = kanbanColumnRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("KanbanColumn not found with id " + id));
+                .orElseThrow(() -> new ColumnNotFoundException("KanbanColumn not found with id " + id));
         existing.setName(updated.getName());
         if (updated.getPosition() != existing.getPosition()) {
             existing.setPosition(updated.getPosition());
@@ -87,7 +91,7 @@ public class KanbanColumnService {
 
     public void deleteKanbanColumn(Long id) {
         KanbanColumn column = kanbanColumnRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("KanbanColumn not found with id " + id));
+                .orElseThrow(() -> new ColumnNotFoundException("KanbanColumn not found with id " + id));
         Board board = column.getBoard();
         Long boardId = board != null ? board.getId() : null;
 
@@ -115,7 +119,7 @@ public class KanbanColumnService {
 
     public void moveKanbanColumn(Long kanbanColumnId, int targetPosition) {
         KanbanColumn toMove = kanbanColumnRepository.findById(kanbanColumnId)
-                .orElseThrow(() -> new RuntimeException("KanbanColumn not found with id " + kanbanColumnId));
+                .orElseThrow(() -> new ColumnNotFoundException("KanbanColumn not found with id " + kanbanColumnId));
         Board board = toMove.getBoard();
 
         List<KanbanColumn> columns = kanbanColumnRepository.findByBoardOrderByPositionAsc(board);
@@ -148,7 +152,7 @@ public class KanbanColumnService {
 
     private Board getBoardOrThrow(Long boardId) {
         return boardRepository.findById(boardId)
-                .orElseThrow(() -> new RuntimeException("Board not found with id " + boardId));
+                .orElseThrow(() -> new BoardNotFoundException("Board not found with id " + boardId));
     }
 
     private void deleteTaskFolderQuiet(Long taskId) {

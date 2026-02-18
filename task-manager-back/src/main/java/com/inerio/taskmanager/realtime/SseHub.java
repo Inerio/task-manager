@@ -27,6 +27,12 @@ public class SseHub {
     /** Never-timeout emitters (we rely on server heartbeats + client auto-reconnect). */
     private static final long TIMEOUT_NEVER = 0L;
 
+    /** Delay (ms) before the client auto-reconnects after a broken connection. */
+    private static final long RECONNECT_TIME_MS = 3_000L;
+
+    /** Interval (ms) between heartbeat pings to keep connections alive across proxies. */
+    private static final long HEARTBEAT_INTERVAL_MS = 25_000L;
+
     /** ownerUid -> emitters (global/boards stream) */
     private final ConcurrentHashMap<String, CopyOnWriteArraySet<SseEmitter>> globalEmitters = new ConcurrentHashMap<>();
 
@@ -186,7 +192,7 @@ public class SseHub {
     // -------------------------------
 
     /** Send a "ping" every 25s to all connections. */
-    @Scheduled(fixedDelay = 25_000L)
+    @Scheduled(fixedDelay = HEARTBEAT_INTERVAL_MS)
     public void heartbeat() {
         final String payload = "{\"type\":\"ping\",\"ts\":\"" + Instant.now().toString() + "\"}";
         globalEmitters.values().forEach(set -> set.forEach(s -> safeSend(s, "ping", payload)));
@@ -202,7 +208,7 @@ public class SseHub {
             SseEmitter.SseEventBuilder ev = SseEmitter.event()
                     .name(event)
                     .data(jsonData)
-                    .reconnectTime(3000L);
+                    .reconnectTime(RECONNECT_TIME_MS);
             emitter.send(ev);
         } catch (IOException ex) {
             // Remove broken emitter immediately.

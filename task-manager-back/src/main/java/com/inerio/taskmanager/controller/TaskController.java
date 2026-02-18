@@ -12,7 +12,7 @@ import com.inerio.taskmanager.service.UserAccountService;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -99,7 +99,7 @@ public class TaskController {
         userAccountService.touch(uid);
         if (!taskService.ownsColumn(uid, kanbanColumnId)) return ResponseEntity.notFound().build();
         List<TaskDto> tasks = taskService.getTasksByKanbanColumnId(kanbanColumnId)
-                .stream().map(TaskMapperDto::toDto).collect(Collectors.toList());
+                .stream().map(TaskMapperDto::toDto).toList();
         if (tasks.isEmpty()) return ResponseEntity.noContent().build();
         return ResponseEntity.ok(tasks);
     }

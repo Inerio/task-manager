@@ -2,7 +2,6 @@ package com.inerio.taskmanager.dto;
 
 import com.inerio.taskmanager.model.Board;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Utility mapper between {@link Board} entities and {@link BoardDto} objects.
@@ -10,10 +9,9 @@ import java.util.stream.Collectors;
  * Provides static mapping methods used by controllers/services to shape API payloads.
  * </p>
  */
-public class BoardMapperDto {
+public final class BoardMapperDto {
 
-    /** Default no-args constructor (utility class is stateless). */
-    public BoardMapperDto() { }
+    private BoardMapperDto() { }
 
     /**
      * Converts a {@link Board} entity to a {@link BoardDto}, including its columns if present.
@@ -27,7 +25,7 @@ public class BoardMapperDto {
         List<KanbanColumnDto> columns = (board.getKanbanColumns() != null)
             ? board.getKanbanColumns().stream()
                 .map(KanbanColumnMapperDto::toDto)
-                .collect(Collectors.toList())
+                .toList()
             : null;
 
         return new BoardDto(
@@ -36,5 +34,5 @@ public class BoardMapperDto {
             board.getPosition(),
             columns
         );
-        }
+    }
 }

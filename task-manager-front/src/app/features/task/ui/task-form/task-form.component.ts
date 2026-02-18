@@ -12,11 +12,9 @@ import {
 import type {
   WritableSignal,
   ElementRef,
-  AfterViewInit,
   OnInit,
   OnChanges,
   SimpleChanges,
-  OnDestroy,
   Signal,
 } from "@angular/core";
 import {
@@ -56,7 +54,7 @@ import { AttachmentService } from "../../../attachments/data/attachment.service"
   providers: [NativeDialogGuardService],
 })
 export class TaskFormComponent
-  implements AfterViewInit, OnInit, OnChanges, OnDestroy
+  implements OnInit, OnChanges
 {
   // ===== Inputs / Outputs =====
   @Input({ required: true }) task: Partial<Task> = {};
@@ -155,8 +153,6 @@ export class TaskFormComponent
     }
   }
 
-  ngAfterViewInit(): void {}
-  ngOnDestroy(): void {}
 
   // ===== UI actions =====
   onDialogOpen(open: boolean): void {

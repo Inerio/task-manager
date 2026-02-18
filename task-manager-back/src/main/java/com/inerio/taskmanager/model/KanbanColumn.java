@@ -37,13 +37,13 @@ public class KanbanColumn {
 
     /** Tasks contained in this column. */
     @OneToMany(
-    	    mappedBy = "kanbanColumn",
-    	    cascade = CascadeType.ALL,
-    	    orphanRemoval = true,
-    	    fetch = FetchType.LAZY
-    	)
-    	@OrderBy("position ASC, id ASC")
-    	private List<Task> tasks = new ArrayList<>();
+            mappedBy = "kanbanColumn",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    @OrderBy("position ASC, id ASC")
+    private List<Task> tasks = new ArrayList<>();
 
     /** Parent board (required). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -64,45 +64,30 @@ public class KanbanColumn {
         this.position = position;
     }
 
-    /** @return column id */
     public Long getId() {
         return id;
     }
 
-    /**
-     * Sets the column id (framework use).
-     * @param id identifier
-     */
     public void setId(Long id) {
         this.id = id;
     }
 
-    /** @return column name */
     public String getName() {
         return name;
     }
 
-    /** @param name column name */
     public void setName(String name) {
         this.name = name;
     }
 
-    /** @return zero-based position */
     public int getPosition() {
         return position;
     }
 
-    /** @param position zero-based position */
     public void setPosition(int position) {
         this.position = position;
     }
 
-    /**
-     * Returns the tasks of this column.
-     * Never {@code null}.
-     *
-     * @return list of tasks
-     */
     public List<Task> getTasks() {
         return tasks;
     }
@@ -115,19 +100,16 @@ public class KanbanColumn {
         this.tasks = tasks != null ? tasks : new ArrayList<>();
     }
 
-    /** @return parent board */
     public Board getBoard() {
         return board;
     }
 
-    /** @param board parent board */
     public void setBoard(Board board) {
         this.board = board;
     }
 
     /**
      * Adds a task to this column and sets the reverse relation.
-     *
      * @param task task to add
      */
     public void addTask(Task task) {
@@ -139,7 +121,6 @@ public class KanbanColumn {
 
     /**
      * Removes a task from this column and clears its reverse relation.
-     *
      * @param task task to remove
      */
     public void removeTask(Task task) {

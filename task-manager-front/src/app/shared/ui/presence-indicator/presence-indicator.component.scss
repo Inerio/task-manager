@@ -1,0 +1,228 @@
+@use "../../../../styles/_breakpoints" as bp;
+
+.presence-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  position: relative;
+}
+
+.my-name-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-round);
+  padding: 3px 10px 3px 3px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text-1);
+  transition:
+    background 0.14s,
+    box-shadow 0.14s;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+
+  &:hover {
+    background: var(--surface-2);
+    box-shadow: var(--shadow-1);
+  }
+
+  .my-name-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+}
+
+.avatar-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  user-select: none;
+
+  &--small {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    font-size: 0.65rem;
+  }
+
+  &--me {
+    border: 2px solid var(--surface-1);
+  }
+}
+
+.name-edit-inline {
+  display: flex;
+  align-items: center;
+}
+
+.name-edit-input {
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1.5px solid var(--brand);
+  border-radius: var(--radius-round);
+  padding: 4px 12px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  width: 160px;
+  max-width: 160px;
+  outline: none;
+
+  &:focus {
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 30%, transparent);
+  }
+}
+
+.online-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  padding: 3px 10px 3px 3px;
+  border-radius: var(--radius-round);
+  border: 1px solid var(--border-1);
+  background: var(--surface-1);
+  transition: background 0.14s;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--text-2);
+
+  &:hover {
+    background: var(--surface-2);
+  }
+}
+
+.avatar-stack {
+  display: flex;
+  align-items: center;
+
+  .avatar-circle + .avatar-circle {
+    margin-left: -8px;
+  }
+
+  .avatar-circle {
+    border: 2px solid var(--surface-1);
+  }
+}
+
+.online-count {
+  font-weight: 500;
+}
+
+.presence-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  max-width: 280px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-3);
+  z-index: var(--z-dialog);
+  padding: 6px 0;
+  animation: presenceDropIn 0.12s ease;
+}
+
+@keyframes presenceDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.presence-dropdown-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-2);
+  padding: 4px 12px 6px;
+}
+
+.presence-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 5px 12px;
+  font-size: 0.82rem;
+
+  &--me {
+    background: color-mix(in oklab, var(--brand) 6%, var(--surface-1));
+  }
+}
+
+.presence-dropdown-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+.presence-badge-you {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--brand);
+  background: color-mix(in oklab, var(--brand) 12%, var(--surface-1));
+  border-radius: var(--radius-round);
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+/* ---- Mobile ---- */
+@include bp.md-down {
+  .my-name-chip {
+    max-width: 120px;
+    padding: 2px 8px 2px 2px;
+    font-size: 0.76rem;
+  }
+
+  .name-edit-input {
+    width: 120px;
+    max-width: 120px;
+  }
+
+  .online-indicator {
+    font-size: 0.72rem;
+    padding: 2px 8px 2px 2px;
+  }
+
+  .avatar-circle {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    font-size: 0.65rem;
+
+    &--small {
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      font-size: 0.6rem;
+    }
+  }
+
+  .presence-dropdown {
+    right: -8px;
+    min-width: 180px;
+  }
+}

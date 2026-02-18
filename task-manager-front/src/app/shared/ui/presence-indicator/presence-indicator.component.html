@@ -1,0 +1,91 @@
+<div class="presence-bar">
+  <!-- My name chip (clickable to edit) -->
+  @if (!editingName() && !showNamePrompt()) {
+  <button
+    class="my-name-chip"
+    (click)="myName() ? startEditName() : promptName()"
+    [title]="'presence.editName' | transloco"
+  >
+    <span
+      class="avatar-circle avatar-circle--me"
+      [style.background]="getColor(mySessionId)"
+    >
+      {{ getInitials(myName()) }}
+    </span>
+    <span class="my-name-label">
+      {{ myName() || ('presence.setName' | transloco) }}
+    </span>
+  </button>
+  } @else {
+  <!-- Inline name edit -->
+  <div class="name-edit-inline">
+    <input
+      #nameInput
+      class="name-edit-input"
+      type="text"
+      maxlength="40"
+      [value]="editValue()"
+      (input)="onNameInput($event)"
+      (keydown)="onNameKeydown($event)"
+      (blur)="saveName()"
+      [placeholder]="'presence.namePlaceholder' | transloco"
+    />
+  </div>
+  }
+
+  <!-- Online users indicator -->
+  @if (othersCount() > 0) {
+  <div class="online-indicator" (click)="toggleDropdown()">
+    <!-- Stacked avatars (show up to 3) -->
+    <div class="avatar-stack">
+      @for (user of others().slice(0, 3); track user.sessionId) {
+      <span
+        class="avatar-circle avatar-circle--small"
+        [style.background]="getColor(user.sessionId)"
+        [title]="user.displayName || ('presence.anonymous' | transloco)"
+      >
+        {{ getInitials(user.displayName) }}
+      </span>
+      }
+    </div>
+    <span class="online-count">
+      {{ othersCount() }} {{ 'presence.online' | transloco }}
+    </span>
+  </div>
+
+  <!-- Dropdown listing all online users -->
+  @if (dropdownOpen()) {
+  <div class="presence-dropdown" (mouseleave)="closeDropdown()">
+    <div class="presence-dropdown-title">
+      {{ 'presence.onlineUsers' | transloco }}
+    </div>
+    <!-- Current user -->
+    <div class="presence-dropdown-item presence-dropdown-item--me">
+      <span
+        class="avatar-circle avatar-circle--small"
+        [style.background]="getColor(mySessionId)"
+      >
+        {{ getInitials(myName()) }}
+      </span>
+      <span class="presence-dropdown-name">
+        {{ myName() || ('presence.anonymous' | transloco) }}
+      </span>
+      <span class="presence-badge-you">{{ 'presence.you' | transloco }}</span>
+    </div>
+    @for (user of others(); track user.sessionId) {
+    <div class="presence-dropdown-item">
+      <span
+        class="avatar-circle avatar-circle--small"
+        [style.background]="getColor(user.sessionId)"
+      >
+        {{ getInitials(user.displayName) }}
+      </span>
+      <span class="presence-dropdown-name">
+        {{ user.displayName || ('presence.anonymous' | transloco) }}
+      </span>
+    </div>
+    }
+  </div>
+  }
+  }
+</div>

@@ -33,7 +33,7 @@
     <app-board [boardId]="selectedBoardId()!"></app-board>
   </section>
   } @else {
-  <!-- Keep a header actions slot with the Account ID button -->
+  <!-- Empty state: no boards selected -->
   <section class="board-area board-area--empty">
     <div class="empty-actions">
       <button
@@ -51,6 +51,33 @@
         />
       </button>
     </div>
+
+    <!-- Centered welcome prompt (desktop only, no name set yet) -->
+    @if (!isMdDown() && !hasDisplayName()) {
+    <div class="welcome-prompt">
+      <div class="welcome-icon">👋</div>
+      <h2 class="welcome-title">{{ 'presence.welcomeTitle' | transloco }}</h2>
+      <p class="welcome-subtitle">{{ 'presence.welcomeSubtitle' | transloco }}</p>
+
+      @if (!welcomeEditing()) {
+      <button class="welcome-name-btn" (click)="startWelcomeName()">
+        {{ 'presence.setName' | transloco }}
+      </button>
+      } @else {
+      <input
+        class="welcome-name-input"
+        type="text"
+        maxlength="40"
+        [value]="welcomeEditValue()"
+        (input)="onWelcomeNameInput($event)"
+        (keydown)="onWelcomeKeydown($event)"
+        (blur)="saveWelcomeName()"
+        [placeholder]="'presence.namePlaceholder' | transloco"
+        autofocus
+      />
+      }
+    </div>
+    }
   </section>
   }
 </div>

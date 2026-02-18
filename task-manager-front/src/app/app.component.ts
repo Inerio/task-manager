@@ -20,6 +20,7 @@ import { AccountIdDialogComponent } from "./shared/ui/account-id-dialog/account-
 import { TaskService } from "./features/task/data/task.service";
 import { AlertService } from "./core/services/alert.service";
 import { RealtimeService } from "./core/services/realtime/realtime.service";
+import { PresenceService } from "./core/services/presence/presence.service";
 
 @Component({
   selector: "app-root",
@@ -49,6 +50,7 @@ export class AppComponent implements OnDestroy {
   private readonly alert = inject(AlertService);
   private readonly i18n = inject(TranslocoService);
   private readonly realtime = inject(RealtimeService);
+  private readonly presence = inject(PresenceService);
 
   // Boards list (signal from service)
   readonly boards = this.boardService.boards;
@@ -76,11 +78,21 @@ export class AppComponent implements OnDestroy {
   // Account dialog for empty-state / global access
   readonly showAccountDialog = signal(false);
 
+  /** Whether a display name is set (used by empty-state welcome). */
+  readonly hasDisplayName = computed(() => !!this.presence.displayName().trim());
+
+  /** Welcome name editing (empty-state only). */
+  readonly welcomeEditValue = signal("");
+  readonly welcomeEditing = signal(false);
+
   constructor() {
     this.boardService.loadBoards();
 
     // Start global SSE as early as possible
     this.realtime.connectGlobal();
+
+    // Load display name from backend (in case it was set on another device)
+    this.presence.loadMyName();
 
     this._onMqChange = this._onMqChange.bind(this);
     this._mql.addEventListener("change", this._onMqChange);
@@ -169,6 +181,34 @@ export class AppComponent implements OnDestroy {
     this.selectedBoardId.set(nextId);
   }
 
+  // ---- Welcome name prompt (empty state, desktop only) ----
+  startWelcomeName(): void {
+    this.welcomeEditValue.set("");
+    this.welcomeEditing.set(true);
+  }
+  onWelcomeNameInput(event: Event): void {
+    this.welcomeEditValue.set((event.target as HTMLInputElement).value);
+  }
+  saveWelcomeName(): void {
+    const v = this.welcomeEditValue().trim();
+    if (v) {
+      this.presence.setDisplayName(v);
+    }
+    this.welcomeEditing.set(false);
+  }
+  cancelWelcomeName(): void {
+    this.welcomeEditing.set(false);
+  }
+  onWelcomeKeydown(event: KeyboardEvent): void {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      this.saveWelcomeName();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      this.cancelWelcomeName();
+    }
+  }
+
   /** Called when switching ID from the app-level dialog (empty state / global). */
   onUidSwitchedFromApp(_uid: string): void {
     this.showAccountDialog.set(false);
@@ -177,9 +217,11 @@ export class AppComponent implements OnDestroy {
     this.taskService.loadTasks({ force: true });
     this.alert.show("success", this.i18n.translate("identity.switched"));
 
-    // Reconnect global SSE with the new UID, and reset board stream
+    // Reset presence session and reconnect global SSE with the new UID
+    this.presence.resetSession();
     this.realtime.destroy();
     this.realtime.connectGlobal();
     this.realtime.switchBoard(this.selectedBoardId());
+    this.presence.loadMyName();
   }
 }

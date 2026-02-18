@@ -3,13 +3,14 @@ import { environment } from "../../../../environments/environment";
 import { BoardService } from "../../../features/board/data/board.service";
 import { KanbanColumnService } from "../../../features/board/data/kanban-column.service";
 import { TaskService } from "../../../features/task/data/task.service";
+import { PresenceService } from "../presence/presence.service";
 import { readAnonId } from "../../interceptors/anon-id.interceptor";
 
 /**
  * RealtimeService
  * - Manages two EventSource connections:
- *   • global stream (boards.*) scoped by UID
- *   • board stream (columns.changed / tasks.changed) for the active board
+ *   - global stream (boards.*) scoped by UID
+ *   - board stream (columns.changed / tasks.changed) for the active board
  * - On events, it asks the existing services to reload their data.
  */
 @Injectable({ providedIn: "root" })
@@ -19,6 +20,7 @@ export class RealtimeService {
   private readonly boards = inject(BoardService);
   private readonly columns = inject(KanbanColumnService);
   private readonly tasks = inject(TaskService);
+  private readonly presence = inject(PresenceService);
 
   private globalEs: EventSource | null = null;
   private boardEs: EventSource | null = null;
@@ -28,7 +30,9 @@ export class RealtimeService {
   connectGlobal(): void {
     if (this.globalEs) return;
     const uid = encodeURIComponent(readAnonId());
-    const url = `${this.api}/events?uid=${uid}`;
+    const sessionId = encodeURIComponent(this.presence.sessionId);
+    const displayName = encodeURIComponent(this.presence.displayName());
+    const url = `${this.api}/events?uid=${uid}&sessionId=${sessionId}&displayName=${displayName}`;
     const es = new EventSource(url);
 
     // Boards list changes
@@ -37,6 +41,12 @@ export class RealtimeService {
     es.addEventListener("boards.created", reloadBoards);
     es.addEventListener("boards.updated", reloadBoards);
     es.addEventListener("boards.deleted", reloadBoards);
+
+    // Presence changes
+    es.addEventListener("presence.changed", () => {
+      this.presence.loadPresence();
+    });
+
     es.addEventListener("ping", () => {});
 
     es.onerror = () => {};

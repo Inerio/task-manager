@@ -91,9 +91,6 @@ export class AppComponent implements OnDestroy {
     // Start global SSE as early as possible
     this.realtime.connectGlobal();
 
-    // Load display name from backend (in case it was set on another device)
-    this.presence.loadMyName();
-
     this._onMqChange = this._onMqChange.bind(this);
     this._mql.addEventListener("change", this._onMqChange);
 
@@ -222,6 +219,5 @@ export class AppComponent implements OnDestroy {
     this.realtime.destroy();
     this.realtime.connectGlobal();
     this.realtime.switchBoard(this.selectedBoardId());
-    this.presence.loadMyName();
   }
 }

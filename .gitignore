@@ -1,10 +1,13 @@
-# Ne jamais versionner les envs
+# Never version env files
 .env
 *.env
 
-# Ignorer tout dossier "uploads" où qu'il soit
+# Ignore all "uploads" folders
 **/uploads/**
 
 # Mac/Windows/IDE
 .DS_Store
 Thumbs.db
+
+# Claude Code
+.claude/

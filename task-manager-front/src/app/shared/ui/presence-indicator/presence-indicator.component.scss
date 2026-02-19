@@ -5,6 +5,7 @@
   align-items: center;
   gap: 0.6rem;
   position: relative;
+  min-width: 0;
 }
 
 .my-name-chip {
@@ -192,9 +193,21 @@
 /* ---- Mobile ---- */
 @include bp.md-down {
   .my-name-chip {
-    max-width: 120px;
-    padding: 2px 8px 2px 2px;
-    font-size: 0.76rem;
+    /* Avatar-only: hide name label, show just the circle */
+    padding: 0;
+    border: none;
+    background: transparent;
+    max-width: none;
+    overflow: visible;
+
+    .my-name-label {
+      display: none;
+    }
+
+    &:hover {
+      background: transparent;
+      box-shadow: none;
+    }
   }
 
   .name-edit-input {
@@ -203,8 +216,19 @@
   }
 
   .online-indicator {
-    font-size: 0.72rem;
-    padding: 2px 8px 2px 2px;
+    /* Avatar-stack only: hide the "X en ligne" text */
+    padding: 0;
+    border: none;
+    background: transparent;
+    gap: 0;
+
+    .online-count {
+      display: none;
+    }
+
+    &:hover {
+      background: transparent;
+    }
   }
 
   .avatar-circle {

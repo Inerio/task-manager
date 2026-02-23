@@ -12,7 +12,6 @@ import { firstValueFrom } from "rxjs";
 import { environment } from "../../../../environments/environment";
 import { type Task, type TaskId } from "../models/task.model";
 import { AlertService } from "../../../core/services/alert.service";
-import { LoadingService } from "../../../core/services/loading.service";
 
 /** Tasks CRUD + reordering. Signals are the single source of truth. */
 @Injectable({ providedIn: "root" })
@@ -21,7 +20,6 @@ export class TaskService {
   private readonly apiUrl = `${environment.apiUrl}/tasks`;
   private readonly alert = inject(AlertService);
   private readonly i18n = inject(TranslocoService);
-  private readonly loading = inject(LoadingService);
 
   private readonly tasksSignal: WritableSignal<Task[]> = signal([]);
   readonly tasks: Signal<Task[]> = computed(() => this.tasksSignal());
@@ -40,11 +38,41 @@ export class TaskService {
     ].join("|");
   }
 
+  // ---- Serial queue for reorder/move operations ----
+  private _queue: Promise<void> = Promise.resolve();
+  private _pendingOps = 0;
+  private _reloadAfterDrain = false;
+
+  /**
+   * Enqueue an HTTP operation. The operation runs after all previously queued
+   * operations complete. While any operation is in-flight, SSE-triggered
+   * reloads are deferred until the queue drains.
+   */
+  private enqueue(op: () => Promise<void>): void {
+    this._pendingOps++;
+    this._queue = this._queue
+      .then(op)
+      .catch(() => {})
+      .finally(() => {
+        this._pendingOps--;
+        if (this._pendingOps === 0 && this._reloadAfterDrain) {
+          this._reloadAfterDrain = false;
+          this.loadTasks({ force: true });
+        }
+      });
+  }
+
   // === Fetch ===
   loadTasks(options?: { force?: boolean }): void {
     if (!options?.force && this._loaded()) return;
 
-    this.loading.wrap$(this.http.get<Task[]>(this.apiUrl), "board").subscribe({
+    // Defer SSE reloads while reorder/move operations are in-flight
+    if (this._pendingOps > 0) {
+      this._reloadAfterDrain = true;
+      return;
+    }
+
+    this.http.get<Task[]>(this.apiUrl).subscribe({
       next: (data) => {
         this.tasksSignal.set(data ?? []);
         this._loaded.set(true);
@@ -169,8 +197,10 @@ export class TaskService {
     }
   }
 
-  // === Reorder ===
-  async reorderTasks(tasks: ReadonlyArray<Task>): Promise<void> {
+  // === Reorder (optimistic + queued) ===
+
+  reorderTasks(tasks: ReadonlyArray<Task>): void {
+    // 1. Optimistic: update signal immediately
     const prev = this.tasksSignal();
     const updatedIds = new Set(tasks.map((t) => t.id));
     const nextState = [
@@ -181,33 +211,39 @@ export class TaskService {
         ? a.kanbanColumnId - b.kanbanColumnId
         : (a.position ?? 0) - (b.position ?? 0)
     );
-
     this.tasksSignal.set(nextState);
 
+    // 2. Queue the HTTP call
     const dto = tasks
       .filter((t): t is Task & { id: number } => typeof t.id === "number")
       .map((t) => ({ id: t.id, position: t.position ?? 0 }));
 
-    try {
-      await firstValueFrom(this.http.put<void>(`${this.apiUrl}/reorder`, dto));
-    } catch (err) {
-      this.tasksSignal.set(prev);
-      this.alert.show("error", this.i18n.translate("errors.reorderingTasks"));
-      throw err;
-    }
+    this.enqueue(async () => {
+      try {
+        await firstValueFrom(
+          this.http.put<void>(`${this.apiUrl}/reorder`, dto)
+        );
+      } catch {
+        this.alert.show(
+          "error",
+          this.i18n.translate("errors.reorderingTasks")
+        );
+      }
+    });
   }
 
-  async moveTaskOptimistic(
+  moveTaskOptimistic(
     taskId: TaskId,
     toColumnId: number,
     targetIndex: number
-  ): Promise<void> {
+  ): void {
     const current = this.tasksSignal();
     const dragged = current.find((t) => t.id === taskId);
     if (!dragged) return;
 
     const fromColumnId = dragged.kanbanColumnId;
 
+    // Same-column reorder
     if (fromColumnId === toColumnId) {
       const inCol = current.filter((t) => t.kanbanColumnId === fromColumnId);
       const fromIdx = inCol.findIndex((t) => t.id === taskId);
@@ -217,11 +253,11 @@ export class TaskService {
       const insertAt = Math.max(0, Math.min(targetIndex, copy.length));
       copy.splice(insertAt, 0, dragged);
       const reordered = copy.map((t, idx) => ({ ...t, position: idx }));
-      await this.reorderTasks(reordered);
+      this.reorderTasks(reordered);
       return;
     }
-    const snapshot: Task[] = current.map((t) => ({ ...t }));
 
+    // Cross-column move: optimistic update
     const source = current.filter(
       (t) => t.kanbanColumnId === fromColumnId && t.id !== taskId
     );
@@ -245,28 +281,29 @@ export class TaskService {
     });
     this.tasksSignal.set(next);
 
+    // Queue the HTTP calls (move + reorder)
     const reorderDto = Array.from(updatedMap.values())
       .filter((t): t is Task & { id: number } => typeof t.id === "number")
       .map((t) => ({ id: t.id, position: t.position ?? 0 }));
 
-    try {
-      await firstValueFrom(
-        this.http.put<Task>(`${this.apiUrl}/${taskId}`, {
-          ...dragged,
-          kanbanColumnId: toColumnId,
-        } as Task)
-      );
-      await firstValueFrom(
-        this.http.put<void>(`${this.apiUrl}/reorder`, reorderDto)
-      );
-    } catch (err) {
-      this.tasksSignal.set(snapshot);
-      this.alert.show(
-        "error",
-        this.i18n.translate("errors.movingTask") || "Failed to move task"
-      );
-      throw err;
-    }
+    this.enqueue(async () => {
+      try {
+        await firstValueFrom(
+          this.http.put<Task>(`${this.apiUrl}/${taskId}`, {
+            ...dragged,
+            kanbanColumnId: toColumnId,
+          } as Task)
+        );
+        await firstValueFrom(
+          this.http.put<void>(`${this.apiUrl}/reorder`, reorderDto)
+        );
+      } catch {
+        this.alert.show(
+          "error",
+          this.i18n.translate("errors.movingTask") || "Failed to move task"
+        );
+      }
+    });
   }
 
   // === Private helpers ===

@@ -8,7 +8,6 @@ import {
 import { environment } from "../../../../environments/environment";
 import { firstValueFrom, finalize } from "rxjs";
 import { AlertService } from "../../../core/services/alert.service";
-import { LoadingService } from "../../../core/services/loading.service";
 
 /** Kanban columns CRUD + ordering with signals and optimistic updates. */
 @Injectable({ providedIn: "root" })
@@ -17,7 +16,6 @@ export class KanbanColumnService {
   private readonly http = inject(HttpClient);
   private readonly alert = inject(AlertService);
   private readonly i18n = inject(TranslocoService);
-  private readonly loadingSvc = inject(LoadingService);
 
   // ---- state ----
   private readonly _kanbanColumns = signal<KanbanColumn[]>([]);
@@ -35,12 +33,10 @@ export class KanbanColumnService {
       this._kanbanColumns.set([]);
       return;
     }
-    this._loading.set(true);
-
     const url = `${environment.apiUrl}/boards/${boardId}/kanbanColumns`;
-    this.loadingSvc
-      .wrap$(this.http.get<KanbanColumn[]>(url), "board")
-      .pipe(finalize(() => this._loading.set(false))) // ensure local spinner is cleared on both success & error
+    this.http
+      .get<KanbanColumn[]>(url)
+      .pipe(finalize(() => this._loading.set(false)))
       .subscribe({
         next: (cols) => this._kanbanColumns.set(cols ?? []),
         error: () => {

@@ -14,7 +14,6 @@ import { TranslocoModule, TranslocoService } from "@jsverse/transloco";
 import { LanguageSwitcherComponent } from "../../../settings/ui/language-switcher/language-switcher.component";
 import { ThemeSwitcherComponent } from "../../../settings/ui/theme-switcher/theme-switcher.component";
 import { BoardService } from "../../data/board.service";
-import { LoadingService } from "../../../../core/services/loading.service";
 import { KanbanColumnService } from "../../data/kanban-column.service";
 import { TemplatePickerService } from "../../../template-picker/data/template-picker.service";
 import { DragDropGlobalService } from "../../../../core/services/dnd/drag-drop-global.service";
@@ -65,7 +64,6 @@ export class BoardSidebarComponent {
 
   // ---- Services ----
   private readonly boardService = inject(BoardService);
-  private readonly loading = inject(LoadingService);
   private readonly kanbanColumnService = inject(KanbanColumnService);
   private readonly i18n = inject(TranslocoService);
   private readonly templatePicker = inject(TemplatePickerService);
@@ -141,7 +139,7 @@ export class BoardSidebarComponent {
       return;
     }
 
-    this.loading.wrap$(this.boardService.createBoard(name)).subscribe({
+    this.boardService.createBoard(name).subscribe({
       next: async (board) => {
         this.boardService.loadBoards();
         const newId = typeof board.id === "number" ? board.id : null;
@@ -149,13 +147,11 @@ export class BoardSidebarComponent {
 
         const chosenTemplate = await this.templatePicker.open();
         if (chosenTemplate && newId !== null) {
-          await this.loading.wrap(
-            applyBoardTemplate(
-              this.kanbanColumnService,
-              newId,
-              chosenTemplate,
-              this.i18n
-            )
+          await applyBoardTemplate(
+            this.kanbanColumnService,
+            newId,
+            chosenTemplate,
+            this.i18n
           );
           this.kanbanColumnService.loadKanbanColumns(newId);
         }

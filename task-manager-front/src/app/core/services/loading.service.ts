@@ -12,9 +12,15 @@ import { Observable, finalize, firstValueFrom, defer } from "rxjs";
  * - isLoading() -> global spinner (backward compatible)
  * - isLoadingScope(key) -> spinner for a specific area (e.g. "board")
  * - show()/wrap()/wrap$ accept an optional 'scope' to toggle only that area.
+ *
+ * A built-in delay prevents the spinner from appearing on fast operations
+ * (< DELAY_MS). This avoids flickering on quick network round-trips.
  */
 @Injectable({ providedIn: "root" })
 export class LoadingService {
+  /** Minimum time (ms) before the spinner becomes visible. */
+  private static readonly DELAY_MS = 300;
+
   // --- Global counter (back-compat) ---
   private readonly _active = signal(0);
   readonly isLoading = computed(() => this._active() > 0);
@@ -37,25 +43,33 @@ export class LoadingService {
     return computed(() => counter() > 0);
   }
 
-  /** Manually start/stop a loading scope (global if scope not provided). */
+  /**
+   * Manually start/stop a loading scope (global if scope not provided).
+   * The spinner only appears after DELAY_MS. If closed before the delay,
+   * the counter is never incremented — no flicker.
+   */
   show(scope?: string): () => void {
-    if (!scope) {
-      this._active.update((n) => n + 1);
-      let closed = false;
-      return () => {
-        if (closed) return;
-        closed = true;
-        this._active.update((n) => Math.max(0, n - 1));
-      };
-    }
+    const counter: WritableSignal<number> = scope
+      ? this.getScopeCounter(scope)
+      : this._active;
 
-    const scoped = this.getScopeCounter(scope);
-    scoped.update((n) => n + 1);
     let closed = false;
+    let activated = false;
+
+    const timer = setTimeout(() => {
+      if (!closed) {
+        counter.update((n) => n + 1);
+        activated = true;
+      }
+    }, LoadingService.DELAY_MS);
+
     return () => {
       if (closed) return;
       closed = true;
-      scoped.update((n) => Math.max(0, n - 1));
+      clearTimeout(timer);
+      if (activated) {
+        counter.update((n) => Math.max(0, n - 1));
+      }
     };
   }
 

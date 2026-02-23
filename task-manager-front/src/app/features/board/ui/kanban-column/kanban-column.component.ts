@@ -120,7 +120,7 @@ export class KanbanColumnComponent implements OnChanges {
           { ...created, position: 0 },
           ...withoutCreated.map((t, idx) => ({ ...t, position: idx + 1 })),
         ];
-        await this.taskService.reorderTasks(reordered);
+        this.taskService.reorderTasks(reordered);
 
         if (_pendingFiles.length) {
           await Promise.all(

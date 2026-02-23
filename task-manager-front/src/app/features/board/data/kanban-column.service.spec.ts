@@ -11,16 +11,12 @@ import {
 import { KanbanColumnService } from "./kanban-column.service";
 import { TranslocoService } from "@jsverse/transloco";
 import { AlertService } from "../../../core/services/alert.service";
-import { LoadingService } from "../../../core/services/loading.service";
 import { environment } from "../../../../environments/environment";
 import { KanbanColumn } from "../models/kanban-column.model";
 
 describe("KanbanColumnService (HTTP + signals)", () => {
   const translocoStub = { translate: (k: string) => k };
   const alertStub = { show: jasmine.createSpy("show") };
-  const loadingStub = {
-    wrap$: <T>(obs: any, _scope?: string) => obs,
-  };
 
   let service: KanbanColumnService;
   let http: HttpClient;
@@ -34,7 +30,6 @@ describe("KanbanColumnService (HTTP + signals)", () => {
         provideHttpClientTesting(),
         { provide: TranslocoService, useValue: translocoStub },
         { provide: AlertService, useValue: alertStub },
-        { provide: LoadingService, useValue: loadingStub },
       ],
     });
     service = TestBed.inject(KanbanColumnService);
@@ -47,11 +42,10 @@ describe("KanbanColumnService (HTTP + signals)", () => {
     httpMock.verify();
   });
 
-  it("loadKanbanColumns: sets loading, fills state, clears loading", () => {
+  it("loadKanbanColumns: fills state, clears loading", () => {
     expect(service.loading()).toBeFalse();
 
     service.loadKanbanColumns(42);
-    expect(service.loading()).toBeTrue();
 
     const req = httpMock.expectOne(
       `${environment.apiUrl}/boards/42/kanbanColumns`

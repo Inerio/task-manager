@@ -183,7 +183,7 @@ export class KanbanColumnDndService {
     this.autoScroll.updateFromPointerY(event.clientY);
   }
 
-  async onSliceDrop(event: DragEvent, zoneIndex: number): Promise<void> {
+  onSliceDrop(event: DragEvent, zoneIndex: number): void {
     if (isFileDragEvent(event)) return;
 
     if (this.isSelfEdge(zoneIndex)) {
@@ -206,7 +206,7 @@ export class KanbanColumnDndService {
     if (fromColumnId == null || taskId == null) return;
 
     const insertAt = this.computeInsertIndex(zoneIndex, fromColumnId, taskId);
-    await this.onTaskDrop(event, insertAt);
+    this.onTaskDrop(event, insertAt);
 
     this.autoScroll.stop();
     this.drag.endDrag();
@@ -242,10 +242,7 @@ export class KanbanColumnDndService {
     return zoneIndex > fromIdx ? zoneIndex - 1 : zoneIndex;
   }
 
-  private async onTaskDrop(
-    event: DragEvent,
-    targetIndex: number
-  ): Promise<void> {
+  private onTaskDrop(event: DragEvent, targetIndex: number): void {
     event.preventDefault();
 
     const ctx = this.drag.currentTaskDrag();
@@ -278,7 +275,7 @@ export class KanbanColumnDndService {
       this.dragOverIndex.set(null);
       this.hoveredZoneIndex.set(null);
       this.animateOnEnter.set(false);
-      void this.tasksSvc.reorderTasks(reordered).catch(() => {});
+      this.tasksSvc.reorderTasks(reordered);
       return;
     }
 
@@ -291,9 +288,7 @@ export class KanbanColumnDndService {
     this.dragOverIndex.set(null);
     this.hoveredZoneIndex.set(null);
     this.animateOnEnter.set(false);
-    void this.tasksSvc
-      .moveTaskOptimistic(taskId, colId, clamped)
-      .catch(() => {});
+    this.tasksSvc.moveTaskOptimistic(taskId, colId, clamped);
   }
 
   /** True if the hovered zone equals the dragged card own edges (no-op move). */

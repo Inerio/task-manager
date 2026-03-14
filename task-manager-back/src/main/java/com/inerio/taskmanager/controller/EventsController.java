@@ -56,9 +56,8 @@ public class EventsController {
             @RequestParam(name = "uid", required = false) @Nullable String uidParam,
             @RequestHeader(name = "X-Client-Id", required = false) @Nullable String uidHeader) {
         String uid = (uidParam != null && !uidParam.isBlank()) ? uidParam : uidHeader;
-        if (uid != null && !boards.ownsBoard(uid, boardId)) {
-            return ResponseEntity.notFound().build();
-        }
+        if (uid == null || uid.isBlank()) return ResponseEntity.badRequest().build();
+        if (!boards.ownsBoard(uid, boardId)) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(hub.subscribeBoard(boardId));
     }
 }

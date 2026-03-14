@@ -9,12 +9,11 @@ import com.inerio.taskmanager.service.BoardService;
 import com.inerio.taskmanager.service.KanbanColumnService;
 import com.inerio.taskmanager.service.TaskService;
 import com.inerio.taskmanager.service.UserAccountService;
+import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,8 +35,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/tasks")
 public class TaskController {
 
-    private static final Logger log = LoggerFactory.getLogger(TaskController.class);
-
     private final TaskService taskService;
     private final KanbanColumnService kanbanColumnService;
     private final UserAccountService userAccountService;
@@ -55,7 +52,7 @@ public class TaskController {
 
     @PutMapping("/reorder")
     public ResponseEntity<Void> reorderTasks(@RequestHeader("X-Client-Id") String uid,
-                                             @RequestBody List<TaskReorderDto> reorderedTasks) {
+                                             @RequestBody @Valid List<TaskReorderDto> reorderedTasks) {
         userAccountService.touch(uid);
         taskService.reorderTasks(reorderedTasks);
         return ResponseEntity.ok().build();
@@ -63,23 +60,18 @@ public class TaskController {
 
     @PostMapping("/move")
     public ResponseEntity<?> moveTask(@RequestHeader("X-Client-Id") String uid,
-                                      @RequestBody TaskMoveDto moveRequest) {
+                                      @RequestBody @Valid TaskMoveDto moveRequest) {
         userAccountService.touch(uid);
         if (!taskService.ownsTask(uid, moveRequest.getTaskId())
             || !taskService.ownsColumn(uid, moveRequest.getTargetKanbanColumnId())) {
             return ResponseEntity.notFound().build();
         }
-        try {
-            taskService.moveTask(
-                moveRequest.getTaskId(),
-                moveRequest.getTargetKanbanColumnId(),
-                moveRequest.getTargetPosition()
-            );
-            return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            log.warn("Task move failed: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        taskService.moveTask(
+            moveRequest.getTaskId(),
+            moveRequest.getTargetKanbanColumnId(),
+            moveRequest.getTargetPosition()
+        );
+        return ResponseEntity.ok().build();
     }
 
     /** Return all tasks for this UID (used by the front on refresh). */
@@ -106,7 +98,7 @@ public class TaskController {
 
     @PostMapping
     public ResponseEntity<TaskDto> createTask(@RequestHeader("X-Client-Id") String uid,
-                                              @RequestBody TaskDto dto) {
+                                              @RequestBody @Valid TaskDto dto) {
         userAccountService.touch(uid);
         if (!taskService.ownsColumn(uid, dto.getKanbanColumnId())) return ResponseEntity.notFound().build();
         Optional<KanbanColumn> kanbanColumnOpt = kanbanColumnService.getKanbanColumnById(dto.getKanbanColumnId());
@@ -119,19 +111,14 @@ public class TaskController {
     @PutMapping("/{id}")
     public ResponseEntity<TaskDto> updateTask(@RequestHeader("X-Client-Id") String uid,
                                               @PathVariable Long id,
-                                              @RequestBody TaskDto dto) {
+                                              @RequestBody @Valid TaskDto dto) {
         userAccountService.touch(uid);
         if (!taskService.ownsTask(uid, id) || !taskService.ownsColumn(uid, dto.getKanbanColumnId()))
             return ResponseEntity.notFound().build();
         Optional<KanbanColumn> kanbanColumnOpt = kanbanColumnService.getKanbanColumnById(dto.getKanbanColumnId());
         if (kanbanColumnOpt.isEmpty()) return ResponseEntity.badRequest().build();
-        try {
-            TaskDto saved = TaskMapperDto.toDto(taskService.updateTaskFromDto(id, dto, kanbanColumnOpt.get()));
-            return ResponseEntity.ok(saved);
-        } catch (RuntimeException e) {
-            log.warn("Task not found for update: {}", id, e);
-            return ResponseEntity.notFound().build();
-        }
+        TaskDto saved = TaskMapperDto.toDto(taskService.updateTaskFromDto(id, dto, kanbanColumnOpt.get()));
+        return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/{id}")
@@ -171,7 +158,7 @@ public class TaskController {
     @DeleteMapping("/all")
     public ResponseEntity<Void> deleteAllTasks(@RequestHeader("X-Client-Id") String uid) {
         userAccountService.touch(uid);
-        taskService.deleteAllTasks();
+        taskService.deleteAllTasksForOwner(uid);
         return ResponseEntity.noContent().build();
     }
 
@@ -181,16 +168,8 @@ public class TaskController {
                                               @RequestParam MultipartFile file) {
         userAccountService.touch(uid);
         if (!taskService.ownsTask(uid, id)) return ResponseEntity.notFound().build();
-        try {
-            TaskDto updatedTask = TaskMapperDto.toDto(taskService.uploadAttachment(id, file));
-            return ResponseEntity.ok(updatedTask);
-        } catch (IllegalStateException e) {
-            log.warn("Attachment upload failed for task {}: {}", id, e.getMessage());
-            return ResponseEntity.status(409).body(e.getMessage());
-        } catch (Exception e) {
-            log.warn("Attachment upload failed for task {}: {}", id, e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        TaskDto updatedTask = TaskMapperDto.toDto(taskService.uploadAttachment(id, file));
+        return ResponseEntity.ok(updatedTask);
     }
 
     @GetMapping("/{id}/attachments/{filename:.+}")

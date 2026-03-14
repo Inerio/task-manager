@@ -1,5 +1,7 @@
 package com.inerio.taskmanager.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 /**
  * DTO representing a single task's target position during a reorder operation.
  * <p>
@@ -10,6 +12,7 @@ package com.inerio.taskmanager.dto;
 public class TaskReorderDto {
 
     /** ID of the task to reorder. */
+    @NotNull(message = "Task ID is required")
     private Long id;
 
     /** Zero-based target position within its column. */

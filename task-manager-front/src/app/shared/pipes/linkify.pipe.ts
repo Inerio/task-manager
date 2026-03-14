@@ -1,10 +1,11 @@
-import { Pipe, PipeTransform, inject } from "@angular/core";
+import { Pipe, PipeTransform, inject, SecurityContext } from "@angular/core";
 import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
 
 /**
  * LINKIFY
  * - Escape HTML first (prevent injection)
  * - Turn URLs (http/https + www.) into anchors
+ * - Validate URLs with DomSanitizer before embedding
  * - Keep trailing punctuation outside the link
  * - Convert \n to <br>
  */
@@ -45,6 +46,17 @@ export class LinkifyPipe implements PipeTransform {
     });
   }
 
+  /**
+   * Validate a URL via Angular's DomSanitizer.
+   * Returns the sanitized URL or null if the sanitizer flags it as unsafe.
+   */
+  private safeUrl(raw: string): string | null {
+    const sanitized = this.sanitizer.sanitize(SecurityContext.URL, raw);
+    // sanitize() returns null for unsafe schemes (javascript:, data:, etc.)
+    if (!sanitized || sanitized === "unsafe:") return null;
+    return sanitized;
+  }
+
   transform(text: string | null | undefined): SafeHtml {
     if (!text) return this.sanitizer.bypassSecurityTrustHtml("");
 
@@ -52,11 +64,29 @@ export class LinkifyPipe implements PipeTransform {
 
     if (this.urlHint.test(html)) {
       html = html.replace(this.urlRegex, (_m, url: string, tail: string) => {
-        const href = url.startsWith("www.") ? `https://${url}` : url;
+        // Decode HTML entities back to raw URL for validation
+        const rawUrl = url
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+
+        const href = rawUrl.startsWith("www.") ? `https://${rawUrl}` : rawUrl;
+        const safe = this.safeUrl(href);
+
+        // If the URL is flagged as unsafe, render it as plain text
+        if (!safe) return url + tail;
+
+        // Re-escape the validated URL for use inside the href attribute
+        const escapedHref = safe
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;");
+
         const a =
-          `<a href="${href}" target="_blank" ` +
+          `<a href="${escapedHref}" target="_blank" ` +
           `rel="noopener noreferrer ugc nofollow">${url}</a>`;
-        return a + tail; // preserve trailing punctuation / whitespace
+        return a + tail;
       });
     }
 

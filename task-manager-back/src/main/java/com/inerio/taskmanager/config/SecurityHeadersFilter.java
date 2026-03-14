@@ -25,6 +25,10 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("X-XSS-Protection", "0");
+        response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+        response.setHeader("Permissions-Policy",
+                "camera=(), microphone=(), geolocation=(), payment=()");
+        response.setHeader("Cache-Control", "no-store");
         filterChain.doFilter(request, response);
     }
 }

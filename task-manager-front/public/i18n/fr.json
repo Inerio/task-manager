@@ -1,7 +1,8 @@
 {
   "app": {
     "brand": "Tasukeru",
-    "copyright": "Tous droits réservés."
+    "copyright": "Tous droits réservés.",
+    "buyMeACoffee": "Offrez-moi un café"
   },
   "lang": {
     "label": "Langue",

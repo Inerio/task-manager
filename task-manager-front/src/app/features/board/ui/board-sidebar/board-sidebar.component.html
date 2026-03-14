@@ -103,6 +103,18 @@
     ></div>
   </nav>
 
+  <!-- Buy me a coffee -->
+  <a
+    class="bmc-link"
+    href="https://buymeacoffee.com/inerio"
+    target="_blank"
+    rel="noopener noreferrer"
+    [title]="'app.buyMeACoffee' | transloco"
+  >
+    <img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="" width="15" height="15" />
+    <span>{{ 'app.buyMeACoffee' | transloco }}</span>
+  </a>
+
   <!-- Local dialog instance for mobile access inside sidebar -->
   <app-account-id-dialog
     [open]="showAccountDialog()"

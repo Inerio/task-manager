@@ -1,5 +1,8 @@
 name: Backend slices on dev (Mvc + Repository)
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [dev]

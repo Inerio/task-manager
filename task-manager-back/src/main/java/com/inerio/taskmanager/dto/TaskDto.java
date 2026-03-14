@@ -1,5 +1,8 @@
 package com.inerio.taskmanager.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,15 +17,19 @@ public class TaskDto {
     private Long id;
 
     /** Task title. */
+    @NotBlank(message = "Title is required")
+    @Size(max = 255, message = "Title must be at most 255 characters")
     private String title;
 
     /** Optional task description. */
+    @Size(max = 5000, message = "Description must be at most 5000 characters")
     private String description;
 
     /** Completion flag. */
     private boolean completed;
 
     /** ID of the parent Kanban column. */
+    @NotNull(message = "Kanban column ID is required")
     private Long kanbanColumnId;
 
     /** Zero-based position within the column. */

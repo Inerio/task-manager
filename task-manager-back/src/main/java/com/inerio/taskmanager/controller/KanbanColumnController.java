@@ -6,9 +6,8 @@ import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.service.BoardService;
 import com.inerio.taskmanager.service.KanbanColumnService;
 import com.inerio.taskmanager.service.UserAccountService;
+import jakarta.validation.Valid;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,8 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/boards/{boardId}/kanbanColumns")
 public class KanbanColumnController {
-
-    private static final Logger log = LoggerFactory.getLogger(KanbanColumnController.class);
 
     private final KanbanColumnService kanbanColumnService;
     private final BoardService boardService;
@@ -100,15 +97,10 @@ public class KanbanColumnController {
     @PutMapping("/move")
     public ResponseEntity<?> moveKanbanColumn(@RequestHeader("X-Client-Id") String uid,
                                               @PathVariable Long boardId,
-                                              @RequestBody KanbanColumnMoveDto moveDto) {
+                                              @RequestBody @Valid KanbanColumnMoveDto moveDto) {
         userAccountService.touch(uid);
         if (!boardService.ownsBoard(uid, boardId)) return ResponseEntity.notFound().build();
-        try {
-            kanbanColumnService.moveKanbanColumn(moveDto.getKanbanColumnId(), moveDto.getTargetPosition());
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            log.warn("Move column failed: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        kanbanColumnService.moveKanbanColumn(moveDto.getKanbanColumnId(), moveDto.getTargetPosition());
+        return ResponseEntity.ok().build();
     }
 }

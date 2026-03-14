@@ -1,5 +1,7 @@
 package com.inerio.taskmanager.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 /**
  * DTO used to move a task (drag and drop) between columns.
  * <p>
@@ -9,9 +11,11 @@ package com.inerio.taskmanager.dto;
 public class TaskMoveDto {
 
     /** ID of the task to move. */
+    @NotNull(message = "Task ID is required")
     private Long taskId;
 
     /** ID of the target column. */
+    @NotNull(message = "Target column ID is required")
     private Long targetKanbanColumnId;
 
     /** Zero-based index within the target column. */

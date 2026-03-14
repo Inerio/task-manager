@@ -1,5 +1,6 @@
 package com.inerio.taskmanager.service;
 
+import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +14,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -39,8 +42,22 @@ import com.inerio.taskmanager.realtime.EventType;
 @Service
 public class TaskService {
 
+    private static final Logger log = LoggerFactory.getLogger(TaskService.class);
     private static final int POSITION_BUMP = 100_000;
     private static final int MAX_FILENAME_LENGTH = 255;
+
+    /** Allowed MIME types for file uploads. */
+    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
+            "image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/svg+xml",
+            "application/pdf",
+            "text/plain", "text/csv",
+            "application/json",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/zip", "application/gzip"
+    );
 
     private final TaskRepository taskRepository;
     private final KanbanColumnRepository kanbanColumnRepository;
@@ -87,12 +104,10 @@ public class TaskService {
     @Transactional
     public Task createTaskFromDto(TaskDto dto, KanbanColumn kanbanColumn) {
         Task task = TaskMapperDto.toEntity(dto, kanbanColumn);
-        int maxPosition = 0;
-        List<Task> current = taskRepository.findByKanbanColumnOrderByPositionAsc(kanbanColumn);
-        if (!current.isEmpty()) {
-            maxPosition = current.get(current.size() - 1).getPosition() + 1;
-        }
-        task.setPosition(maxPosition);
+        int nextPosition = taskRepository.findMaxPositionByKanbanColumn(kanbanColumn)
+                .map(max -> max + 1)
+                .orElse(0);
+        task.setPosition(nextPosition);
         Task saved = taskRepository.save(task);
 
         if (kanbanColumn.getBoard() != null && kanbanColumn.getBoard().getId() != null) {
@@ -191,13 +206,24 @@ public class TaskService {
         sse.emitBoard(boardId, EventType.TASKS_CHANGED);
     }
 
-    public void deleteAllTasks() {
-        taskRepository.findAll().forEach(t -> deleteAttachmentsFolder(t.getId()));
-        taskRepository.deleteAll();
+    @Transactional
+    public void deleteAllTasksForOwner(String uid) {
+        List<Task> tasks = taskRepository.findAllByOwnerUid(uid);
+        Set<Long> boardIds = new HashSet<>();
+        for (Task t : tasks) {
+            deleteAttachmentsFolder(t.getId());
+            if (t.getKanbanColumn() != null && t.getKanbanColumn().getBoard() != null) {
+                boardIds.add(t.getKanbanColumn().getBoard().getId());
+            }
+        }
+        taskRepository.deleteAll(tasks);
+        for (Long boardId : boardIds) {
+            sse.emitBoard(boardId, EventType.TASKS_CHANGED);
+        }
     }
 
     @Transactional
-    public void moveTask(Long taskId, Long targetKanbanColumnId, int _targetPositionIgnored) {
+    public void moveTask(Long taskId, Long targetKanbanColumnId, int targetPosition) {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException("Task not found with ID " + taskId));
         KanbanColumn targetColumn = kanbanColumnRepository.findById(targetKanbanColumnId)
@@ -292,9 +318,16 @@ public class TaskService {
         }
     }
 
-    public Task uploadAttachment(Long taskId, MultipartFile file) throws Exception {
+    public Task uploadAttachment(Long taskId, MultipartFile file) {
         Path uploadPath = baseUploadDir.resolve(taskId.toString()).normalize();
-        Files.createDirectories(uploadPath);
+        try { Files.createDirectories(uploadPath); } catch (IOException e) {
+            throw new RuntimeException("Failed to create upload directory", e);
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("File type not allowed");
+        }
 
         String original = file.getOriginalFilename();
         if (original == null || original.isBlank()) throw new IllegalArgumentException("Invalid filename");
@@ -319,6 +352,8 @@ public class TaskService {
 
             try (var in = file.getInputStream()) {
                 Files.copy(in, filePath);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to save uploaded file", e);
             }
             task.getAttachments().add(safeName);
             Task saved = taskRepository.save(task);
@@ -371,7 +406,8 @@ public class TaskService {
             }
             if (boardId != null) sse.emitBoard(boardId, EventType.TASKS_CHANGED);
             return saved;
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("Failed to delete attachment file '{}' for task {}", filename, taskId, e);
             return task;
         }
     }
@@ -401,9 +437,13 @@ public class TaskService {
                 .forEach(path -> {
                     try {
                         Files.deleteIfExists(path);
-                    } catch (Exception ignored) { }
+                    } catch (Exception e) {
+                        log.debug("Could not delete path {}: {}", path, e.getMessage());
+                    }
                 });
-        } catch (Exception ignored) { }
+        } catch (Exception e) {
+            log.debug("Could not walk upload dir for task {}: {}", taskId, e.getMessage());
+        }
     }
 
     private static String sanitizeFilename(String name) {

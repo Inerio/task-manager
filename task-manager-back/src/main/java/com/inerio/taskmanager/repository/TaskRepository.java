@@ -3,6 +3,7 @@ package com.inerio.taskmanager.repository;
 import com.inerio.taskmanager.model.KanbanColumn;
 import com.inerio.taskmanager.model.Task;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -120,4 +121,16 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     	                t.id ASC
     	       """)
     List<Task> findAllForOwnerOrdered(@Param("uid") String uid);
+
+    /**
+     * Returns all tasks that belong to boards owned by the given UID (unordered).
+     */
+    @Query("SELECT t FROM Task t WHERE t.kanbanColumn.board.owner.uid = :uid")
+    List<Task> findAllByOwnerUid(@Param("uid") String uid);
+
+    /**
+     * Returns the maximum position in a column, or empty if column has no tasks.
+     */
+    @Query("SELECT MAX(t.position) FROM Task t WHERE t.kanbanColumn = :col")
+    Optional<Integer> findMaxPositionByKanbanColumn(@Param("col") KanbanColumn col);
 }

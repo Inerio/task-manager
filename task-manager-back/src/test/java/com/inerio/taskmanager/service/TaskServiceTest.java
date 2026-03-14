@@ -158,10 +158,8 @@ class TaskServiceTest {
         KanbanColumn col = new KanbanColumn("A", 0);
         setId(col, 10L);
 
-        Task existing0 = task(100L, 0, col);
-        Task existing1 = task(101L, 1, col);
-        when(taskRepository.findByKanbanColumnOrderByPositionAsc(col))
-                .thenReturn(List.of(existing0, existing1));
+        when(taskRepository.findMaxPositionByKanbanColumn(col))
+                .thenReturn(Optional.of(1));
         // stub local
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 

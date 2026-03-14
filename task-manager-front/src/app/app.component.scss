@@ -90,6 +90,9 @@
     top: 1.25rem;
     right: 2.5rem;
     z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 
     @include bp.md-down {
       top: var(--space-3);

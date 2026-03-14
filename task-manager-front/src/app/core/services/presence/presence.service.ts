@@ -10,7 +10,7 @@ export interface PresenceEntry {
 const LS_SESSION_KEY = "tasukeru_session_id" as const;
 const LS_DISPLAY_NAME_KEY = "tasukeru_display_name" as const;
 
-/** Generate a short random session ID (unique per browser tab). */
+/** Generate a short random session ID (shared across tabs via localStorage). */
 function createSessionId(): string {
   return (
     crypto.randomUUID?.() ??
@@ -29,7 +29,7 @@ export class PresenceService {
   /** List of all online users for the current UID. */
   readonly onlineUsers = signal<PresenceEntry[]>([]);
 
-  /** Unique session ID for this browser tab. */
+  /** Stable session ID for this browser (shared across tabs via localStorage). */
   private _sessionId: string = this.getOrCreateSessionId();
 
   get sessionId(): string {
@@ -69,18 +69,25 @@ export class PresenceService {
   resetSession(): void {
     this._sessionId = createSessionId();
     try {
-      sessionStorage.setItem(LS_SESSION_KEY, this._sessionId);
+      localStorage.setItem(LS_SESSION_KEY, this._sessionId);
     } catch {}
   }
 
   private getOrCreateSessionId(): string {
     try {
-      const existing = sessionStorage.getItem(LS_SESSION_KEY);
+      // Migrate from sessionStorage to localStorage (one-time)
+      const legacy = sessionStorage.getItem(LS_SESSION_KEY);
+      if (legacy) {
+        localStorage.setItem(LS_SESSION_KEY, legacy);
+        sessionStorage.removeItem(LS_SESSION_KEY);
+        return legacy;
+      }
+      const existing = localStorage.getItem(LS_SESSION_KEY);
       if (existing) return existing;
     } catch {}
     const id = createSessionId();
     try {
-      sessionStorage.setItem(LS_SESSION_KEY, id);
+      localStorage.setItem(LS_SESSION_KEY, id);
     } catch {}
     return id;
   }

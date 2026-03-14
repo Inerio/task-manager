@@ -167,7 +167,9 @@
     "you": "vous",
     "anonymous": "Anonyme",
     "welcomeTitle": "Bienvenue !",
-    "welcomeSubtitle": "Définissez votre nom pour que les autres membres de cette session sachent qui vous êtes."
+    "welcomeSubtitle": "Définissez votre nom pour que les autres membres de cette session sachent qui vous êtes.",
+    "welcomeGreetingTitle": "Bon retour, {{name}} !",
+    "welcomeGreetingSubtitle": "Créez votre premier tableau pour commencer."
   },
   "errors": {
     "loadingTasks": "Erreur lors du chargement des tâches.",

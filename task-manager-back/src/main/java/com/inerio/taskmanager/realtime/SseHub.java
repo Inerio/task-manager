@@ -73,8 +73,13 @@ public class SseHub {
 
         Runnable cleanup = () -> {
             set.remove(emitter);
-            emitterToSession.remove(emitter);
+            String removedSid = emitterToSession.remove(emitter);
             emitterToUid.remove(emitter);
+            // Clean up session maps only if no other emitter uses the same sessionId
+            if (removedSid != null && !emitterToSession.containsValue(removedSid)) {
+                sessionDisplayNames.remove(removedSid);
+                sessionToUid.remove(removedSid);
+            }
             // Broadcast presence change after disconnect
             emitPresence(ownerUid);
         };

@@ -36,6 +36,8 @@
   <!-- Empty state: no boards selected -->
   <section class="board-area board-area--empty">
     <div class="empty-actions">
+      <app-presence-indicator></app-presence-indicator>
+
       <button
         type="button"
         class="uid-btn"
@@ -52,29 +54,35 @@
       </button>
     </div>
 
-    <!-- Centered welcome prompt (desktop only, no name set yet) -->
-    @if (!isMdDown() && !hasDisplayName()) {
+    <!-- Centered welcome prompt (desktop only, until first board is created) -->
+    @if (!isMdDown()) {
     <div class="welcome-prompt">
-      <div class="welcome-icon">👋</div>
-      <h2 class="welcome-title">{{ 'presence.welcomeTitle' | transloco }}</h2>
-      <p class="welcome-subtitle">{{ 'presence.welcomeSubtitle' | transloco }}</p>
-
-      @if (!welcomeEditing()) {
-      <button class="welcome-name-btn" (click)="startWelcomeName()">
-        {{ 'presence.setName' | transloco }}
-      </button>
+      @if (hasDisplayName()) {
+        <div class="welcome-icon">👋</div>
+        <h2 class="welcome-title">{{ 'presence.welcomeGreetingTitle' | transloco:{ name: myName() } }}</h2>
+        <p class="welcome-subtitle">{{ 'presence.welcomeGreetingSubtitle' | transloco }}</p>
       } @else {
-      <input
-        class="welcome-name-input"
-        type="text"
-        maxlength="40"
-        [value]="welcomeEditValue()"
-        (input)="onWelcomeNameInput($event)"
-        (keydown)="onWelcomeKeydown($event)"
-        (blur)="saveWelcomeName()"
-        [placeholder]="'presence.namePlaceholder' | transloco"
-        autofocus
-      />
+        <div class="welcome-icon">👋</div>
+        <h2 class="welcome-title">{{ 'presence.welcomeTitle' | transloco }}</h2>
+        <p class="welcome-subtitle">{{ 'presence.welcomeSubtitle' | transloco }}</p>
+
+        @if (!welcomeEditing()) {
+        <button class="welcome-name-btn" (click)="startWelcomeName()">
+          {{ 'presence.setName' | transloco }}
+        </button>
+        } @else {
+        <input
+          class="welcome-name-input"
+          type="text"
+          maxlength="40"
+          [value]="welcomeEditValue()"
+          (input)="onWelcomeNameInput($event)"
+          (keydown)="onWelcomeKeydown($event)"
+          (blur)="saveWelcomeName()"
+          [placeholder]="'presence.namePlaceholder' | transloco"
+          autofocus
+        />
+        }
       }
     </div>
     }

@@ -167,7 +167,9 @@
     "you": "you",
     "anonymous": "Anonymous",
     "welcomeTitle": "Welcome!",
-    "welcomeSubtitle": "Set your name so others on this session know who you are."
+    "welcomeSubtitle": "Set your name so others on this session know who you are.",
+    "welcomeGreetingTitle": "Welcome back, {{name}}!",
+    "welcomeGreetingSubtitle": "Create your first board to get started."
   },
   "errors": {
     "loadingTasks": "Error loading tasks.",

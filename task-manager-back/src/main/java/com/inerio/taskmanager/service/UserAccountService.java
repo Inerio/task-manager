@@ -2,7 +2,6 @@ package com.inerio.taskmanager.service;
 
 import com.inerio.taskmanager.model.UserAccount;
 import com.inerio.taskmanager.repository.UserAccountRepository;
-import java.time.Instant;
 import org.springframework.stereotype.Service;
 
 /**
@@ -32,19 +31,24 @@ public class UserAccountService {
      * @return existing or newly created {@link UserAccount}
      */
     public UserAccount getOrCreate(String uid) {
-        return repo.findByUid(uid).orElseGet(() -> repo.save(new UserAccount(uid)));
+        return repo.findByUid(uid).orElseGet(() -> {
+            try {
+                return repo.save(new UserAccount(uid));
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                // Concurrent insert — the other thread won; just fetch the existing row.
+                return repo.findByUid(uid).orElseThrow();
+            }
+        });
     }
 
     /**
      * Updates the {@code lastActiveAt} timestamp for the given UID.
-     * If no account exists yet, one is created and then updated.
+     * If no account exists yet, one is created atomically (upsert).
      *
      * @param uid stable anonymous user identifier
      */
     public void touch(String uid) {
-        UserAccount acc = repo.findByUid(uid).orElseGet(() -> new UserAccount(uid));
-        acc.setLastActiveAt(Instant.now());
-        repo.save(acc);
+        repo.upsertTouch(uid);
     }
 
 }

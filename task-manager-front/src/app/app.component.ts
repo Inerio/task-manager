@@ -17,6 +17,7 @@ import { BoardSidebarComponent } from "./features/board/ui/board-sidebar/board-s
 import { BoardToolbarComponent } from "./features/board/ui/board-toolbar/board-toolbar.component";
 import { BoardService } from "./features/board/data/board.service";
 import { AccountIdDialogComponent } from "./shared/ui/account-id-dialog/account-id-dialog.component";
+import { PresenceIndicatorComponent } from "./shared/ui/presence-indicator/presence-indicator.component";
 import { TaskService } from "./features/task/data/task.service";
 import { AlertService } from "./core/services/alert.service";
 import { RealtimeService } from "./core/services/realtime/realtime.service";
@@ -42,6 +43,8 @@ import { PresenceService } from "./core/services/presence/presence.service";
     BoardComponent,
     // account id dialog for empty-state / global access
     AccountIdDialogComponent,
+    // presence indicator for empty-state
+    PresenceIndicatorComponent,
   ],
 })
 export class AppComponent implements OnDestroy {
@@ -80,6 +83,9 @@ export class AppComponent implements OnDestroy {
 
   /** Whether a display name is set (used by empty-state welcome). */
   readonly hasDisplayName = computed(() => !!this.presence.displayName().trim());
+
+  /** Current display name (used by welcome greeting). */
+  readonly myName = this.presence.displayName;
 
   /** Welcome name editing (empty-state only). */
   readonly welcomeEditValue = signal("");

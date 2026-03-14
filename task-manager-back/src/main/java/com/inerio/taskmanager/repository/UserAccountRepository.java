@@ -5,6 +5,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Spring Data JPA repository for {@link UserAccount} entities.
@@ -30,4 +34,19 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
      * @return list of inactive accounts
      */
     List<UserAccount> findByLastActiveAtBefore(Instant cutoff);
+
+    /**
+     * Atomically inserts a new account or updates the {@code lastActiveAt} timestamp
+     * if the UID already exists. Eliminates race conditions on concurrent first-visit requests.
+     *
+     * @param uid stable client identifier
+     */
+    @Modifying
+    @Transactional
+    @Query(value = """
+            INSERT INTO user_account (uid, created_at, last_active_at)
+            VALUES (:uid, NOW(), NOW())
+            ON CONFLICT (uid) DO UPDATE SET last_active_at = NOW()
+            """, nativeQuery = true)
+    void upsertTouch(@Param("uid") String uid);
 }
